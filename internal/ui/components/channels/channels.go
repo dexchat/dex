@@ -1,31 +1,22 @@
 package channels
 
 import (
+	"github.com/charmbracelet/lipgloss"
+	"github.com/vaaleyard/dex/internal/ui/styles"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 type Model struct {
-	Channels     []string
-	SelectedChan int
+	Channels []string
+	Selected int
 }
-
-var style = lipgloss.NewStyle().
-	Border(lipgloss.RoundedBorder()).
-	Padding(1, 2).
-	Width(20).
-	BorderForeground(lipgloss.Color("36"))
-
-var selectedStyle = lipgloss.NewStyle().
-	Bold(true).
-	Foreground(lipgloss.Color("205"))
 
 func New(channels []string) Model {
 	return Model{
-		Channels:     channels,
-		SelectedChan: 0,
+		Channels: channels,
+		Selected: 0,
 	}
 }
 
@@ -38,26 +29,31 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "up":
-			if m.SelectedChan > 0 {
-				m.SelectedChan--
+			if m.Selected > 0 {
+				m.Selected--
 			}
 		case "down":
-			if m.SelectedChan < len(m.Channels)-1 {
-				m.SelectedChan++
+			if m.Selected < len(m.Channels)-1 {
+				m.Selected++
 			}
 		}
 	}
 	return m, nil
 }
 
-func (m Model) View() string {
+func (m Model) View(width int, height int) string {
 	var rendered []string
 	for i, ch := range m.Channels {
-		if i == m.SelectedChan {
-			rendered = append(rendered, selectedStyle.Render("→ "+ch))
+		if i == m.Selected {
+			rendered = append(rendered, lipgloss.NewStyle().Render("→ "+ch))
 		} else {
 			rendered = append(rendered, "  "+ch)
 		}
 	}
-	return style.Render(strings.Join(rendered, "\n"))
+	body := strings.Join(rendered, "\n")
+
+	return styles.ChannelListStyle.
+		Width(width).
+		Height(height).
+		Render(body)
 }

@@ -1,28 +1,27 @@
 package chat
 
 import (
+	"github.com/vaaleyard/dex/internal/ui/styles"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
-type Model struct {
-	Messages []string
+type Message struct {
+	Nick string
+	Text string
+	Time string
 }
-
-var style = lipgloss.NewStyle().
-	Border(lipgloss.RoundedBorder()).
-	BorderForeground(lipgloss.Color("#3e4452")).
-	Padding(1, 2).
-	Margin(0, 1)
+type Model struct {
+	Messages []Message
+}
 
 func New() Model {
 	return Model{
-		Messages: []string{
-			"[10:00] <alice> hello",
-			"[10:01] <bob> hi",
-			"[10:02] <you> what's up?",
+		Messages: []Message{
+			{"amora", "hey everyone", "10:01"},
+			{"jared", "sup!", "10:02"},
+			{"gilfoyle", "what", "10:03"},
 		},
 	}
 }
@@ -32,10 +31,21 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	// for now: no interactivity
 	return m, nil
 }
 
-func (m Model) View() string {
-	return style.Render(strings.Join(m.Messages, "\n"))
+func (m Model) View(width int, height int) string {
+	var lines []string
+
+	for _, msg := range m.Messages {
+		nick := styles.UsernameStyle(msg.Nick)
+		text := styles.UserMsgStyle.Render(msg.Text)
+		timestamp := styles.TimestampStyle("[" + msg.Time + "]")
+
+		lines = append(lines, timestamp+" "+nick+" "+text)
+	}
+
+	body := strings.Join(lines, "\n")
+
+	return styles.ChatViewStyle.Width(width).Height(height).Render(body)
 }
