@@ -73,12 +73,6 @@ var (
 				Foreground(HighlightColor)
 )
 
-func TimestampStyle(timestamp string) string {
-	return lipgloss.NewStyle().
-		Foreground(MutedColor).
-		Render(timestamp)
-}
-
 func UsernameStyle(username string) string {
 	colorMap := map[string]lipgloss.Color{
 		"you":     PrimaryColor,
@@ -100,33 +94,4 @@ func UsernameStyle(username string) string {
 		Foreground(color).
 		Bold(true).
 		Render(username)
-}
-
-func GetChannelStyle(active bool, unread bool, mentioned bool) lipgloss.Style {
-	style := lipgloss.NewStyle()
-
-	if active {
-		style = style.Foreground(PrimaryColor).Bold(true)
-	} else if mentioned {
-		style = style.Foreground(HighlightColor)
-	} else if unread {
-		style = style.Foreground(TextColor)
-	} else {
-		style = style.Foreground(MutedColor)
-	}
-
-	return style
-}
-
-func GetBorderWithTitle(title string, width, height int) lipgloss.Style {
-	return lipgloss.NewStyle().
-		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(SecondaryColor).
-		Width(width).
-		Height(height).
-		BorderTop(true).
-		BorderLeft(true).
-		BorderRight(true).
-		BorderBottom(true).
-		SetString(title)
 }

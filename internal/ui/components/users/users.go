@@ -9,9 +9,10 @@ import (
 
 type Model struct {
 	Users []string
+	theme styles.Theme
 }
 
-func New() Model {
+func New(theme styles.Theme) Model {
 	return Model{
 		Users: []string{
 			"@leo",
@@ -20,6 +21,7 @@ func New() Model {
 			"dinesh",
 			"jared",
 		},
+		theme: theme,
 	}
 }
 
@@ -41,5 +43,8 @@ func (m Model) View(width int, height int) string {
 
 	body := strings.Join(rendered, "\n")
 
-	return styles.UserListStyle.Width(width).Height(height).Render(body)
+	return m.theme.Styles.Sidebar.
+		Width(width).
+		Height(height).
+		Render(body)
 }

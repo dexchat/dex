@@ -11,12 +11,15 @@ import (
 type Model struct {
 	Channels []string
 	Selected int
+
+	theme styles.Theme
 }
 
-func New(channels []string) Model {
+func New(theme styles.Theme, channels []string) Model {
 	return Model{
 		Channels: channels,
 		Selected: 0,
+		theme:    theme,
 	}
 }
 
@@ -52,7 +55,7 @@ func (m Model) View(width int, height int) string {
 	}
 	body := strings.Join(rendered, "\n")
 
-	return styles.ChannelListStyle.
+	return m.theme.Styles.Sidebar.
 		Width(width).
 		Height(height).
 		Render(body)

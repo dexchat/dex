@@ -31,9 +31,9 @@ func New() Model {
 
 	m.theme = styles.AyuDarkTheme()
 	m.servers = servers.New([]string{"freenode", "libera", "QuakeNet"})
-	m.channels = channels.New([]string{"#golang", "#dev", "#linux", "#cinema", "#rust", "#docker", "#kubernetes", "#alpine"})
-	m.chat = chat.New()
-	m.users = users.New()
+	m.channels = channels.New(m.theme, []string{"#golang", "#dev", "#linux", "#cinema", "#rust", "#docker", "#kubernetes", "#alpine"})
+	m.chat = chat.New(m.theme)
+	m.users = users.New(m.theme)
 	m.input = input.New(m.theme)
 
 	return m
@@ -56,12 +56,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.layout = layout.GenerateLayout(msg.Width, msg.Height, m.servers.Hidden)
 
 		s := fmt.Sprintf("Terminal size: %dx%d\n"+
-			"Channel Width: %d\n"+
+			"Channel width: %d\n"+
 			"Chat width: %d\n"+
 			"User width: %d\n"+
-			"Middle content sum: %d\n"+
+			"Middle content size: %dx%d\n"+
 			"input width: %d\n", msg.Width, msg.Height, m.layout.ChannelSidebarWidth, m.layout.MainContentWidth, m.layout.UserSidebarWidth,
-			m.layout.ChannelSidebarWidth+m.layout.MainContentWidth+m.layout.UserSidebarWidth, m.layout.ScreenWidth)
+			m.layout.ChannelSidebarWidth+m.layout.MainContentWidth+m.layout.UserSidebarWidth, m.layout.MainContentHeight, m.layout.ScreenWidth)
 
 		f, _ := os.Create("debug.log")
 		_, _ = f.WriteString(s)

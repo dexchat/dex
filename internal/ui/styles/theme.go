@@ -20,6 +20,7 @@ type Theme struct {
 		UnreadColor  lipgloss.Color
 		StatusBg     lipgloss.Color
 		StatusText   lipgloss.Color
+		Usernames    []lipgloss.Color
 	}
 
 	Styles struct {
@@ -35,5 +36,6 @@ type Theme struct {
 		Mention       lipgloss.Style
 		InputField    lipgloss.Style
 		StatusLine    lipgloss.Style
+		Usernames     lipgloss.Style
 	}
 }
