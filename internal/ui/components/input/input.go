@@ -3,22 +3,26 @@ package input
 import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/vaaleyard/dex/internal/ui/layout"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
 type Model struct {
-	Input textinput.Model
+	input textinput.Model
+	theme styles.Theme
 }
 
-func New() Model {
+func New(theme styles.Theme) Model {
 	ti := textinput.New()
-	ti.Placeholder = "Type your message..."
+	ti.Placeholder = "Send message..."
 	ti.Focus()
 	ti.CharLimit = 256
-	ti.Prompt = "> "
-	ti.Width = 80
 
-	return Model{Input: ti}
+	return Model{
+		input: ti,
+		theme: theme,
+	}
 }
 
 func (m Model) Init() tea.Cmd {
@@ -27,12 +31,12 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
-	m.Input, cmd = m.Input.Update(msg)
+	m.input, cmd = m.input.Update(msg)
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if msg.String() == "enter" {
-			m.Input.SetValue("")
+			m.input.SetValue("")
 		}
 	}
 
@@ -40,8 +44,15 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) View(width int, height int) string {
-	return styles.InputBoxStyle.
-		Width(width).
-		Height(height).
-		Render(m.Input.View())
+	inputView := m.input.View()
+
+	if m.input.Value() == "" {
+		inputView = m.theme.Styles.InputField.Render(m.input.Placeholder)
+	}
+
+	return m.theme.Styles.InputField.
+		Border(lipgloss.RoundedBorder()).
+		Padding(0, layout.InputBoxPadding).
+		Width(width).Height(height).Render(" " + inputView)
+
 }

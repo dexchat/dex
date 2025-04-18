@@ -9,7 +9,7 @@ var (
 	UserSidebarRatio    = 0.1
 
 	TabRowPadding         = 0
-	InputRowPadding       = 1
+	InputBoxPadding       = 1
 	ChannelSidebarPadding = 2
 	UserSidebarPadding    = 2
 	MainContentPadding    = 2
@@ -49,7 +49,7 @@ func GenerateLayout(terminalWidth, terminalHeight int, isTabHidden bool) Layout 
 	adjustedChannelSidebarWidth := rawChannelsWidth - ChannelSidebarPadding
 	adjustedUserSidebarWidth := rawUsersWidth - UserSidebarPadding
 	adjustedMainContentWidth := terminalWidth - rawChannelsWidth - rawUsersWidth - MainContentPadding
-	adjustedInputBoxWidth := terminalWidth - (InputRowPadding * 2)
+	adjustedInputBoxWidth := terminalWidth - (InputBoxPadding * 2)
 
 	if adjustedChannelSidebarWidth < 0 {
 		adjustedChannelSidebarWidth = 0
