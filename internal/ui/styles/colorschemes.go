@@ -2,11 +2,14 @@ package styles
 
 import "github.com/charmbracelet/lipgloss"
 
+// TODO: Improve the name of each color
+
 // Ayu
 func AyuDarkTheme() Theme {
 	theme := Theme{}
 
 	theme.Colors.Background = lipgloss.Color("#0D1017")
+	theme.Colors.LighterBackground = lipgloss.Color("#131721")
 	theme.Colors.Text = lipgloss.Color("#B3B1AD")
 	theme.Colors.Accent = lipgloss.Color("#59C2FF")
 	theme.Colors.SidebarBg = lipgloss.Color("#131721")
@@ -74,10 +77,8 @@ func AyuDarkTheme() Theme {
 		Bold(true)
 
 	theme.Styles.InputField = lipgloss.NewStyle().
-		Background(theme.Colors.Background).
-		Foreground(theme.Colors.Text).
-		BorderForeground(theme.Colors.Background).
-		BorderBackground(theme.Colors.Background)
+		Background(theme.Colors.LighterBackground).
+		Foreground(theme.Colors.Text)
 
 	theme.Styles.StatusLine = lipgloss.NewStyle().
 		Background(theme.Colors.StatusBg).

@@ -1,77 +1,55 @@
 package layout
 
-var (
-	TabRowHeight   = 1
-	InputBoxHeight = 1
+const (
+	InputBoxHeight = 3 // 2*border + margin
+	InputBoxMargin = 1
 
 	// Sidebars will occupy 10% of the terminal screen size
-	ChannelSidebarRatio = 0.1
-	UserSidebarRatio    = 0.1
+	channelSidebarRatio = 0.1
+	userSidebarRatio    = 0.1
 
-	TabRowPadding         = 0
-	InputBoxPadding       = 1
-	ChannelSidebarPadding = 2
-	UserSidebarPadding    = 2
-	MainContentPadding    = 2
-	VerticalPadding       = 2
+	sidebarPadding  = 2
+	appPadding      = 2
+	verticalPadding = 1
 )
 
-// Layout holds computed widths/heights for all panes
 type Layout struct {
 	ScreenWidth  int
 	ScreenHeight int
 
-	TabRowHeight      int
-	InputBoxHeight    int
-	MainContentHeight int
+	AppHeight int
+	AppWidth  int
 
-	ChannelSidebarWidth int
-	MainContentWidth    int
-	UserSidebarWidth    int
-	InputBoxWidth       int
+	SiderbarWidth int
 }
 
 // GenerateLayout computes the full layout based on the terminal screen size
-func GenerateLayout(terminalWidth, terminalHeight int, isTabHidden bool) Layout {
-	if isTabHidden {
-		TabRowHeight = 0
+func GenerateLayout(terminalWidth, terminalHeight int) Layout {
+	appAvailableHeight := terminalHeight - verticalPadding
+	if appAvailableHeight < 0 {
+		appAvailableHeight = 0 // terminal too small
 	}
 
-	mainContentAvailableHeight := terminalHeight - TabRowHeight - InputBoxHeight - VerticalPadding
-	if mainContentAvailableHeight < 0 {
-		mainContentAvailableHeight = 0 // terminal too small
+	rawChannelsWidth := int(float64(terminalWidth) * channelSidebarRatio)
+	rawUsersWidth := int(float64(terminalWidth) * userSidebarRatio)
+
+	adjustedSidebarWidth := rawChannelsWidth - sidebarPadding
+	adjustedAppWidth := terminalWidth - rawChannelsWidth - rawUsersWidth - appPadding
+
+	if adjustedSidebarWidth < 0 {
+		adjustedSidebarWidth = 0
+	}
+	if adjustedAppWidth < 0 {
+		adjustedAppWidth = 0
 	}
 
-	rawChannelsWidth := int(float64(terminalWidth) * ChannelSidebarRatio)
-	rawUsersWidth := int(float64(terminalWidth) * UserSidebarRatio)
-
-	// Calculate widths to account for padding
-	adjustedChannelSidebarWidth := rawChannelsWidth - ChannelSidebarPadding
-	adjustedUserSidebarWidth := rawUsersWidth - UserSidebarPadding
-	adjustedMainContentWidth := terminalWidth - rawChannelsWidth - rawUsersWidth - MainContentPadding
-	adjustedInputBoxWidth := terminalWidth - (InputBoxPadding * 2)
-
-	if adjustedChannelSidebarWidth < 0 {
-		adjustedChannelSidebarWidth = 0
-	}
-	if adjustedUserSidebarWidth < 0 {
-		adjustedUserSidebarWidth = 0
-	}
-	if adjustedMainContentWidth < 0 {
-		adjustedMainContentWidth = 0
-	}
-
-	totalHorizontalPadding := ChannelSidebarPadding + UserSidebarPadding + MainContentPadding
+	totalHorizontalPadding := (sidebarPadding * 2) + appPadding
 
 	return Layout{
-		ScreenWidth:         terminalWidth - totalHorizontalPadding,
-		ScreenHeight:        terminalHeight,
-		TabRowHeight:        TabRowHeight,
-		InputBoxHeight:      InputBoxHeight,
-		MainContentHeight:   mainContentAvailableHeight - VerticalPadding,
-		ChannelSidebarWidth: adjustedChannelSidebarWidth,
-		MainContentWidth:    adjustedMainContentWidth,
-		UserSidebarWidth:    adjustedUserSidebarWidth,
-		InputBoxWidth:       adjustedInputBoxWidth,
+		ScreenWidth:   terminalWidth - totalHorizontalPadding,
+		ScreenHeight:  terminalHeight,
+		AppHeight:     appAvailableHeight - verticalPadding,
+		AppWidth:      adjustedAppWidth - 4,
+		SiderbarWidth: adjustedSidebarWidth,
 	}
 }

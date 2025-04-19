@@ -10,8 +10,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/vaaleyard/dex/internal/ui/components/channels"
 	"github.com/vaaleyard/dex/internal/ui/components/chat"
-	"github.com/vaaleyard/dex/internal/ui/components/input"
-	"github.com/vaaleyard/dex/internal/ui/components/servers"
 	"github.com/vaaleyard/dex/internal/ui/components/users"
 )
 
@@ -19,30 +17,25 @@ type Model struct {
 	layout layout.Layout
 	theme  styles.Theme
 
-	servers  servers.Model
 	chat     chat.Model
 	users    users.Model
 	channels channels.Model
-	input    input.Model
 }
 
 func New() Model {
 	m := Model{}
 
 	m.theme = styles.AyuDarkTheme()
-	m.servers = servers.New([]string{"freenode", "libera", "QuakeNet"})
 	m.channels = channels.New(m.theme, []string{"#golang", "#dev", "#linux", "#cinema", "#rust", "#docker", "#kubernetes", "#alpine"})
 	m.chat = chat.New(m.theme)
 	m.users = users.New(m.theme)
-	m.input = input.New(m.theme)
+	m.layout = layout.Layout{}
 
 	return m
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(
-		m.input.Init(),
-	)
+	return m.chat.Init()
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -53,40 +46,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	case tea.WindowSizeMsg:
-		m.layout = layout.GenerateLayout(msg.Width, msg.Height, m.servers.Hidden)
+		m.layout = layout.GenerateLayout(msg.Width, msg.Height)
 
 		s := fmt.Sprintf("Terminal size: %dx%d\n"+
-			"Channel width: %d\n"+
-			"Chat width: %d\n"+
-			"User width: %d\n"+
-			"Middle content size: %dx%d\n"+
-			"input width: %d\n", msg.Width, msg.Height, m.layout.ChannelSidebarWidth, m.layout.MainContentWidth, m.layout.UserSidebarWidth,
-			m.layout.ChannelSidebarWidth+m.layout.MainContentWidth+m.layout.UserSidebarWidth, m.layout.MainContentHeight, m.layout.ScreenWidth)
+			"Sidebar size: %dx%d\n"+
+			"Chat size: %dx%d\n",
+			msg.Width, msg.Height, m.layout.SiderbarWidth, m.layout.AppHeight, m.layout.AppWidth,
+			m.layout.AppHeight)
 
 		f, _ := os.Create("debug.log")
 		_, _ = f.WriteString(s)
 	}
 
 	var cmds []tea.Cmd
-	m.servers, _ = m.servers.Update(msg)
 	m.chat, _ = m.chat.Update(msg)
 	m.users, _ = m.users.Update(msg)
 	m.channels, _ = m.channels.Update(msg)
-	m.input, _ = m.input.Update(msg)
 
 	return m, tea.Batch(cmds...)
 }
 
 func (m Model) View() string {
-	middleContent := lipgloss.JoinHorizontal(lipgloss.Top,
-		m.channels.View(m.layout.ChannelSidebarWidth, m.layout.MainContentHeight),
-		m.chat.View(m.layout.MainContentWidth, m.layout.MainContentHeight),
-		m.users.View(m.layout.UserSidebarWidth, m.layout.MainContentHeight),
-	)
-
-	return lipgloss.JoinVertical(lipgloss.Left,
-		m.servers.View(m.layout.ScreenWidth, m.layout.TabRowHeight),
-		middleContent,
-		m.input.View(m.layout.InputBoxWidth, m.layout.InputBoxHeight),
+	return lipgloss.JoinHorizontal(lipgloss.Top,
+		m.channels.View(m.layout.SiderbarWidth, m.layout.AppHeight),
+		m.chat.View(m.layout.AppWidth, m.layout.AppHeight),
+		m.users.View(m.layout.SiderbarWidth, m.layout.AppHeight),
 	)
 }

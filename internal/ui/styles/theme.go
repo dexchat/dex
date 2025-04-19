@@ -6,21 +6,22 @@ import (
 
 type Theme struct {
 	Colors struct {
-		Background   lipgloss.Color
-		Text         lipgloss.Color
-		Accent       lipgloss.Color
-		SidebarBg    lipgloss.Color
-		InputBg      lipgloss.Color
-		BorderColor  lipgloss.Color
-		SelfMsg      lipgloss.Color
-		SystemMsg    lipgloss.Color
-		ErrorMsg     lipgloss.Color
-		Timestamp    lipgloss.Color
-		MentionColor lipgloss.Color
-		UnreadColor  lipgloss.Color
-		StatusBg     lipgloss.Color
-		StatusText   lipgloss.Color
-		Usernames    []lipgloss.Color
+		Background        lipgloss.Color
+		LighterBackground lipgloss.Color
+		Text              lipgloss.Color
+		Accent            lipgloss.Color
+		SidebarBg         lipgloss.Color
+		InputBg           lipgloss.Color
+		BorderColor       lipgloss.Color
+		SelfMsg           lipgloss.Color
+		SystemMsg         lipgloss.Color
+		ErrorMsg          lipgloss.Color
+		Timestamp         lipgloss.Color
+		MentionColor      lipgloss.Color
+		UnreadColor       lipgloss.Color
+		StatusBg          lipgloss.Color
+		StatusText        lipgloss.Color
+		Usernames         []lipgloss.Color
 	}
 
 	Styles struct {

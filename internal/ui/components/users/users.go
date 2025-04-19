@@ -38,12 +38,13 @@ func (m Model) View(width int, height int) string {
 	var rendered []string
 
 	for _, user := range m.Users {
-		rendered = append(rendered, styles.UsernameStyle(user))
+		rendered = append(rendered, m.theme.Styles.Usernames.Render(user))
 	}
 
 	body := strings.Join(rendered, "\n")
 
 	return m.theme.Styles.Sidebar.
+		BorderLeftForeground(m.theme.Colors.LighterBackground).
 		Width(width).
 		Height(height).
 		Render(body)
