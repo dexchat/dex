@@ -25,12 +25,16 @@ type Model struct {
 
 func New(theme styles.Theme) Model {
 	ti := textinput.New()
-	ti.Prompt = ""
-	ti.Placeholder = "Send message..."
-	// TODO: fix show placeholder without the m.Value == "" in View
-	ti.PlaceholderStyle = lipgloss.NewStyle().Foreground(theme.Colors.ErrorMsg).Background(theme.Colors.ErrorMsg)
 	ti.CharLimit = 256
 	ti.Focus()
+	ti.Prompt = ""
+	ti.Placeholder = "Send message..."
+	ti.PlaceholderStyle = lipgloss.NewStyle().
+		Background(theme.Colors.LighterBackground).
+		Foreground(theme.Colors.Text)
+	ti.TextStyle = lipgloss.NewStyle().
+		Background(theme.Colors.LighterBackground).
+		Foreground(theme.Colors.Text)
 
 	m := Model{
 		messages: []string{
@@ -88,8 +92,16 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 func (m Model) View(width, height int) string {
 	m.viewport.Width = width
 	m.viewport.Height = height - layout.InputBoxHeight
-	inputView := m.input.View()
 
+	inputWidth := width - 1
+	if inputWidth < 12 { // random number to not panic the app
+		inputWidth = 12
+	}
+	m.input.Width = inputWidth
+
+	var inputView string
+
+	inputView = m.input.View()
 	inputContainer := m.theme.Styles.InputField.
 		Margin(0, layout.InputBoxMargin, 0, layout.InputBoxMargin).
 		MarginBackground(m.theme.Colors.Background).
