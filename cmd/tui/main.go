@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/vaaleyard/dex/internal/ui"
 	"os"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/vaaleyard/dex/internal/ui"
 )
 
 func main() {

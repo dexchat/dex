@@ -1,10 +1,8 @@
 package ui
 
 import (
-	"fmt"
 	"github.com/vaaleyard/dex/internal/ui/layout"
 	"github.com/vaaleyard/dex/internal/ui/styles"
-	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -26,7 +24,7 @@ func New() Model {
 	m := Model{}
 
 	m.theme = styles.AyuDarkTheme()
-	m.channels = channels.New(m.theme, []string{"#golang", "#dev", "#linux", "#cinema", "#rust", "#docker", "#kubernetes", "#alpine"})
+	m.channels = channels.New(m.theme)
 	m.chat = chat.New(m.theme)
 	m.users = users.New(m.theme)
 
@@ -47,15 +45,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.layout = layout.GenerateLayout(msg.Width, msg.Height)
 
-		s := fmt.Sprintf("1\nTerminal size: %dx%d\n"+
-			"Sidebar size: %dx%d\n"+
-			"Chat size: %dx%d\n",
-			msg.Width, msg.Height,
-			m.layout.SiderbarWidth, m.layout.AppHeight,
-			m.layout.ChatWidth, m.layout.AppHeight)
-
-		f, _ := os.Create("debug.log")
-		_, _ = f.WriteString(s)
+		// s := fmt.Sprintf("1\nTerminal size: %dx%d\n"+
+		// 	"Sidebar size: %dx%d\n"+
+		// 	"Chat size: %dx%d\n",
+		// 	msg.Width, msg.Height,
+		// 	m.layout.SiderbarWidth, m.layout.AppHeight,
+		// 	m.layout.ChatWidth, m.layout.AppHeight)
+		//
+		// f, _ := os.Create("debug.log")
+		// _, _ = f.WriteString(s)
 	}
 
 	var cmds []tea.Cmd
