@@ -1,10 +1,10 @@
 package chat
 
 import (
-	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/vaaleyard/dex/internal/ui/components/input"
 	"github.com/vaaleyard/dex/internal/ui/layout"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 	"strings"
@@ -18,24 +18,12 @@ type Message struct {
 type Model struct {
 	messages []string
 	viewport viewport.Model
-	input    textinput.Model
+	input    input.Model
 
 	theme styles.Theme
 }
 
 func New(theme styles.Theme) Model {
-	ti := textinput.New()
-	ti.CharLimit = 256
-	ti.Focus()
-	ti.Prompt = ""
-	ti.Placeholder = "Send message..."
-	ti.PlaceholderStyle = lipgloss.NewStyle().
-		Background(theme.Colors.LighterBackground).
-		Foreground(theme.Colors.Text)
-	ti.TextStyle = lipgloss.NewStyle().
-		Background(theme.Colors.LighterBackground).
-		Foreground(theme.Colors.Text)
-
 	m := Model{
 		messages: []string{
 			"[16:11] connecting to server...",
@@ -70,7 +58,7 @@ func New(theme styles.Theme) Model {
 			"[16:11] End of /MOTD command.",
 		},
 		theme:    theme,
-		input:    ti,
+		input:    input.New(theme),
 		viewport: viewport.New(0, 0),
 	}
 	m.viewport.SetContent(strings.Join(m.messages, "\n"))
@@ -79,13 +67,11 @@ func New(theme styles.Theme) Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return textinput.Blink
+	return m.input.Init()
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	var cmd tea.Cmd
-	m.input, cmd = m.input.Update(msg)
-
+	cmd := m.input.Update(msg)
 	return m, cmd
 }
 
@@ -93,27 +79,12 @@ func (m Model) View(width, height int) string {
 	m.viewport.Width = width
 	m.viewport.Height = height - layout.InputBoxHeight
 
-	inputWidth := width - 1
-	if inputWidth < 12 { // random number to not panic the app
-		inputWidth = 12
-	}
-	m.input.Width = inputWidth
-
-	var inputView string
-
-	inputView = m.input.View()
-	inputContainer := m.theme.Styles.InputField.
-		Margin(0, layout.InputBoxMargin, 0, layout.InputBoxMargin).
-		MarginBackground(m.theme.Colors.Background).
-		Border(lipgloss.NormalBorder()).
-		BorderBackground(m.theme.Colors.LighterBackground).
-		BorderForeground(m.theme.Colors.LighterBackground).
-		Width(width).Render(inputView)
+	inputView := m.input.View(width)
 
 	combinedView := lipgloss.JoinVertical(
 		lipgloss.Left,
 		m.viewport.View(),
-		inputContainer,
+		inputView,
 	)
 
 	return m.theme.Styles.ChatArea.
