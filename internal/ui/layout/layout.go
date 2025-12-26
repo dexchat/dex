@@ -5,7 +5,7 @@ const (
 	InputBoxMargin = 1
 
 	// Sidebars will occupy 10% of the terminal screen size
-	channelSidebarRatio = 0.1
+	channelSidebarRatio = 0.11
 	userSidebarRatio    = 0.1
 
 	sidebarsPadding = 2
