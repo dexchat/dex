@@ -1,21 +1,23 @@
 package channels
 
 import (
+	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss/tree"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
 type node struct {
-	name     string
-	isServer bool
-	parent   string
+	name         string
+	isServer     bool
+	parent       string
+	mentioned    bool
+	mentionCount int
+	hasUnread    bool
 }
 
 type Model struct {
-	rawTree  string
 	nodes    []node
 	cursor   int
 	selected string
@@ -24,34 +26,48 @@ type Model struct {
 }
 
 func New(theme styles.Theme) Model {
+	// hardcoded only for POC, the logic will be implemented later
 	servers := map[string][]string{
-		"irc.libera.chat": {"#libera", "#go", "#rust"},
-		"irc.rizon.net":   {"#kubernetes", "#linux", "#nginx"},
+		"irc.libera.chat": {"#libera", "#go", "#rust", "#homelab", "#ai", "#go-nuts", "#linux", "#kde", "#archlinux",
+			"#python", "#debian", "##thelouge", "#ubuntu"},
+		"irc.rizon.net": {"#kubernetes", "#linux", "#nginx", "#go"},
 	}
 
-	var serverTree []string
 	var items []node
 
-	// Build the tree and item list once
-	for server, channels := range servers {
-		sub := tree.Root(server)
-		items = append(items, node{name: server, isServer: true})
-
-		for _, channel := range channels {
-			sub.Child(channel)
-			items = append(items, node{name: channel, isServer: false, parent: server})
-		}
-
-		serverTree = append(serverTree, sub.String())
+	// server:channel differentiates channels with the same name in different servers
+	mentionCounts := map[string]int{
+		"irc.libera.chat:#go": 2,
+	}
+	unreadChannels := map[string]bool{
+		"irc.libera.chat:#libera": true,
+		"irc.libera.chat:#debian": true,
 	}
 
-	t := tree.Root(strings.Join(serverTree, "\n\n"))
+	for server, channels := range servers {
+		items = append(items, node{
+			name:     server,
+			isServer: true,
+		})
+
+		for _, channel := range channels {
+			key := server + ":" + channel
+			isMentioned := mentionCounts[key] > 0
+			items = append(items, node{
+				name:         channel,
+				isServer:     false,
+				parent:       server,
+				mentioned:    isMentioned,
+				mentionCount: mentionCounts[key],
+				hasUnread:    unreadChannels[key] && !isMentioned,
+			})
+		}
+	}
 
 	return Model{
 		cursor:   0,
 		selected: "",
 		nodes:    items,
-		rawTree:  t.String(),
 		theme:    theme,
 	}
 }
@@ -60,33 +76,34 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m Model) ProcessInput(msg tea.KeyMsg) (Model, tea.Cmd) {
+func (m Model) processInput(msg tea.KeyMsg) (Model, tea.Cmd) {
 	switch msg.String() {
-	case "up":
+	case "up", "ctrl+p":
 		if m.cursor > 0 {
 			m.cursor--
 		}
-	case "down":
+	case "down", "ctrl+n":
 		if m.cursor < len(m.nodes)-1 {
 			m.cursor++
 		}
-	case "enter":
-		// Only allow selecting channels, not servers
+	}
+
+	if m.cursor < len(m.nodes) {
 		currentItem := m.nodes[m.cursor]
 		if !currentItem.isServer {
-			m.selected = currentItem.name
+			m.selected = currentItem.parent + ":" + currentItem.name
 			return m, func() tea.Msg {
 				return ChannelSelectedMsg{
-					Channel: m.selected,
+					Channel: currentItem.name,
 					Server:  currentItem.parent,
 				}
 			}
 		}
 	}
+
 	return m, nil
 }
 
-// Custom message for channel selection
 type ChannelSelectedMsg struct {
 	Channel string
 	Server  string
@@ -95,77 +112,70 @@ type ChannelSelectedMsg struct {
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		return m.ProcessInput(msg)
+		return m.processInput(msg)
 	}
 	return m, nil
 }
 
 func (m Model) View(width int, height int) string {
-	// Apply styling to the raw tree string based on cursor position and selection
-	lines := strings.Split(m.rawTree, "\n")
-	styledLines := make([]string, 0, len(lines))
+	var lines []string
+	lastServerName := ""
 
-	currentItemIndex := 0
-	for _, line := range lines {
-		if strings.TrimSpace(line) == "" {
-			styledLines = append(styledLines, line)
-			continue
+	for i, node := range m.nodes {
+		if node.isServer && lastServerName != "" {
+			lines = append(lines, "")
 		}
 
-		// Check if this line corresponds to an item
-		isItemLine := false
-		for _, item := range []string{"├──", "└──", "│"} {
-			if strings.Contains(line, item) {
-				isItemLine = true
-				break
-			}
-		}
+		var line string
+		var textPart string
 
-		if isItemLine || !strings.HasPrefix(line, " ") {
-			// This is either a server or channel line
-			var itemStyle = m.theme.Styles.App
-
-			if currentItemIndex == m.cursor {
-				itemStyle = m.theme.Styles.SelectedItem
-			}
-
-			// Apply underline for selected channel
-			if currentItemIndex < len(m.nodes) &&
-				m.nodes[currentItemIndex].name == m.selected {
-				itemStyle = itemStyle.Underline(true)
-			}
-
-			// Extract the item name from the line
-			itemName := m.nodes[currentItemIndex].name
-
-			// Replace the item name with styled version while preserving tree structure
-			styledLine := strings.Replace(
-				line,
-				itemName,
-				itemStyle.Render(itemName),
-				1,
-			)
-
-			styledLines = append(styledLines, styledLine)
-			currentItemIndex++
+		if node.isServer {
+			textPart = node.name
+			lastServerName = node.name
 		} else {
-			// This is a tree structure line (not an item)
-			styledLines = append(styledLines, line)
+			channelText := node.name
+			if node.mentioned && node.mentionCount > 0 {
+				channelText = fmt.Sprintf("%s (%d)", node.name, node.mentionCount)
+			}
+			textPart = channelText
 		}
+
+		var itemStyle = m.theme.Styles.App.PaddingLeft(1).PaddingRight(1)
+
+		if node.isServer {
+			itemStyle = m.theme.Styles.ServerItem.PaddingLeft(1).PaddingRight(1)
+		} else if node.mentioned {
+			itemStyle = m.theme.Styles.MentionedItem.PaddingLeft(1).PaddingRight(1)
+		} else if node.hasUnread {
+			itemStyle = m.theme.Styles.UnreadItem.PaddingLeft(1).PaddingRight(1)
+		}
+
+		if i == m.cursor {
+			itemStyle = itemStyle.Background(m.theme.Colors.BorderColor)
+		}
+
+		styledText := itemStyle.Render(textPart)
+		if node.isServer {
+			line = styledText
+		} else {
+			line = fmt.Sprintf("  %s", styledText)
+		}
+
+		lines = append(lines, line)
 	}
 
+	body := strings.Join(lines, "\n")
 	return m.theme.Styles.Sidebar.
+		BorderRightForeground(m.theme.Colors.LighterBackground).
 		Width(width).
 		Height(height).
-		Render(strings.Join(styledLines, "\n"))
+		Render(body)
 }
 
-// SelectedChannel returns the currently selected channel
 func (m Model) SelectedChannel() string {
 	return m.selected
 }
 
-// SelectedServer returns the server of the currently selected channel
 func (m Model) SelectedServer() string {
 	for _, item := range m.nodes {
 		if item.name == m.selected {
