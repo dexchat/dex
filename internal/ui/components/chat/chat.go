@@ -99,14 +99,24 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) View(width, height int) string {
 	m.viewport.Width = width
-	m.viewport.Height = height - layout.InputBoxHeight
+	m.viewport.Height = height - layout.InputBoxHeight - 1
 
 	inputView := m.input.View(width)
 
+	paddedInputView := lipgloss.NewStyle().
+		PaddingTop(1).
+		Render(inputView)
+
+	paddedViewport := lipgloss.NewStyle().
+		PaddingLeft(2).
+		PaddingRight(2).
+		PaddingTop(1).
+		Render(m.viewport.View())
+
 	combinedView := lipgloss.JoinVertical(
 		lipgloss.Left,
-		m.viewport.View(),
-		inputView,
+		paddedViewport,
+		paddedInputView,
 	)
 
 	return m.theme.Styles.ChatArea.

@@ -65,9 +65,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+	channelsView := lipgloss.NewStyle().
+		PaddingTop(1).
+		Render(m.channels.View(m.layout.SiderbarWidth, m.layout.AppHeight))
+
+	usersView := lipgloss.NewStyle().
+		PaddingTop(1).
+		Render(m.users.View(m.layout.SiderbarWidth, m.layout.AppHeight))
+
 	return lipgloss.JoinHorizontal(lipgloss.Top,
-		m.channels.View(m.layout.SiderbarWidth, m.layout.AppHeight),
+		channelsView,
 		m.chat.View(m.layout.ChatWidth, m.layout.AppHeight),
-		m.users.View(m.layout.SiderbarWidth, m.layout.AppHeight),
+		usersView,
 	)
 }
