@@ -23,6 +23,7 @@ func AyuDarkTheme() Theme {
 	theme.Colors.UnreadColor = lipgloss.Color("#73D0FF")
 	theme.Colors.StatusBg = lipgloss.Color("#253340")
 	theme.Colors.StatusText = lipgloss.Color("#B3B1AD")
+	theme.Colors.ServerColor = lipgloss.Color("#59C2FF")
 	theme.Colors.Usernames = []lipgloss.Color{
 		lipgloss.Color("#39BAE6"),
 		lipgloss.Color("#FFB454"),
@@ -45,12 +46,19 @@ func AyuDarkTheme() Theme {
 		BorderForeground(theme.Colors.Background).
 		BorderBackground(theme.Colors.Background)
 
-	theme.Styles.SelectedItem = lipgloss.NewStyle().
-		Background(lipgloss.Color("#E6B450")).
-		Foreground(lipgloss.Color("#0A0E14"))
-
 	theme.Styles.UnreadItem = lipgloss.NewStyle().
+		Background(theme.Colors.Background).
 		Foreground(theme.Colors.UnreadColor)
+
+	theme.Styles.MentionedItem = lipgloss.NewStyle().
+		Background(theme.Colors.Background).
+		Foreground(theme.Colors.MentionColor).
+		Bold(true)
+
+	theme.Styles.ServerItem = lipgloss.NewStyle().
+		Background(theme.Colors.Background).
+		Foreground(theme.Colors.ServerColor).
+		Bold(true)
 
 	theme.Styles.ChatArea = lipgloss.NewStyle().
 		Background(theme.Colors.Background).
