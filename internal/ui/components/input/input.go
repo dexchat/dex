@@ -9,8 +9,9 @@ import (
 )
 
 type Model struct {
-	input textinput.Model
-	theme styles.Theme
+	input    textinput.Model
+	theme    styles.Theme
+	nickname string
 }
 
 func New(theme styles.Theme) Model {
@@ -27,8 +28,9 @@ func New(theme styles.Theme) Model {
 		Foreground(theme.Colors.Text)
 
 	return Model{
-		input: ti,
-		theme: theme,
+		input:    ti,
+		theme:    theme,
+		nickname: "trump",
 	}
 }
 
@@ -43,13 +45,26 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (m Model) View(width int) string {
-	inputWidth := width - 1
-	if inputWidth < 12 { // random number to not panic the app
+	nicknamePrefix := lipgloss.NewStyle().
+		Foreground(m.theme.Colors.Accent).
+		Bold(true).
+		Render(m.nickname)
+
+	prompt := lipgloss.NewStyle().
+		Foreground(m.theme.Colors.BorderColor).
+		Background(m.theme.Colors.LighterBackground).
+		Render(" | ")
+
+	prefixWidth := len(m.nickname) + len(" > ")
+	inputWidth := width - prefixWidth - layout.InputBoxMargin*2 - 3 // borders and margins
+
+	if inputWidth < 12 { // minimum width to not panic
 		inputWidth = 12
 	}
 	m.input.Width = inputWidth
 
-	inputView := m.input.View()
+	inputView := nicknamePrefix + prompt + m.input.View()
+
 	inputContainer := m.theme.Styles.InputField.
 		Margin(0, layout.InputBoxMargin, 0, layout.InputBoxMargin).
 		MarginBackground(m.theme.Colors.Background).
