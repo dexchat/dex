@@ -1,8 +1,9 @@
 package users
 
 import (
-	"github.com/vaaleyard/dex/internal/ui/styles"
 	"strings"
+
+	"github.com/vaaleyard/dex/internal/ui/styles"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -15,9 +16,9 @@ type Model struct {
 func New(theme styles.Theme) Model {
 	return Model{
 		Users: []string{
-			"@leo",
-			"+amora",
-			"gilfoyle",
+			"@richard",
+			"+gilfoyle",
+			"monica",
 			"dinesh",
 			"jared",
 		},

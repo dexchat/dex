@@ -1,13 +1,14 @@
 package chat
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/vaaleyard/dex/internal/ui/components/input"
 	"github.com/vaaleyard/dex/internal/ui/layout"
 	"github.com/vaaleyard/dex/internal/ui/styles"
-	"strings"
 )
 
 type Message struct {
@@ -26,36 +27,57 @@ type Model struct {
 func New(theme styles.Theme) Model {
 	m := Model{
 		messages: []string{
-			"[16:11] connecting to server...",
-			"[16:11] connected",
-			"[16:11] *** Checking Ident",
-			"[16:11] *** Looking up your hostname...",
-			"[16:11] *** Couldn't look up your hostname",
-			"[16:11] *** No Ident response",
-			"[16:11] Your host is lithium.libera.chat[0000:0000::0000:0000:0000:0000/6697], running version dex-1.0-dev",
-			"[16:11] This server was created Tue Jul 16 2024 at 04:09:28 UTC",
-			"[16:11] lithium.libera.chat dex-1.0-dev 0000000000000000000 000000000000000000000000000000 0000000000",
-			"[16:11] There are 62 users and 31057 invisible on 28 servers",
-			"[16:11] 42 IRC Operators online",
-			"[16:11] 58 unknown connection(s)",
-			"[16:11] 22434 channels formed",
-			"[16:11] I have 2032 clients and 1 servers",
-			"[16:11] 2032 2704 Current local users 2032, max 2704",
-			"[16:11] 31119 34153 Current global users 31119, max 34153",
-			"[16:11] Highest connection count: 2705 (2704 clients) (426530 connections received)",
-			"[16:11] - lithium.libera.chat Message of the Day -",
-			"[16:11] - Welcome to Libera Chat, the IRC network for",
-			"[16:11] - free & open-source software and peer directed projects.",
-			"[16:11] -",
-			"[16:11] - Use of Libera Chat is governed by our network policies.",
-			"[16:11] - To reduce network abuses we perform open proxy checks",
-			"[16:11] - on hosts at connection time.",
-			"[16:11] - Please visit us in #libera for questions and support.",
-			"[16:11] - Website and documentation:  https://libera.chat/",
-			"[16:11] - Webchat:                    https://web.libera.chat/",
-			"[16:11] - Network policies:           https://libera.chat/policies",
-			"[16:11] - Email:                      support@libera.chat",
-			"[16:11] End of /MOTD command.",
+			"@idlebot gilfoyle found a pair of Nikes! This wondrous godsend has accelerated them 0 days, 03:49:14 towards level 97.",
+			"@idlebot gilfoyle reaches next level in 3 days, 00:35:36.",
+			"@idlebot dinesh [1190/1453] has come upon jared [821/1313] and taken them in combat! 12 days, 12:44:38 is removed from dinesh's clock.",
+			"@idlebot dinesh reaches next level in 44 days, 10:16:26.",
+			"@idlebot monica [651/822] has challenged richard [514/1140] in combat and won! 1 day, 21:22:17 is removed from monica's clock.",
+			"@idlebot monica reaches next level in 5 days, 09:08:03.",
+			"@idlebot In the fierce battle, richard dropped their level 75 helm! monica picks it up, tossing their old level 72 helm to richard.",
+			"@idlebot gilfoyle [563/985] has come upon dinesh [949/1419] and been defeated in combat! 6 days, 03:38:17 is added to gilfoyle's clock.",
+			"@idlebot gilfoyle reaches next level in 53 days, 11:19:01.",
+			"@idlebot jared ate a poisonous fruit. This terrible calamity has slowed them 0 days, 15:03:16 from level 105.",
+			"@idlebot jared reaches next level in 8 days, 11:14:18.",
+			"@idlebot monica invented the wheel! This wondrous godsend has accelerated them 2 days, 19:58:55 towards level 95.",
+			"@idlebot monica reaches next level in 20 days, 18:32:07.",
+			"@idlebot richard was set on fire. This terrible calamity has slowed them 5 days, 12:16:31 from level 69.",
+			"@idlebot richard reaches next level in 51 days, 10:34:14.",
+			"@idlebot gilfoyle got a kiss from dinesh! This wondrous godsend has accelerated them 0 days, 08:33:29 towards level 97.",
+			"@idlebot gilfoyle reaches next level in 2 days, 14:45:34.",
+			"@idlebot jared, the Gangsta, has attained level 71! Next level in 62 days, 04:22:00.",
+			"@idlebot jared [226/588] has challenged monica [412/993] in combat and lost! 4 days, 23:23:21 is added to jared's clock.",
+			"@idlebot jared reaches next level in 67 days, 03:45:21.",
+			"@idlebot richard had to fix some Whitespace code. This terrible calamity has slowed them 0 days, 00:21:38 from level 31.",
+			"@idlebot richard reaches next level in 0 days, 03:38:20.",
+			"@idlebot gilfoyle [384/898] has come upon dinesh [35/784] and taken them in combat! 8 days, 12:13:23 is removed from gilfoyle's clock.",
+			"@idlebot gilfoyle reaches next level in 28 days, 11:42:16.",
+			"@idlebot gilfoyle has dealt dinesh a Critical Strike! 0 days, 00:08:48 is added to dinesh's clock.",
+			"@idlebot dinesh reaches next level in 0 days, 01:07:29.",
+			"@idlebot jared, the \"Cook\", has attained level 100! Next level in 91 days, 04:22:00.",
+			"@idlebot jared [1121/1241] has challenged monica [829/1222] in combat and won! 20 days, 23:19:27 is removed from jared's clock.",
+			"@idlebot jared reaches next level in 70 days, 05:02:33.",
+			"@idlebot richard [500/775] has come upon gilfoyle [1040/1136] and been defeated in combat! 3 days, 16:36:24 is added to richard's clock.",
+			"@idlebot richard reaches next level in 44 days, 17:07:40.",
+			"@idlebot dinesh found a pair of Nikes! This wondrous godsend has accelerated them 5 days, 15:04:26 towards level 95.",
+			"@idlebot dinesh reaches next level in 64 days, 17:21:04.",
+			"@idlebot jared encounters simple and bows humbly.",
+			"@idlebot jared [206/586] has challenged monica [740/1260] in combat and lost! 5 days, 09:34:55 is added to jared's clock.",
+			"@idlebot jared reaches next level in 50 days, 09:25:58.",
+			"@idlebot richard gained a sixth sense! This wondrous godsend has accelerated them 1 day, 15:01:39 towards level 100.",
+			"@idlebot richard reaches next level in 14 days, 15:14:53.",
+			"@idlebot gilfoyle had to fix some Whitespace code. This terrible calamity has slowed them 5 days, 23:08:25 from level 66.",
+			"@idlebot gilfoyle reaches next level in 60 days, 04:24:57.",
+			"@idlebot dinesh is forsaken by their evil god. 1 day, 02:18:21 is added to their clock.",
+			"@idlebot dinesh reaches next level in 37 days, 15:10:34.",
+			"@idlebot jared fell, chipping the stone in their amulet! jared's amulet loses 10% of its effectiveness.",
+			"@idlebot monica [745/939] has come upon richard [1203/1223] and been defeated in combat! 2 days, 01:04:53 is added to monica's clock.",
+			"@idlebot monica reaches next level in 16 days, 15:39:46.",
+			"@idlebot richard, the Paladin, has attained level 94! Next level in 85 days, 04:22:00.",
+			"@idlebot richard [108/784] has challenged gilfoyle [1226/1297] in combat and lost! 11 days, 01:46:03 is added to richard's clock.",
+			"@idlebot richard reaches next level in 96 days, 06:08:03.",
+			"@idlebot dinesh reinforced their shield with a dragon's scales! dinesh's shield gains 10% effectiveness.",
+			"@idlebot jared [876/1004] has come upon monica [1065/1279] and been defeated in combat! 3 days, 21:25:53 is added to jared's clock.",
+			"@idlebot jared reaches next level in 39 days, 06:48:30.",
 		},
 		theme:    theme,
 		input:    input.New(theme),
