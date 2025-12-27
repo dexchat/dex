@@ -20,6 +20,7 @@ type Model struct {
 	messages []string
 	viewport viewport.Model
 	input    input.Model
+	topic    string
 
 	theme styles.Theme
 }
@@ -79,6 +80,7 @@ func New(theme styles.Theme) Model {
 			"@idlebot jared [876/1004] has come upon monica [1065/1279] and been defeated in combat! 3 days, 21:25:53 is added to jared's clock.",
 			"@idlebot jared reaches next level in 39 days, 06:48:30.",
 		},
+		topic:    "Welcome to the Libera IdleRPG game.  Discussion in #idlerpg-discuss | Website: https://idlerpg.lolhosting.net | Please read: https://idlerpg.lolhosting.net#conduct",
 		theme:    theme,
 		input:    input.New(theme),
 		viewport: viewport.New(0, 0),
@@ -98,8 +100,23 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) View(width, height int) string {
+	topicContent := lipgloss.NewStyle().
+		Background(m.theme.Colors.LighterBackground).
+		Foreground(m.theme.Colors.Accent).
+		Bold(true).
+		PaddingLeft(1).
+		PaddingRight(1).
+		Width(width + 4). // 2 for both sides
+		Render(m.topic)
+	topicView := lipgloss.NewStyle().
+		PaddingTop(1).
+		Render(topicContent)
+
+	topicLines := strings.Count(topicContent, "\n") + 1
+
+	// calculate topic line count dynamically to correct render it
 	m.viewport.Width = width
-	m.viewport.Height = height - layout.InputBoxHeight - 1
+	m.viewport.Height = height - layout.InputBoxHeight - topicLines - 1
 
 	inputView := m.input.View(width)
 
@@ -108,13 +125,13 @@ func (m Model) View(width, height int) string {
 		Render(inputView)
 
 	paddedViewport := lipgloss.NewStyle().
-		PaddingLeft(2).
-		PaddingRight(2).
-		PaddingTop(1).
+		PaddingLeft(1).
+		PaddingRight(1).
 		Render(m.viewport.View())
 
 	combinedView := lipgloss.JoinVertical(
 		lipgloss.Left,
+		topicView,
 		paddedViewport,
 		paddedInputView,
 	)
