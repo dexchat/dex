@@ -164,23 +164,19 @@ func (m Model) View(width int, height int) string {
 		lines = append(lines, line)
 	}
 
-	body := strings.Join(lines, "\n")
+	channelsBody := strings.Join(lines, "\n")
+	helpView := renderHelp(width, m.theme)
+
+	// help should be placed at one line above the bottom margin
+	spacingLines := height - len(lines) - 1
+	if spacingLines < 0 {
+		spacingLines = 0
+	}
+	body := channelsBody + "\n" + strings.Repeat("\n", spacingLines) + helpView
+
 	return m.theme.Styles.Sidebar.
 		BorderRightForeground(m.theme.Colors.LighterBackground).
 		Width(width).
 		Height(height).
 		Render(body)
-}
-
-func (m Model) SelectedChannel() string {
-	return m.selected
-}
-
-func (m Model) SelectedServer() string {
-	for _, item := range m.nodes {
-		if item.name == m.selected {
-			return item.parent
-		}
-	}
-	return ""
 }
