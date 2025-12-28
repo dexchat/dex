@@ -17,15 +17,16 @@ type Message struct {
 	Time string
 }
 type Model struct {
-	messages []string
-	viewport viewport.Model
-	input    input.Model
-	topic    string
+	messages       []string
+	viewport       viewport.Model
+	input          input.Model
+	topic          string
+	usernameColors styles.UsernameColors
 
 	theme styles.Theme
 }
 
-func New(theme styles.Theme) Model {
+func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 	m := Model{
 		messages: []string{
 			"@idlebot gilfoyle found a pair of Nikes! This wondrous godsend has accelerated them 0 days, 03:49:14 towards level 97.",
@@ -80,10 +81,11 @@ func New(theme styles.Theme) Model {
 			"@idlebot jared [876/1004] has come upon monica [1065/1279] and been defeated in combat! 3 days, 21:25:53 is added to jared's clock.",
 			"@idlebot jared reaches next level in 39 days, 06:48:30.",
 		},
-		topic:    "Welcome to the Libera IdleRPG game.  Discussion in #idlerpg-discuss | Website: https://idlerpg.lolhosting.net | Please read: https://idlerpg.lolhosting.net#conduct",
-		theme:    theme,
-		input:    input.New(theme),
-		viewport: viewport.New(0, 0),
+		topic:          "Welcome to the Libera IdleRPG game.  Discussion in #idlerpg-discuss | Website: https://idlerpg.lolhosting.net | Please read: https://idlerpg.lolhosting.net#conduct",
+		theme:          theme,
+		usernameColors: usernameColors,
+		input:          input.New(theme),
+		viewport:       viewport.New(0, 0),
 	}
 	m.viewport.SetContent(strings.Join(m.messages, "\n"))
 

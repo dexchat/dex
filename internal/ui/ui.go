@@ -12,8 +12,9 @@ import (
 )
 
 type Model struct {
-	layout layout.Layout
-	theme  styles.Theme
+	layout         layout.Layout
+	theme          styles.Theme
+	usernameColors styles.UsernameColors
 
 	chat     chat.Model
 	users    users.Model
@@ -24,9 +25,11 @@ func New() Model {
 	m := Model{}
 
 	m.theme = styles.AyuDarkTheme()
+	m.usernameColors = styles.NewUsernameColors(m.theme.Colors.Usernames)
+
 	m.channels = channels.New(m.theme)
-	m.chat = chat.New(m.theme)
-	m.users = users.New(m.theme)
+	m.chat = chat.New(m.theme, m.usernameColors)
+	m.users = users.New(m.theme, m.usernameColors)
 
 	return m
 }

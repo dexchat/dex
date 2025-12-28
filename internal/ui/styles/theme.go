@@ -19,10 +19,10 @@ type Theme struct {
 		Timestamp         lipgloss.Color
 		MentionColor      lipgloss.Color
 		UnreadColor       lipgloss.Color
-		StatusBg      lipgloss.Color
-		StatusText    lipgloss.Color
-		ServerColor   lipgloss.Color
-		Usernames     []lipgloss.Color
+		StatusBg          lipgloss.Color
+		StatusText        lipgloss.Color
+		ServerColor       lipgloss.Color
+		Usernames         []lipgloss.Color
 	}
 
 	Styles struct {

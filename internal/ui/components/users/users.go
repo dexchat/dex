@@ -10,11 +10,12 @@ import (
 )
 
 type Model struct {
-	Users []string
-	theme styles.Theme
+	Users          []string
+	theme          styles.Theme
+	usernameColors styles.UsernameColors
 }
 
-func New(theme styles.Theme) Model {
+func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 	return Model{
 		Users: []string{
 			"@richard",
@@ -23,7 +24,8 @@ func New(theme styles.Theme) Model {
 			"dinesh",
 			"jared",
 		},
-		theme: theme,
+		theme:          theme,
+		usernameColors: usernameColors,
 	}
 }
 
@@ -59,7 +61,9 @@ func (m Model) View(width int, height int) string {
 	var rendered []string
 
 	for _, user := range m.Users {
-		rendered = append(rendered, m.theme.Styles.Usernames.Render(user))
+		userStyle := lipgloss.NewStyle().
+			Foreground(m.usernameColors.GetColor(user))
+		rendered = append(rendered, userStyle.Render(user))
 	}
 
 	body := memberHeader + "\n" + divider + "\n" + strings.Join(rendered, "\n")
