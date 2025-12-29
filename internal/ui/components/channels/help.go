@@ -13,8 +13,8 @@ type helpKeyMap struct {
 func renderHelp(width int, theme styles.Theme) string {
 	helpKeys := helpKeyMap{
 		Help: key.NewBinding(
-			key.WithKeys("ctrl+o"),
-			key.WithHelp("ctrl+o", "for help"),
+			key.WithKeys("ctrl+p"),
+			key.WithHelp("ctrl+p", "for help"),
 		),
 	}
 
