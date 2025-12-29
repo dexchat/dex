@@ -114,22 +114,22 @@ func (m Model) View(width, height int) string {
 		Bold(true).
 		PaddingLeft(1).
 		PaddingRight(1).
+		MarginBottom(1).
 		Width(width + 4). // 2 for both sides
 		Render(m.topic)
 	topicView := lipgloss.NewStyle().
-		PaddingTop(1).
 		Render(topicContent)
 
 	topicLines := strings.Count(topicContent, "\n") + 1
 
-	// calculate topic line count dynamically to correct render it
-	m.viewport.Width = width
-	m.viewport.Height = height - layout.InputBoxHeight - topicLines - 1
-
 	inputView := m.input.View(width)
 	paddedInputView := lipgloss.NewStyle().
-		PaddingTop(1).
+		PaddingTop(layout.InputBoxPaddingTop).
 		Render(inputView)
+
+	// calculate topic line count dynamically to correct render it
+	m.viewport.Width = width + layout.ChatViewportPaddingHorizontal
+	m.viewport.Height = height - layout.InputBoxHeight - layout.InputBoxPaddingTop - topicLines
 
 	styledMessages := make([]string, len(m.messages))
 	for i, msg := range m.messages {
@@ -138,8 +138,8 @@ func (m Model) View(width, height int) string {
 	m.viewport.SetContent(strings.Join(styledMessages, "\n"))
 	paddedViewport := lipgloss.NewStyle().
 		Background(m.theme.Colors.Background).
-		PaddingLeft(2).
-		PaddingRight(2).
+		PaddingLeft(1).
+		PaddingRight(1).
 		Render(m.viewport.View())
 
 	combinedView := lipgloss.JoinVertical(
@@ -150,5 +150,6 @@ func (m Model) View(width, height int) string {
 	)
 
 	return m.theme.Styles.ChatArea.
+		MarginTop(1).
 		Render(combinedView)
 }

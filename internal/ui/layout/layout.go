@@ -1,16 +1,18 @@
 package layout
 
 const (
-	InputBoxHeight = 3 // top/bottom border + text input (1 line)
-	InputBoxMargin = 1
+	InputBoxHeight     = 3 // top/bottom border + text input (1 line)
+	InputBoxMargin     = 1
+	InputBoxPaddingTop = 1
 
 	// Sidebars will occupy 10% of the terminal screen size
 	channelSidebarRatio = 0.11
 	userSidebarRatio    = 0.1
 
-	sidebarsPadding = 2
-	appPadding      = 2
-	verticalPadding = 1
+	sidebarsPadding               = 2
+	appPadding                    = 2
+	verticalPadding               = 1
+	ChatViewportPaddingHorizontal = 2 // PaddingLeft(1) + PaddingRight(1)
 )
 
 type Layout struct {
