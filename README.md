@@ -4,11 +4,9 @@
 
 
 ## TODO
-* fix all paddings and borders to be consistent: add borders colors to them to check if they match the window
+* centralize in layout package all paddings and borders numbers. Find a better way to do it
 * make sure the dynamic resizing works and no glitch with paddings/borders happen 
-* after above, centralize in layout package all paddings and borders numbers
 * centralize all styles in styles package
-
 
 ## Features to implement
 * command palette with: quick jump, fuzzy channel search, join, leave, etc.
