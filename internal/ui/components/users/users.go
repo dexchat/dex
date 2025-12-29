@@ -18,6 +18,7 @@ type Model struct {
 func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 	return Model{
 		Users: []string{
+			"@idlebot",
 			"@richard",
 			"+gilfoyle",
 			"monica",
