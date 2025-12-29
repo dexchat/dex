@@ -6,7 +6,8 @@ const (
 	InputBoxPaddingTop = 1
 
 	// Sidebars will occupy 10% of the terminal screen size
-	channelSidebarRatio = 0.11
+	// TODO: if I increase the ratio of one sidebar, the other is not recalculated based on the difference, fix it
+	channelSidebarRatio = 0.1
 	userSidebarRatio    = 0.1
 
 	sidebarsPadding               = 2

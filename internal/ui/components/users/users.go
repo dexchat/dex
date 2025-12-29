@@ -51,7 +51,7 @@ func (m Model) View(width int, height int) string {
 		Inline(false).
 		Render(memberCount)
 
-	dividerLength := width - 2
+	dividerLength := width
 	if dividerLength < 0 {
 		dividerLength = 0
 	}
