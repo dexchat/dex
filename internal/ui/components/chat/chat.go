@@ -103,6 +103,16 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		switch msg.String() {
+		case "wheel down":
+			m.viewport.ScrollDown(2)
+		case "wheel up":
+			m.viewport.ScrollUp(2)
+		}
+	}
+
 	cmd := m.input.Update(msg)
 	return m, cmd
 }
