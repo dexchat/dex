@@ -25,7 +25,7 @@ func parseMessage(rawMsg string) Message {
 	}
 }
 
-func (m Model) renderMessage(msg Message, width int) string {
+func (m *Model) renderMessage(msg Message, width int) string {
 	styledNick := lipgloss.NewStyle().
 		Foreground(m.usernameColors.GetColor(msg.Username)).
 		Render(msg.Username)

@@ -7,8 +7,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/vaaleyard/dex/internal/ui/components/input"
-	"github.com/vaaleyard/dex/internal/ui/layout"
 	"github.com/vaaleyard/dex/internal/ui/styles"
+)
+
+// TODO/BUG: typing k/j in inputbox move the viewport up/down like vim
+
+const (
+	InputBoxPaddingTop = 1
 )
 
 type Model struct {
@@ -17,8 +22,38 @@ type Model struct {
 	input          input.Model
 	topic          string
 	usernameColors styles.UsernameColors
+	theme          styles.Theme
+}
 
-	theme styles.Theme
+func (m *Model) renderTopic(width int) string {
+	return lipgloss.NewStyle().
+		Background(m.theme.Colors.LighterBackground).
+		Foreground(m.theme.Colors.Accent).
+		Bold(true).
+		PaddingLeft(1).
+		PaddingRight(1).
+		MarginBottom(1).
+		Width(width + 2).
+		Render(m.topic)
+}
+
+func (m *Model) SetSize(width, height int) {
+	m.input.SetWidth(width)
+
+	topicHeight := lipgloss.Height(m.renderTopic(width))
+	inputHeight := lipgloss.Height(m.input.View()) + InputBoxPaddingTop
+	viewportHeight := height - topicHeight - inputHeight
+
+	m.viewport.Width = width
+	m.viewport.Height = viewportHeight
+
+	// Re-render messages with the new width and update viewport content
+	styledMessages := make([]string, len(m.messages))
+	for i, msg := range m.messages {
+		styledMessages[i] = m.renderMessage(msg, m.viewport.Width)
+	}
+	m.viewport.SetContent(strings.Join(styledMessages, "\n"))
+	m.viewport.GotoBottom()
 }
 
 func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
@@ -89,64 +124,38 @@ func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 		viewport:       viewport.New(0, 0),
 	}
 
-	msgStrings := make([]string, len(m.messages))
-	for i, msg := range m.messages {
-		msgStrings[i] = msg.Username + " " + msg.Text
-	}
-	m.viewport.SetContent(strings.Join(msgStrings, "\n"))
-
 	return m
 }
 
-func (m Model) Init() tea.Cmd {
+func (m *Model) Init() tea.Cmd {
 	return m.input.Init()
 }
 
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.MouseMsg:
-		switch msg.String() {
-		case "wheel down":
-			m.viewport.ScrollDown(2)
-		case "wheel up":
-			m.viewport.ScrollUp(2)
-		}
-	}
+func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	var (
+		cmd  tea.Cmd
+		cmds []tea.Cmd
+	)
 
-	cmd := m.input.Update(msg)
-	return m, cmd
+	m.input, cmd = m.input.Update(msg)
+	cmds = append(cmds, cmd)
+
+	m.viewport, cmd = m.viewport.Update(msg)
+	cmds = append(cmds, cmd)
+
+	return *m, tea.Batch(cmds...)
 }
 
-func (m Model) View(width, height int) string {
-	topicContent := lipgloss.NewStyle().
-		Background(m.theme.Colors.LighterBackground).
-		Foreground(m.theme.Colors.Accent).
-		Bold(true).
-		PaddingLeft(1).
-		PaddingRight(1).
-		MarginBottom(1).
-		Width(width + 4). // 2 for both sides
-		Render(m.topic)
-	topicView := lipgloss.NewStyle().
-		Render(topicContent)
+func (m *Model) View() string {
+	topicView := m.renderTopic(m.viewport.Width)
+	inputView := m.input.View()
 
-	topicLines := strings.Count(topicContent, "\n") + 1
-
-	inputView := m.input.View(width)
-	paddedInputView := lipgloss.NewStyle().
-		PaddingTop(layout.InputBoxPaddingTop).
+	chatInputBox := lipgloss.NewStyle().
+		PaddingTop(InputBoxPaddingTop).
 		Render(inputView)
 
-	// calculate topic line count dynamically to correct render it
-	m.viewport.Width = width + layout.ChatViewportPaddingHorizontal
-	m.viewport.Height = height - layout.InputBoxHeight - layout.InputBoxPaddingTop - topicLines
-
-	styledMessages := make([]string, len(m.messages))
-	for i, msg := range m.messages {
-		styledMessages[i] = m.renderMessage(msg, m.viewport.Width)
-	}
-	m.viewport.SetContent(strings.Join(styledMessages, "\n"))
-	paddedViewport := lipgloss.NewStyle().
+	// The viewport content is set by SetSize
+	chatViewport := lipgloss.NewStyle().
 		Background(m.theme.Colors.Background).
 		PaddingLeft(1).
 		PaddingRight(1).
@@ -155,11 +164,10 @@ func (m Model) View(width, height int) string {
 	combinedView := lipgloss.JoinVertical(
 		lipgloss.Left,
 		topicView,
-		paddedViewport,
-		paddedInputView,
+		chatViewport,
+		chatInputBox,
 	)
 
 	return m.theme.Styles.ChatArea.
-		MarginTop(1).
 		Render(combinedView)
 }
