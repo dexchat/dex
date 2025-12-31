@@ -20,7 +20,7 @@ const (
 	// 2 lines of padding to not overflow the texts to the top
 	topPadding = 2
 	// channels right (1) + users left (1) + chat borders (2)
-	verticalBordersSize = 4
+	appVerticalBordersSize = 4
 )
 
 type Model struct {
@@ -71,7 +71,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			adjustedHeight = 0
 		}
 
-		chatWidth := m.layout.Width - channelsPanelMaxWidth - usersPanelMaxWidth - verticalBordersSize
+		chatWidth := m.layout.Width - channelsPanelMaxWidth - usersPanelMaxWidth - appVerticalBordersSize
 		m.chat.SetSize(chatWidth, adjustedHeight)
 	}
 
