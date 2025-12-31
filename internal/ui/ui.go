@@ -11,7 +11,20 @@ import (
 	"github.com/vaaleyard/dex/internal/ui/components/users"
 )
 
+const (
+	// Arbitrary values that I think looks good in the screen
+	// I believe that having a slightly bigger chat panel compared to
+	// the user panel is better for the eyes
+	channelsPanelMaxWidth = 25
+	usersPanelMaxWidth    = 20
+	// 2 lines of padding to not overflow the texts to the top
+	topPadding = 2
+	// channels right (1) + users left (1) + chat borders (2)
+	verticalBordersSize = 4
+)
+
 type Model struct {
+	// TODO: replace for Width and Height only
 	layout         layout.Layout
 	theme          styles.Theme
 	usernameColors styles.UsernameColors
@@ -21,7 +34,7 @@ type Model struct {
 	channels channels.Model
 }
 
-func New() Model {
+func New() *Model {
 	m := Model{}
 
 	m.theme = styles.AyuDarkTheme()
@@ -31,14 +44,19 @@ func New() Model {
 	m.chat = chat.New(m.theme, m.usernameColors)
 	m.users = users.New(m.theme, m.usernameColors)
 
-	return m
+	return &m
 }
 
-func (m Model) Init() tea.Cmd {
+func (m *Model) Init() tea.Cmd {
 	return m.chat.Init()
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var (
+		cmd  tea.Cmd
+		cmds []tea.Cmd
+	)
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -46,39 +64,53 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	case tea.WindowSizeMsg:
-		m.layout = layout.GenerateLayout(msg.Width, msg.Height)
+		m.layout.Width = msg.Width
+		m.layout.Height = msg.Height
+		adjustedHeight := m.layout.Height - topPadding
+		if adjustedHeight < 0 {
+			adjustedHeight = 0
+		}
 
-		// s := fmt.Sprintf("1\nTerminal size: %dx%d\n"+
-		// 	"Sidebar size: %dx%d\n"+
-		// 	"Chat size: %dx%d\n",
-		// 	msg.Width, msg.Height,
-		// 	m.layout.SiderbarWidth, m.layout.AppHeight,
-		// 	m.layout.ChatWidth, m.layout.AppHeight)
-		//
-		// f, _ := os.Create("debug.log")
-		// _, _ = f.WriteString(s)
+		chatWidth := m.layout.Width - channelsPanelMaxWidth - usersPanelMaxWidth - verticalBordersSize
+		m.chat.SetSize(chatWidth, adjustedHeight)
 	}
 
-	var cmds []tea.Cmd
-	m.chat, _ = m.chat.Update(msg)
-	m.users, _ = m.users.Update(msg)
-	m.channels, _ = m.channels.Update(msg)
+	m.chat, cmd = m.chat.Update(msg)
+	cmds = append(cmds, cmd)
+
+	m.users, cmd = m.users.Update(msg)
+	cmds = append(cmds, cmd)
+
+	m.channels, cmd = m.channels.Update(msg)
+	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) View() string {
+func (m *Model) View() string {
+	adjustedHeight := m.layout.Height - topPadding
+	if adjustedHeight < 0 {
+		adjustedHeight = 0
+	}
+
 	channelsView := lipgloss.NewStyle().
-		PaddingTop(1).
-		Render(m.channels.View(m.layout.SiderbarWidth, m.layout.AppHeight))
+		MaxWidth(channelsPanelMaxWidth).
+		PaddingTop(topPadding).
+		Render(m.channels.View(channelsPanelMaxWidth, adjustedHeight))
 
 	usersView := lipgloss.NewStyle().
-		PaddingTop(1).
-		Render(m.users.View(m.layout.SiderbarWidth, m.layout.AppHeight))
+		MaxWidth(usersPanelMaxWidth).
+		PaddingTop(topPadding).
+		Render(m.users.View(usersPanelMaxWidth, adjustedHeight))
+
+	chatView := lipgloss.NewStyle().
+		PaddingTop(topPadding).
+		Height(adjustedHeight).
+		Render(m.chat.View())
 
 	return lipgloss.JoinHorizontal(lipgloss.Top,
 		channelsView,
-		m.chat.View(m.layout.ChatWidth, m.layout.AppHeight),
+		chatView,
 		usersView,
 	)
 }
