@@ -5,7 +5,13 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/vaaleyard/dex/internal/ui/styles"
+)
+
+const (
+	// left (1) + right (1) borders
+	channelsVerticalBordersSize = 2
 )
 
 type node struct {
@@ -29,7 +35,7 @@ func New(theme styles.Theme) Model {
 	// hardcoded only for POC, the logic will be implemented later
 	servers := map[string][]string{
 		"irc.libera.chat": {"#libera", "#go", "#rust", "#homelab", "#ai", "#go-nuts", "#linux", "#kde", "#archlinux",
-			"#python", "#debian", "##thelouge", "#ubuntu"},
+			"#python", "#debian", "##thelounge", "#IdleRPG", "#ubuntu"},
 		"irc.rizon.net": {"#kubernetes", "#linux", "#nginx", "#go"},
 	}
 
@@ -117,7 +123,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) View(width int, height int) string {
+func (m Model) View(width, height int) string {
+	contentWidth := width - channelsVerticalBordersSize
+	if contentWidth < 0 {
+		contentWidth = 0
+	}
+
 	var lines []string
 	lastServerName := ""
 
@@ -165,18 +176,28 @@ func (m Model) View(width int, height int) string {
 	}
 
 	channelsBody := strings.Join(lines, "\n")
-	helpView := renderHelp(width, m.theme)
+	helpView := renderHelp(contentWidth, m.theme)
+	helpHeight := lipgloss.Height(helpView)
 
-	// help should be placed at one line above the bottom margin
-	spacingLines := height - len(lines) - 1
-	if spacingLines < 0 {
-		spacingLines = 0
+	listHeight := height - helpHeight
+	if listHeight < 0 {
+		listHeight = 0
 	}
-	body := channelsBody + "\n" + strings.Repeat("\n", spacingLines) + helpView
+
+	channelsList := lipgloss.NewStyle().
+		Background(m.theme.Colors.Background).
+		Width(contentWidth).
+		Height(listHeight).
+		Render(channelsBody)
+
+	body := lipgloss.JoinVertical(
+		lipgloss.Left,
+		channelsList,
+		helpView,
+	)
 
 	return m.theme.Styles.Sidebar.
 		BorderRightForeground(m.theme.Colors.LighterBackground).
-		Width(width).
 		Height(height).
 		Render(body)
 }
