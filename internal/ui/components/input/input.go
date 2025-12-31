@@ -4,8 +4,13 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/vaaleyard/dex/internal/ui/layout"
 	"github.com/vaaleyard/dex/internal/ui/styles"
+)
+
+// TODO: move to chat as it's part of the same component/panel
+
+const (
+	InputBoxMargin = 1
 )
 
 type Model struct {
@@ -30,21 +35,31 @@ func New(theme styles.Theme) Model {
 	return Model{
 		input:    ti,
 		theme:    theme,
-		nickname: "trump",
+		nickname: "johnbogle",
 	}
 }
 
-func (m Model) Init() tea.Cmd {
+func (m *Model) SetWidth(width int) {
+	prefixWidth := len(m.nickname) + len(" | ")
+	inputWidth := width - prefixWidth - InputBoxMargin*2 - 1
+
+	if inputWidth < 12 { // minimum width to not panic
+		inputWidth = 12
+	}
+	m.input.Width = inputWidth
+}
+
+func (m *Model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m *Model) Update(msg tea.Msg) tea.Cmd {
+func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(msg)
-	return cmd
+	return *m, cmd
 }
 
-func (m Model) View(width int) string {
+func (m *Model) View() string {
 	nicknamePrefix := lipgloss.NewStyle().
 		Foreground(m.theme.Colors.Accent).
 		Bold(true).
@@ -55,23 +70,15 @@ func (m Model) View(width int) string {
 		Background(m.theme.Colors.LighterBackground).
 		Render(" | ")
 
-	prefixWidth := len(m.nickname) + len(" > ")
-	inputWidth := width - prefixWidth - layout.InputBoxMargin*2 - 3 // borders and margins
-
-	if inputWidth < 12 { // minimum width to not panic
-		inputWidth = 12
-	}
-	m.input.Width = inputWidth
-
 	inputView := nicknamePrefix + prompt + m.input.View()
 
-	inputContainer := m.theme.Styles.InputField.
-		Margin(0, layout.InputBoxMargin, 0, layout.InputBoxMargin).
+	inputBox := m.theme.Styles.InputField.
+		Margin(0, InputBoxMargin, 0, InputBoxMargin).
 		MarginBackground(m.theme.Colors.Background).
 		Border(lipgloss.NormalBorder()).
 		BorderBackground(m.theme.Colors.LighterBackground).
 		BorderForeground(m.theme.Colors.LighterBackground).
-		Width(width).Render(inputView)
+		Render(inputView)
 
-	return inputContainer
+	return inputBox
 }
