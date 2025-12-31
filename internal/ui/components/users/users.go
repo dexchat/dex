@@ -9,6 +9,11 @@ import (
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
+const (
+	// left (1) + right (1) borders
+	usersListVerticalBordersSize = 2
+)
+
 type Model struct {
 	Users          []string
 	theme          styles.Theme
@@ -39,25 +44,26 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) View(width int, height int) string {
+func (m Model) View(width, height int) string {
+	contentWidth := width - usersListVerticalBordersSize
+	if contentWidth < 0 {
+		contentWidth = 0
+	}
+
 	// Member count header
 	memberCount := fmt.Sprintf("%d users", len(m.Users))
 	memberHeader := lipgloss.NewStyle().
 		Background(m.theme.Colors.Background).
 		Foreground(m.theme.Colors.Accent).
 		Bold(true).
-		Width(width).
+		Width(contentWidth).
 		Align(lipgloss.Center).
 		Inline(false).
 		Render(memberCount)
 
-	dividerLength := width
-	if dividerLength < 0 {
-		dividerLength = 0
-	}
 	divider := lipgloss.NewStyle().
 		Foreground(m.theme.Colors.LighterBackground).
-		Render(strings.Repeat("─", dividerLength))
+		Render(strings.Repeat("─", contentWidth))
 
 	var rendered []string
 
@@ -70,8 +76,7 @@ func (m Model) View(width int, height int) string {
 	body := memberHeader + "\n" + divider + "\n" + strings.Join(rendered, "\n")
 
 	return m.theme.Styles.Sidebar.
-		BorderLeftForeground(m.theme.Colors.LighterBackground).
-		Width(width).
 		Height(height).
+		BorderLeftForeground(m.theme.Colors.LighterBackground).
 		Render(body)
 }
