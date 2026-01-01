@@ -5,7 +5,7 @@
 
 ## TODO
 * move input package to chat
-* remove style package
+* remove layout package
 * fix known bugs
 * make sure the updates are not lagging the code in any way
 * maybe centralize all paddings and borders numbers

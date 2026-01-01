@@ -3,50 +3,42 @@ package chat
 import (
 	"strings"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/vaaleyard/dex/internal/ui/components/input"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
 // TODO/BUG: typing k/j in inputbox move the viewport up/down like vim
 
-const (
-	InputBoxPaddingTop = 1
-)
-
 type Model struct {
-	messages       []Message
-	viewport       viewport.Model
-	input          input.Model
-	topic          string
+	viewport viewport.Model
+	topic    string
+	messages []Message
+	nickname string
+	input    textinput.Model
+
 	usernameColors styles.UsernameColors
 	theme          styles.Theme
 }
 
-func (m *Model) renderTopic(width int) string {
-	return lipgloss.NewStyle().
-		Background(m.theme.Colors.LighterBackground).
-		Foreground(m.theme.Colors.Accent).
-		Bold(true).
-		PaddingLeft(1).
-		PaddingRight(1).
-		MarginBottom(1).
-		Width(width + 2).
-		Render(m.topic)
-}
-
 func (m *Model) SetSize(width, height int) {
-	m.input.SetWidth(width)
+	m.setInputWidth(width)
 
 	topicHeight := lipgloss.Height(m.renderTopic(width))
-	inputHeight := lipgloss.Height(m.input.View()) + InputBoxPaddingTop
+	inputHeight := lipgloss.Height(m.renderInputBox())
 	viewportHeight := height - topicHeight - inputHeight
+
+	if viewportHeight < 3 {
+		viewportHeight = 3 // Minimum height for viewport
+	}
 
 	m.viewport.Width = width
 	m.viewport.Height = viewportHeight
+}
 
+func (m *Model) SetContent() {
 	// Re-render messages with the new width and update viewport content
 	styledMessages := make([]string, len(m.messages))
 	for i, msg := range m.messages {
@@ -115,20 +107,33 @@ func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 		messages[i] = parseMessage(raw)
 	}
 
+	input := textinput.New()
+	input.CharLimit = 256
+	input.Focus()
+	input.Prompt = ""
+	input.Placeholder = "Send message..."
+	input.PlaceholderStyle = lipgloss.NewStyle().
+		Background(theme.Colors.LighterBackground).
+		Foreground(theme.Colors.Text)
+	input.TextStyle = lipgloss.NewStyle().
+		Background(theme.Colors.LighterBackground).
+		Foreground(theme.Colors.Text)
+
 	m := Model{
 		messages:       messages,
 		topic:          "Welcome to the Libera IdleRPG game.  Discussion in #idlerpg-discuss | Website: https://idlerpg.lolhosting.net | Please read: https://idlerpg.lolhosting.net#conduct",
 		theme:          theme,
 		usernameColors: usernameColors,
-		input:          input.New(theme),
+		input:          input,
 		viewport:       viewport.New(0, 0),
+		nickname:       "johnbogle",
 	}
 
 	return m
 }
 
 func (m *Model) Init() tea.Cmd {
-	return m.input.Init()
+	return textinput.Blink
 }
 
 func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -148,13 +153,9 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m *Model) View() string {
 	topicView := m.renderTopic(m.viewport.Width)
-	inputView := m.input.View()
+	chatInputBox := m.renderInputBox()
 
-	chatInputBox := lipgloss.NewStyle().
-		PaddingTop(InputBoxPaddingTop).
-		Render(inputView)
-
-	// The viewport content is set by SetSize
+	// The viewport content is set by SetContent
 	chatViewport := lipgloss.NewStyle().
 		Background(m.theme.Colors.Background).
 		PaddingLeft(1).

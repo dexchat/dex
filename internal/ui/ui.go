@@ -73,6 +73,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		chatWidth := m.layout.Width - channelsPanelMaxWidth - usersPanelMaxWidth - appVerticalBordersSize
 		m.chat.SetSize(chatWidth, adjustedHeight)
+		m.chat.SetContent()
 	}
 
 	m.chat, cmd = m.chat.Update(msg)
