@@ -4,7 +4,6 @@
 
 
 ## TODO
-* fix known bugs
 * make sure the updates are not lagging the code in any way
 * maybe centralize all paddings and borders numbers
 * centralize and improve all styles in the styles package, make sure there are no loose styles

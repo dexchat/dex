@@ -10,8 +10,6 @@ import (
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
-// TODO/BUG: typing k/j in inputbox move the viewport up/down like vim
-
 type Model struct {
 	viewport viewport.Model
 	topic    string
@@ -144,6 +142,11 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 	m.input, cmd = m.input.Update(msg)
 	cmds = append(cmds, cmd)
+
+	// This prevents j/k in the input box from scrolling the viewport
+	if _, ok := msg.(tea.KeyMsg); ok && m.input.Focused() {
+		return *m, tea.Batch(cmds...)
+	}
 
 	m.viewport, cmd = m.viewport.Update(msg)
 	cmds = append(cmds, cmd)
