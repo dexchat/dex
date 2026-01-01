@@ -84,11 +84,11 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) processInput(msg tea.KeyMsg) (Model, tea.Cmd) {
 	switch msg.String() {
-	case "up", "ctrl+p":
+	case "ctrl+p":
 		if m.cursor > 0 {
 			m.cursor--
 		}
-	case "down", "ctrl+n":
+	case "ctrl+n":
 		if m.cursor < len(m.nodes)-1 {
 			m.cursor++
 		}
