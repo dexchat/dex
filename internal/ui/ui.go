@@ -23,7 +23,6 @@ const (
 )
 
 type Model struct {
-	Width          int
 	Height         int
 	theme          styles.Theme
 	usernameColors styles.UsernameColors
@@ -63,14 +62,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	case tea.WindowSizeMsg:
-		m.Width = msg.Width
 		m.Height = msg.Height
 		adjustedHeight := m.Height - topPadding
 		if adjustedHeight < 0 {
 			adjustedHeight = 0
 		}
 
-		chatWidth := m.Width - channelsPanelMaxWidth - usersPanelMaxWidth - appVerticalBordersSize
+		chatWidth := msg.Width - channelsPanelMaxWidth - usersPanelMaxWidth - appVerticalBordersSize
 		m.chat.SetSize(chatWidth, adjustedHeight)
 		m.chat.SetContent()
 	}
