@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"github.com/vaaleyard/dex/internal/ui/layout"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -24,8 +23,8 @@ const (
 )
 
 type Model struct {
-	// TODO: replace for Width and Height only
-	layout         layout.Layout
+	Width          int
+	Height         int
 	theme          styles.Theme
 	usernameColors styles.UsernameColors
 
@@ -64,14 +63,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	case tea.WindowSizeMsg:
-		m.layout.Width = msg.Width
-		m.layout.Height = msg.Height
-		adjustedHeight := m.layout.Height - topPadding
+		m.Width = msg.Width
+		m.Height = msg.Height
+		adjustedHeight := m.Height - topPadding
 		if adjustedHeight < 0 {
 			adjustedHeight = 0
 		}
 
-		chatWidth := m.layout.Width - channelsPanelMaxWidth - usersPanelMaxWidth - appVerticalBordersSize
+		chatWidth := m.Width - channelsPanelMaxWidth - usersPanelMaxWidth - appVerticalBordersSize
 		m.chat.SetSize(chatWidth, adjustedHeight)
 		m.chat.SetContent()
 	}
@@ -89,7 +88,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) View() string {
-	adjustedHeight := m.layout.Height - topPadding
+	adjustedHeight := m.Height - topPadding
 	if adjustedHeight < 0 {
 		adjustedHeight = 0
 	}
