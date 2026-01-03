@@ -3,10 +3,13 @@ package ui
 import (
 	"github.com/vaaleyard/dex/internal/ui/styles"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	overlay "github.com/rmhubbert/bubbletea-overlay"
 	"github.com/vaaleyard/dex/internal/ui/components/channels"
 	"github.com/vaaleyard/dex/internal/ui/components/chat"
+	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
+	"github.com/vaaleyard/dex/internal/ui/components/palette"
 	"github.com/vaaleyard/dex/internal/ui/components/users"
 )
 
@@ -22,7 +25,7 @@ const (
 	appVerticalBordersSize = 4
 )
 
-type Model struct {
+type model struct {
 	Height         int
 	theme          styles.Theme
 	usernameColors styles.UsernameColors
@@ -30,10 +33,12 @@ type Model struct {
 	chat     chat.Model
 	users    users.Model
 	channels channels.Model
+	palette  *palette.Model
+	overlay  *overlay.Model
 }
 
-func New() *Model {
-	m := Model{}
+func New() *model {
+	m := model{}
 
 	m.theme = styles.AyuDarkTheme()
 	m.usernameColors = styles.NewUsernameColors(m.theme.Colors.Usernames)
@@ -41,18 +46,20 @@ func New() *Model {
 	m.channels = channels.New(m.theme)
 	m.chat = chat.New(m.theme, m.usernameColors)
 	m.users = users.New(m.theme, m.usernameColors)
+	m.palette = palette.New(m.theme)
 
 	return &m
 }
 
-func (m *Model) Init() tea.Cmd {
+func (m *model) Init() tea.Cmd {
 	return m.chat.Init()
 }
 
-func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
-		cmd  tea.Cmd
-		cmds []tea.Cmd
+		cmd        tea.Cmd
+		cmds       []tea.Cmd
+		paletteMsg tea.Msg = msg
 	)
 
 	switch msg := msg.(type) {
@@ -61,6 +68,22 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC:
 			return m, tea.Quit
 		}
+
+		kb := keybindings.DefaultKeyMap()
+		switch {
+		case key.Matches(msg, kb.MoveDown):
+			if !m.palette.IsVisible() {
+				m.channels.MoveDown()
+			}
+		case key.Matches(msg, kb.MoveUp):
+			if !m.palette.IsVisible() {
+				m.channels.MoveUp()
+			}
+		case key.Matches(msg, kb.TogglePalette):
+			m.palette.Toggle()
+			// Consume the Ctrl+O key so it doesn't immediately close the palette
+			paletteMsg = nil
+		}
 	case tea.WindowSizeMsg:
 		m.Height = msg.Height
 		adjustedHeight := m.Height - topPadding
@@ -68,47 +91,45 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			adjustedHeight = 0
 		}
 
+		m.palette.SetSize(90, len(m.palette.Commands())+5)
+
 		chatWidth := msg.Width - channelsPanelMaxWidth - usersPanelMaxWidth - appVerticalBordersSize
 		m.chat.SetSize(chatWidth, adjustedHeight)
 		m.chat.SetContent()
 	}
 
-	m.chat, cmd = m.chat.Update(msg)
+	palModel, cmd := m.palette.Update(paletteMsg)
+	m.palette = palModel.(*palette.Model)
 	cmds = append(cmds, cmd)
 
-	m.users, cmd = m.users.Update(msg)
-	cmds = append(cmds, cmd)
+	// do not update background if palette is visible,
+	// if it gets updated, the writing will be shared with chat input
+	// TODO: update only the viewport
+	if !m.palette.IsVisible() {
+		m.chat, cmd = m.chat.Update(msg)
+		cmds = append(cmds, cmd)
 
-	m.channels, cmd = m.channels.Update(msg)
-	cmds = append(cmds, cmd)
+		m.users, cmd = m.users.Update(msg)
+		cmds = append(cmds, cmd)
+
+		m.channels, cmd = m.channels.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
+	// Update overlay reference if palette is visible
+	if m.palette.IsVisible() {
+		m.overlay = overlay.New(m.palette, &background{m}, overlay.Center, overlay.Center, 0, 0)
+	} else {
+		m.overlay = nil
+	}
 
 	return m, tea.Batch(cmds...)
 }
 
-func (m *Model) View() string {
-	adjustedHeight := m.Height - topPadding
-	if adjustedHeight < 0 {
-		adjustedHeight = 0
+func (m *model) View() string {
+	if m.palette.IsVisible() && m.overlay != nil {
+		return m.overlay.View()
 	}
 
-	channelsView := lipgloss.NewStyle().
-		MaxWidth(channelsPanelMaxWidth).
-		PaddingTop(topPadding).
-		Render(m.channels.View(channelsPanelMaxWidth, adjustedHeight))
-
-	usersView := lipgloss.NewStyle().
-		MaxWidth(usersPanelMaxWidth).
-		PaddingTop(topPadding).
-		Render(m.users.View(usersPanelMaxWidth, adjustedHeight))
-
-	chatView := lipgloss.NewStyle().
-		PaddingTop(topPadding).
-		Height(adjustedHeight).
-		Render(m.chat.View())
-
-	return lipgloss.JoinHorizontal(lipgloss.Top,
-		channelsView,
-		chatView,
-		usersView,
-	)
+	return (&background{m}).View()
 }

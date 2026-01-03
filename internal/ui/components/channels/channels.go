@@ -78,36 +78,34 @@ func New(theme styles.Theme) Model {
 	}
 }
 
-func (m Model) Init() tea.Cmd {
+func (m *Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m Model) processInput(msg tea.KeyMsg) (Model, tea.Cmd) {
-	switch msg.String() {
-	case "ctrl+p":
-		if m.cursor > 0 {
-			m.cursor--
-		}
-	case "ctrl+n":
-		if m.cursor < len(m.nodes)-1 {
-			m.cursor++
-		}
+// MoveUp moves the cursor up to the previous channel.
+func (m *Model) MoveUp() {
+	if m.cursor > 0 {
+		m.cursor--
 	}
-
 	if m.cursor < len(m.nodes) {
 		currentItem := m.nodes[m.cursor]
 		if !currentItem.isServer {
 			m.selected = currentItem.parent + ":" + currentItem.name
-			return m, func() tea.Msg {
-				return ChannelSelectedMsg{
-					Channel: currentItem.name,
-					Server:  currentItem.parent,
-				}
-			}
 		}
 	}
+}
 
-	return m, nil
+// MoveDown moves the cursor down to the next channel.
+func (m *Model) MoveDown() {
+	if m.cursor < len(m.nodes)-1 {
+		m.cursor++
+	}
+	if m.cursor < len(m.nodes) {
+		currentItem := m.nodes[m.cursor]
+		if !currentItem.isServer {
+			m.selected = currentItem.parent + ":" + currentItem.name
+		}
+	}
 }
 
 type ChannelSelectedMsg struct {
@@ -115,15 +113,11 @@ type ChannelSelectedMsg struct {
 	Server  string
 }
 
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		return m.processInput(msg)
-	}
-	return m, nil
+func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	return *m, nil
 }
 
-func (m Model) View(width, height int) string {
+func (m *Model) View(width, height int) string {
 	contentWidth := width - channelsVerticalBordersSize
 	if contentWidth < 0 {
 		contentWidth = 0

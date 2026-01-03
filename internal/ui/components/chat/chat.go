@@ -65,7 +65,7 @@ func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 		"@idlebot richard reaches next level in 51 days, 10:34:14.",
 		"@idlebot gilfoyle got a kiss from dinesh! This wondrous godsend has accelerated them 0 days, 08:33:29 towards level 97.",
 		"@idlebot gilfoyle reaches next level in 2 days, 14:45:34.",
-		"@idlebot jared, the Gangsta, has attained level 71! Next level in 62 days, 04:22:00.",
+		"@idlebot jared, the Gangsta, has attained level 71! moveUp level in 62 days, 04:22:00.",
 		"@idlebot jared [226/588] has challenged monica [412/993] in combat and lost! 4 days, 23:23:21 is added to jared's clock.",
 		"@idlebot jared reaches next level in 67 days, 03:45:21.",
 		"@idlebot richard had to fix some Whitespace code. This terrible calamity has slowed them 0 days, 00:21:38 from level 31.",
@@ -74,7 +74,7 @@ func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 		"@idlebot gilfoyle reaches next level in 28 days, 11:42:16.",
 		"@idlebot gilfoyle has dealt dinesh a Critical Strike! 0 days, 00:08:48 is added to dinesh's clock.",
 		"@idlebot dinesh reaches next level in 0 days, 01:07:29.",
-		"@idlebot jared, the \"Cook\", has attained level 100! Next level in 91 days, 04:22:00.",
+		"@idlebot jared, the \"Cook\", has attained level 100! moveUp level in 91 days, 04:22:00.",
 		"@idlebot jared [1121/1241] has challenged monica [829/1222] in combat and won! 20 days, 23:19:27 is removed from jared's clock.",
 		"@idlebot jared reaches next level in 70 days, 05:02:33.",
 		"@idlebot richard [500/775] has come upon gilfoyle [1040/1136] and been defeated in combat! 3 days, 16:36:24 is added to richard's clock.",
@@ -159,6 +159,7 @@ func (m *Model) View() string {
 	chatInputBox := m.renderInputBox()
 
 	// The viewport content is set by SetContent
+	// TODO: viewport content is overfloating the margins
 	chatViewport := lipgloss.NewStyle().
 		Background(m.theme.Colors.Background).
 		PaddingLeft(1).
