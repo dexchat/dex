@@ -52,31 +52,27 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	keyMsg, ok := msg.(tea.KeyMsg)
-	if !ok {
-		return m, nil
-	}
+	if ok {
+		switch keyMsg.Type {
+		case tea.KeyEsc:
+			m.close()
+			return m, nil
+		case tea.KeyEnter:
+			return m, m.executeSelected()
+		}
 
-	switch keyMsg.Type {
-	case tea.KeyEsc:
-		m.close()
-		return m, nil
-
-	case tea.KeyEnter:
-		return m, m.executeSelected()
-	}
-
-	switch {
-	case key.Matches(keyMsg, m.keyMap.MoveUp):
-		m.moveUp()
-		return m, nil
-	case key.Matches(keyMsg, m.keyMap.MoveDown):
-		m.moveDown()
-		return m, nil
+		switch {
+		case key.Matches(keyMsg, m.keyMap.MoveUp):
+			m.moveUp()
+			return m, nil
+		case key.Matches(keyMsg, m.keyMap.MoveDown):
+			m.moveDown()
+			return m, nil
+		}
 	}
 
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(msg)
-	m.cursor = 0 // Reset cursor on input query change
 	return m, cmd
 }
 
@@ -129,13 +125,11 @@ func (m *Model) View() string {
 	return commandPaletteBox.Render(content)
 }
 
-// SetSize sets the dimensions of the palette.
 func (m *Model) SetSize(width, height int) {
 	m.width = width
 	m.height = height
 }
 
-// Toggle toggles the visibility of the palette.
 func (m *Model) Toggle() {
 	m.visible = !m.visible
 	if m.visible {
@@ -145,33 +139,26 @@ func (m *Model) Toggle() {
 	}
 }
 
-// IsVisible returns whether the palette is visible.
 func (m *Model) IsVisible() bool {
 	return m.visible
 }
 
-// Commands returns the list of available actions.
 func (m *Model) Commands() []action {
 	return m.actions
 }
 
-// Private helpers
-
-// open prepares the palette for display.
 func (m *Model) open() {
 	m.cursor = 0
 	m.input.Reset()
 	m.input.Focus()
 }
 
-// close hides the palette and resets state.
 func (m *Model) close() {
 	m.visible = false
 	m.cursor = 0
 	m.input.Reset()
 }
 
-// moveUp moves the cursor up, wrapping to the bottom if at the top.
 func (m *Model) moveUp() {
 	filtered := m.filteredCommands()
 	if len(filtered) == 0 {
@@ -183,7 +170,6 @@ func (m *Model) moveUp() {
 	}
 }
 
-// moveDown moves the cursor down, wrapping to the top if at the bottom.
 func (m *Model) moveDown() {
 	filtered := m.filteredCommands()
 	if len(filtered) == 0 {
@@ -195,7 +181,6 @@ func (m *Model) moveDown() {
 	}
 }
 
-// executeSelected executes the selected command and closes the palette.
 func (m *Model) executeSelected() tea.Cmd {
 	filtered := m.filteredCommands()
 	if len(filtered) == 0 || m.cursor >= len(filtered) {
@@ -211,7 +196,6 @@ func (m *Model) executeSelected() tea.Cmd {
 	return nil
 }
 
-// filteredCommands returns the list of actions matching the current input query.
 func (m *Model) filteredCommands() []action {
 	query := m.input.Value()
 	if query == "" {
@@ -227,7 +211,6 @@ func (m *Model) filteredCommands() []action {
 	return filtered
 }
 
-// renderCommandLine renders a single line in the list.
 func (m *Model) renderCommandLine(index int, cmd action) string {
 	highlight := index == m.cursor
 

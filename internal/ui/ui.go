@@ -3,12 +3,10 @@ package ui
 import (
 	"github.com/vaaleyard/dex/internal/ui/styles"
 
-	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 	"github.com/vaaleyard/dex/internal/ui/components/channels"
 	"github.com/vaaleyard/dex/internal/ui/components/chat"
-	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
 	"github.com/vaaleyard/dex/internal/ui/components/palette"
 	"github.com/vaaleyard/dex/internal/ui/components/users"
 )
@@ -57,66 +55,50 @@ func (m *model) Init() tea.Cmd {
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
-		cmd        tea.Cmd
-		cmds       []tea.Cmd
-		paletteMsg tea.Msg = msg
+		cmd  tea.Cmd
+		cmds []tea.Cmd
 	)
 
-	switch msg := msg.(type) {
+	switch msgTyped := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC:
+		if msgTyped.Type == tea.KeyCtrlC {
 			return m, tea.Quit
 		}
+		msg = m.handleKeybindings(msgTyped)
 
-		kb := keybindings.DefaultKeyMap()
-		switch {
-		case key.Matches(msg, kb.MoveDown):
-			if !m.palette.IsVisible() {
-				m.channels.MoveDown()
-			}
-		case key.Matches(msg, kb.MoveUp):
-			if !m.palette.IsVisible() {
-				m.channels.MoveUp()
-			}
-		case key.Matches(msg, kb.TogglePalette):
-			m.palette.Toggle()
-			// Consume the Ctrl+O key so it doesn't immediately close the palette
-			paletteMsg = nil
-		}
 	case tea.WindowSizeMsg:
-		m.Height = msg.Height
+		m.Height = msgTyped.Height
 		adjustedHeight := m.Height - topPadding
 		if adjustedHeight < 0 {
 			adjustedHeight = 0
 		}
 
+		// TODO: ideally palette width should be smaller than chat width
 		m.palette.SetSize(90, len(m.palette.Commands())+5)
 
-		chatWidth := msg.Width - channelsPanelMaxWidth - usersPanelMaxWidth - appVerticalBordersSize
+		chatWidth := msgTyped.Width - channelsPanelMaxWidth - usersPanelMaxWidth - appVerticalBordersSize
 		m.chat.SetSize(chatWidth, adjustedHeight)
 		m.chat.SetContent()
 	}
 
-	palModel, cmd := m.palette.Update(paletteMsg)
-	m.palette = palModel.(*palette.Model)
-	cmds = append(cmds, cmd)
-
-	// do not update background if palette is visible,
-	// if it gets updated, the writing will be shared with chat input
-	// TODO: update only the viewport
-	if !m.palette.IsVisible() {
-		m.chat, cmd = m.chat.Update(msg)
-		cmds = append(cmds, cmd)
-
-		m.users, cmd = m.users.Update(msg)
-		cmds = append(cmds, cmd)
-
-		m.channels, cmd = m.channels.Update(msg)
+	// Write characters in the palette input bar if it's open, instead of chat input
+	if m.palette.IsVisible() {
+		palModel, cmd := m.palette.Update(msg)
+		m.palette = palModel.(*palette.Model)
 		cmds = append(cmds, cmd)
 	}
 
-	// Update overlay reference if palette is visible
+	// Update background components, blocking keyboard input when palette is open
+	msg = m.filterOutKeyMsgs(msg)
+	m.chat, cmd = m.chat.Update(msg)
+	cmds = append(cmds, cmd)
+
+	m.users, cmd = m.users.Update(msg)
+	cmds = append(cmds, cmd)
+
+	m.channels, cmd = m.channels.Update(msg)
+	cmds = append(cmds, cmd)
+
 	if m.palette.IsVisible() {
 		m.overlay = overlay.New(m.palette, &background{m}, overlay.Center, overlay.Center, 0, 0)
 	} else {
@@ -132,4 +114,20 @@ func (m *model) View() string {
 	}
 
 	return (&background{m}).View()
+}
+
+// filterOutKeyMsgs filters out keyboard messages from background components when palette is open
+func (m *model) filterOutKeyMsgs(msg tea.Msg) tea.Msg {
+	// If palette is not visible, pass all messages through
+	if !m.palette.IsVisible() {
+		return msg
+	}
+
+	// If palette is visible, block keyboard input to background components
+	if _, isKeyMsg := msg.(tea.KeyMsg); isKeyMsg {
+		return nil
+	}
+
+	// Allow non-keyboard messages (e.g., WindowSizeMsg) to reach background components
+	return msg
 }
