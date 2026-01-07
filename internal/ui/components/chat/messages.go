@@ -26,14 +26,14 @@ func parseMessage(rawMsg string) Message {
 }
 
 func (m *Model) renderMessage(msg Message, width int) string {
-	styledNick := lipgloss.NewStyle().
-		Foreground(m.usernameColors.GetColor(msg.Username)).
-		Render(msg.Username)
+	baseStyle := lipgloss.NewStyle().
+		Background(m.theme.Colors.Background)
 
-	styledMsg := lipgloss.NewStyle().
-		Background(m.theme.Colors.Background).
-		Width(width).
-		Render(" " + msg.Text)
+	nickStyle := baseStyle.
+		Foreground(m.usernameColors.GetColor(msg.Username))
 
-	return styledNick + styledMsg
+	styledNick := nickStyle.Render(msg.Username)
+	styledText := baseStyle.Render(" " + msg.Text)
+
+	return baseStyle.Width(width).Render(styledNick + styledText)
 }
