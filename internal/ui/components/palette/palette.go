@@ -10,8 +10,10 @@ import (
 )
 
 const (
-	nameMaxLen = 18
-	keyMaxLen  = 10
+	nameMaxLen                   = 18
+	keyMaxLen                    = 10
+	commandPaletteBoxPaddingSize = 1
+	actionLinePaddingSize        = 1
 )
 
 type Model struct {
@@ -83,9 +85,7 @@ func (m *Model) View() string {
 
 	filtered := m.filteredCommands()
 
-	// TODO: move numbers to consts
-	contentWidth := m.width - 4      // borders (2) + padding (1) + actionLine horizontal padding (1)
-	m.input.Width = contentWidth - 3 // borders (2) + padding (1)
+	contentWidth := m.width - commandPaletteBoxPaddingSize*2
 	bgStyle := lipgloss.NewStyle().
 		Background(m.theme.Colors.Background).
 		Width(contentWidth)
@@ -120,7 +120,7 @@ func (m *Model) View() string {
 		BorderForeground(m.theme.Colors.Accent).
 		Background(m.theme.Colors.Background).
 		Width(m.width).
-		Padding(1)
+		Padding(commandPaletteBoxPaddingSize)
 
 	return commandPaletteBox.Render(content)
 }
@@ -224,9 +224,7 @@ func (m *Model) renderCommandLine(index int, cmd action) string {
 		accentColor = m.theme.Colors.Background
 	}
 
-	// TODO: move values to consts
-	// Calculate available width (accounting for border and padding)
-	descWidth := m.width - 2 - nameMaxLen - 2 - keyMaxLen - 2
+	descWidth := m.width - commandPaletteBoxPaddingSize*2 - nameMaxLen - actionLinePaddingSize*2 - keyMaxLen
 	if descWidth < 10 {
 		descWidth = 10
 	}
@@ -252,6 +250,6 @@ func (m *Model) renderCommandLine(index int, cmd action) string {
 
 	return lipgloss.NewStyle().
 		Background(backgroundColor).
-		Padding(0, 1).
+		Padding(0, actionLinePaddingSize).
 		Render(actionLine)
 }
