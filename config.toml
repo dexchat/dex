@@ -1,0 +1,19 @@
+[servers.libera]
+address = "irc.libera.chat"
+port = 6667
+ssl = false
+password = ""
+channels = ["#go-nuts"]
+nickname = "john.dex"
+username = "jdex"
+realname = "John Dex"
+
+[servers.rizon]
+address = "irc.rizon.com"
+port = 6697
+ssl = true
+password = ""
+channels = ["#engineering"]
+nickname = "john.dex"
+username = "jdex"
+realname = "John Dex"

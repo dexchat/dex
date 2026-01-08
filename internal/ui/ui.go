@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/vaaleyard/dex/internal/config"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -34,9 +35,11 @@ type model struct {
 	channels channels.Model
 	palette  *palette.Model
 	overlay  *overlay.Model
+
+	config *config.Config
 }
 
-func New() *model {
+func New(cfg *config.Config) *model {
 	m := model{}
 
 	m.theme = styles.AyuDarkTheme()
@@ -46,6 +49,8 @@ func New() *model {
 	m.chat = chat.New(m.theme, m.usernameColors)
 	m.users = users.New(m.theme, m.usernameColors)
 	m.palette = palette.New(m.theme)
+
+	m.config = cfg
 
 	return &m
 }
