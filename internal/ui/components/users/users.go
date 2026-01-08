@@ -26,6 +26,7 @@ func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 			"@idlebot",
 			"@richard",
 			"+gilfoyle",
+			"johnbogle",
 			"monica",
 			"dinesh",
 			"jared",
