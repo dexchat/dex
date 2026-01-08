@@ -170,7 +170,7 @@ func (m *Model) View(width, height int) string {
 	}
 
 	channelsBody := strings.Join(lines, "\n")
-	helpView := renderHelp(contentWidth, m.theme)
+	helpView := renderFooter(contentWidth, m.theme)
 	helpHeight := lipgloss.Height(helpView)
 
 	listHeight := height - helpHeight

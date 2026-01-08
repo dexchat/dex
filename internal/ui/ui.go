@@ -7,6 +7,7 @@ import (
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 	"github.com/vaaleyard/dex/internal/ui/components/channels"
 	"github.com/vaaleyard/dex/internal/ui/components/chat"
+	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
 	"github.com/vaaleyard/dex/internal/ui/components/palette"
 	"github.com/vaaleyard/dex/internal/ui/components/users"
 )
@@ -62,7 +63,10 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msgTyped := msg.(type) {
 	case tea.KeyMsg:
 		if msgTyped.Type == tea.KeyCtrlC {
-			return m, tea.Quit
+			if keybindings.QuitHandler() {
+				return m, tea.Quit
+			}
+			return m, nil
 		}
 		msg = m.handleKeybindings(msgTyped)
 
@@ -73,7 +77,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			adjustedHeight = 0
 		}
 
-		// TODO: ideally palette width should be smaller than chat width
+		// TODO: ideally palette width should be smaller than chat width. It might happen if the font size is too big
 		m.palette.SetSize(90, len(m.palette.Commands())+5)
 
 		chatWidth := msgTyped.Width - channelsPanelMaxWidth - usersPanelMaxWidth - appVerticalBordersSize
@@ -88,7 +92,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	}
 
-	// Update background components, blocking keyboard input when palette is open
+	// Update background components, blocking keyboard input when the palette is open
 	msg = m.filterOutKeyMsgs(msg)
 	m.chat, cmd = m.chat.Update(msg)
 	cmds = append(cmds, cmd)

@@ -46,9 +46,9 @@ func defaultActions() []action {
 			Handler:     func() tea.Msg { return nil },
 		},
 		{
-			Name:        kb.Help.Help().Desc,
+			Name:        "help",
 			Description: "show help",
-			Keybinding:  kb.Help,
+			Keybinding:  key.NewBinding(),
 			Handler:     func() tea.Msg { return nil },
 		},
 		{

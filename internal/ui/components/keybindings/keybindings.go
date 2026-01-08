@@ -11,7 +11,6 @@ type KeyMap struct {
 	TogglePalette key.Binding
 	LastBuffer    key.Binding
 	EditInEditor  key.Binding
-	Help          key.Binding
 	Quit          key.Binding
 }
 
@@ -40,9 +39,6 @@ func DefaultKeyMap() KeyMap {
 		EditInEditor: key.NewBinding(
 			key.WithKeys("", ""),
 			key.WithHelp("ctrl+x+e", "edit in editor"),
-		),
-		Help: key.NewBinding(
-			key.WithHelp("", "help"),
 		),
 		Quit: key.NewBinding(
 			key.WithKeys("ctrl+c"),

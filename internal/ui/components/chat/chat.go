@@ -159,7 +159,6 @@ func (m *Model) View() string {
 	chatInputBox := m.renderInputBox()
 
 	// The viewport content is set by SetContent
-	// TODO: viewport content is overfloating the margins
 	chatViewport := lipgloss.NewStyle().
 		Background(m.theme.Colors.Background).
 		PaddingLeft(1).
