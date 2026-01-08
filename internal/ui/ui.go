@@ -26,6 +26,8 @@ const (
 )
 
 type model struct {
+	config *config.Config
+
 	Height         int
 	theme          styles.Theme
 	usernameColors styles.UsernameColors
@@ -35,22 +37,19 @@ type model struct {
 	channels channels.Model
 	palette  *palette.Model
 	overlay  *overlay.Model
-
-	config *config.Config
 }
 
 func New(cfg *config.Config) *model {
 	m := model{}
+	m.config = cfg
 
 	m.theme = styles.AyuDarkTheme()
 	m.usernameColors = styles.NewUsernameColors(m.theme.Colors.Usernames)
 
-	m.channels = channels.New(m.theme)
+	m.channels = channels.New(m.theme, m.config.Servers)
 	m.chat = chat.New(m.theme, m.usernameColors)
 	m.users = users.New(m.theme, m.usernameColors)
 	m.palette = palette.New(m.theme)
-
-	m.config = cfg
 
 	return &m
 }

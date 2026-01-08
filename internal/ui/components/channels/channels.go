@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/vaaleyard/dex/internal/config"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
@@ -29,40 +30,33 @@ type Model struct {
 	selected string
 
 	theme styles.Theme
+
+	servers map[string]*config.Server
 }
 
-func New(theme styles.Theme) Model {
-	// hardcoded only for POC, the logic will be implemented later
-	servers := map[string][]string{
-		"irc.libera.chat": {"#libera", "#go", "#rust", "#homelab", "#ai", "#go-nuts", "#linux", "#kde", "#archlinux",
-			"#python", "#debian", "##thelounge", "#IdleRPG", "#ubuntu"},
-		"irc.rizon.net": {"#kubernetes", "#linux", "#nginx", "#go"},
-	}
-
+func New(theme styles.Theme, servers map[string]*config.Server) Model {
 	var items []node
 
 	// server:channel differentiates channels with the same name in different servers
-	mentionCounts := map[string]int{
-		"irc.libera.chat:#go": 2,
-	}
-	unreadChannels := map[string]bool{
-		"irc.libera.chat:#libera": true,
-		"irc.libera.chat:#debian": true,
-	}
+	// example: "libera:#go": 2
+	mentionCounts := map[string]int{}
 
-	for server, channels := range servers {
+	// example: "libera:#go": true
+	unreadChannels := map[string]bool{}
+
+	for serverName, server := range servers {
 		items = append(items, node{
-			name:     server,
+			name:     serverName,
 			isServer: true,
 		})
 
-		for _, channel := range channels {
-			key := server + ":" + channel
+		for _, channel := range server.Channels {
+			key := serverName + ":" + channel
 			isMentioned := mentionCounts[key] > 0
 			items = append(items, node{
 				name:         channel,
 				isServer:     false,
-				parent:       server,
+				parent:       serverName,
 				mentioned:    isMentioned,
 				mentionCount: mentionCounts[key],
 				hasUnread:    unreadChannels[key] && !isMentioned,
@@ -75,6 +69,7 @@ func New(theme styles.Theme) Model {
 		selected: "",
 		nodes:    items,
 		theme:    theme,
+		servers:  servers,
 	}
 }
 

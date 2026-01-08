@@ -3,7 +3,8 @@ address = "irc.libera.chat"
 port = 6667
 ssl = false
 password = ""
-channels = ["#go-nuts"]
+channels = ["#go-nuts", "#libera", "#go", "#rust", "#homelab", "#ai", "#go-nuts", "#linux", "#kde", "#archlinux",
+    "#python", "#debian", "##thelounge", "#IdleRPG", "#ubuntu"]
 nickname = "john.dex"
 username = "jdex"
 realname = "John Dex"
