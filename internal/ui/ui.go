@@ -143,6 +143,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				Text:     msgTyped.Text,
 			})
 		}
+
+	case irc.ChannelTopicMsg:
+		key := makeBufferKey(msgTyped.Server, msgTyped.Channel)
+		if buf, ok := m.buffers[key]; ok {
+			buf.Chat.SetTopic(msgTyped.Topic)
+		}
 	}
 
 	// Write characters in the palette input bar if it's open, instead of chat input

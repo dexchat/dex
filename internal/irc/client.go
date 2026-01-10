@@ -41,7 +41,11 @@ func (c *Client) Connect() error {
 		}
 	})
 
+	// TODO: handle QUIT
+	// TODO: get the correct channel names (with the correct case)
 	c.Handlers.Add(girc.RPL_ENDOFNAMES, c.onUserListChange)
+	c.Handlers.Add(girc.RPL_TOPIC, c.onTopic)
+	c.Handlers.Add(girc.TOPIC, c.onTopic)
 	c.Handlers.Add(girc.PART, c.onUserListChange)
 	c.Handlers.Add(girc.JOIN, c.onUserListChange)
 	c.Handlers.Add(girc.NICK, c.onUserListChange)

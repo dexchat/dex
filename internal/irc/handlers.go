@@ -1,7 +1,6 @@
 package irc
 
 import (
-	"log"
 	"time"
 
 	"github.com/lrstanley/girc"
@@ -55,18 +54,41 @@ func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
 		return
 	}
 
-	target := e.Params[0]
+	channel := e.Params[0]
 	// TODO: handle private messages
-	if !girc.IsValidChannel(target) {
+	if !girc.IsValidChannel(channel) {
 		return
 	}
 
-	log.Printf("Handler triggered for event: %q, Source: %s, Params: %v", e.Command, e.Source, e.Params)
 	c.program.Send(BufferNewMessageMsg{
 		Server:  c.ServerName,
-		Channel: target,
+		Channel: channel,
 		Time:    time.Now().Format("15:04"),
 		From:    e.Source.Name,
 		Text:    e.Last(),
+	})
+}
+
+func (c *Client) onTopic(_ *girc.Client, e girc.Event) {
+	if len(e.Params) == 0 {
+		return
+	}
+
+	var channel string
+	if e.Command == girc.RPL_TOPIC {
+		// RPL_TOPIC (332): <nick> <channel> :<topic>
+		if len(e.Params) < 2 {
+			return
+		}
+		channel = e.Params[1]
+	} else {
+		// TOPIC: <channel> :<topic>
+		channel = e.Params[0]
+	}
+
+	c.program.Send(ChannelTopicMsg{
+		Server:  c.ServerName,
+		Channel: channel,
+		Topic:   e.Last(),
 	})
 }

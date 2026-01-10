@@ -13,3 +13,9 @@ type BufferNewMessageMsg struct {
 	From    string
 	Text    string
 }
+
+type ChannelTopicMsg struct {
+	Server  string
+	Channel string
+	Topic   string
+}

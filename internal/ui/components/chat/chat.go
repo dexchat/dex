@@ -36,7 +36,7 @@ func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 
 	m := Model{
 		messages:       make([]Message, 0),
-		topic:          "Welcome to the Libera IdleRPG game.  Discussion in #idlerpg-discuss | Website: https://idlerpg.lolhosting.net | Please read: https://idlerpg.lolhosting.net#conduct",
+		topic:          "",
 		theme:          theme,
 		usernameColors: usernameColors,
 		input:          input,
@@ -121,4 +121,8 @@ func (m *Model) SetContent() {
 func (m *Model) AddMessage(msg Message) {
 	m.messages = append(m.messages, msg)
 	m.SetContent()
+}
+
+func (m *Model) SetTopic(topic string) {
+	m.topic = topic
 }
