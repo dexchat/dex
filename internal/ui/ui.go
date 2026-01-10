@@ -113,7 +113,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.activeBuffer = key
 			buf := m.getActiveBuffer()
 			buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
-			buf.Chat.SetContent()
+			buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
 		}
 
 	case tea.WindowSizeMsg:
@@ -125,7 +125,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		buf := m.getActiveBuffer()
 		buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
-		buf.Chat.SetContent()
+		buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
 
 	case irc.UserListMsg:
 		key := makeBufferKey(msgTyped.Server, msgTyped.Channel)

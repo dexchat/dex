@@ -75,7 +75,7 @@ func (m *Model) View() string {
 	topicView := m.renderTopic(m.viewport.Width)
 	chatInputBox := m.renderInputBox()
 
-	// The viewport content is set by SetContent
+	// The viewport content is set by updateContent
 	chatViewport := lipgloss.NewStyle().
 		Background(m.theme.Colors.Background).
 		PaddingLeft(1).
@@ -106,9 +106,10 @@ func (m *Model) SetSize(width, height int) {
 
 	m.viewport.Width = width
 	m.viewport.Height = viewportHeight
+	m.updateContent()
 }
 
-func (m *Model) SetContent() {
+func (m *Model) updateContent() {
 	// Re-render messages with the new width and update viewport content
 	styledMessages := make([]string, len(m.messages))
 	for i, msg := range m.messages {
@@ -120,7 +121,7 @@ func (m *Model) SetContent() {
 
 func (m *Model) AddMessage(msg Message) {
 	m.messages = append(m.messages, msg)
-	m.SetContent()
+	m.updateContent()
 }
 
 func (m *Model) SetTopic(topic string) {
