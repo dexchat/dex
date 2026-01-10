@@ -14,6 +14,9 @@ const (
 	usersListVerticalBordersSize = 2
 )
 
+// UserListMsg is a message received from the IRC client containing the new user list.
+type UserListMsg []string
+
 type Model struct {
 	Users          []string
 	theme          styles.Theme
@@ -22,15 +25,7 @@ type Model struct {
 
 func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 	return Model{
-		Users: []string{
-			"@idlebot",
-			"@richard",
-			"+gilfoyle",
-			"johnbogle",
-			"monica",
-			"dinesh",
-			"jared",
-		},
+		Users:          make([]string, 0),
 		theme:          theme,
 		usernameColors: usernameColors,
 	}
@@ -41,7 +36,11 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	// No interaction for now
+	switch msg := msg.(type) {
+	case UserListMsg:
+		m.Users = msg
+		return m, nil
+	}
 	return m, nil
 }
 
