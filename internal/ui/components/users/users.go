@@ -28,9 +28,12 @@ type Model struct {
 }
 
 func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
+	vp := viewport.New(0, 0)
+	vp.MouseWheelEnabled = false
+
 	return Model{
 		users:          make([]string, 0),
-		viewport:       viewport.New(0, 0),
+		viewport:       vp,
 		theme:          theme,
 		usernameColors: usernameColors,
 	}
