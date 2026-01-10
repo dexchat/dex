@@ -22,10 +22,10 @@ func (m *Model) handleKeybindings(msg tea.KeyMsg) tea.Msg {
 
 	switch {
 	case key.Matches(msg, kb.MoveUp):
-		m.channels.MoveUp()
+		m.channels = m.channels.MoveUp()
 		return m.channels.Selected()
 	case key.Matches(msg, kb.MoveDown):
-		m.channels.MoveDown()
+		m.channels = m.channels.MoveDown()
 		return m.channels.Selected()
 	}
 

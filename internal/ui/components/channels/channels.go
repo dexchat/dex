@@ -77,15 +77,15 @@ func New(theme styles.Theme, servers map[string]*config.Server) Model {
 	}
 }
 
-func (m *Model) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	return *m, nil
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	return m, nil
 }
 
-func (m *Model) View(width, height int) string {
+func (m Model) View(width, height int) string {
 	contentWidth := width - channelsVerticalBordersSize
 	if contentWidth < 0 {
 		contentWidth = 0
@@ -165,7 +165,7 @@ func (m *Model) View(width, height int) string {
 }
 
 // MoveUp moves the cursor up to the previous channel
-func (m *Model) MoveUp() {
+func (m Model) MoveUp() Model {
 	if m.cursor > 0 {
 		m.cursor--
 	}
@@ -175,10 +175,11 @@ func (m *Model) MoveUp() {
 			m.selected = currentItem.parent + ":" + currentItem.name
 		}
 	}
+	return m
 }
 
 // MoveDown moves the cursor down to the next channel
-func (m *Model) MoveDown() {
+func (m Model) MoveDown() Model {
 	if m.cursor < len(m.nodes)-1 {
 		m.cursor++
 	}
@@ -188,9 +189,10 @@ func (m *Model) MoveDown() {
 			m.selected = currentItem.parent + ":" + currentItem.name
 		}
 	}
+	return m
 }
 
-func (m *Model) Selected() ChannelSelectionMsg {
+func (m Model) Selected() ChannelSelectionMsg {
 	currentItem := m.nodes[m.cursor]
 	if currentItem.isServer {
 		return ChannelSelectionMsg{
