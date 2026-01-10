@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"log"
+
 	"github.com/vaaleyard/dex/internal/config"
 	"github.com/vaaleyard/dex/internal/irc"
 	"github.com/vaaleyard/dex/internal/ui/styles"
@@ -69,6 +71,7 @@ func New(cfg *config.Config) *Model {
 	}
 
 	// Make the server buffer as active on startup so no users are displayed
+	// TODO: sort server names
 	for serverName := range cfg.Servers {
 		m.activeBuffer = makeBufferKey(serverName, "")
 		break
@@ -119,7 +122,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case irc.UserListMsg:
 		key := makeBufferKey(msgTyped.Server, msgTyped.Channel)
 		if buf, ok := m.buffers[key]; ok {
-			buf.Users, _ = buf.Users.Update(users.UserListMsg(msgTyped.Users))
+			buf.Users, cmd = buf.Users.Update(users.UserListMsg(msgTyped.Users))
+			cmds = append(cmds, cmd)
 		}
 
 	}
@@ -179,13 +183,7 @@ func (m *Model) filterOutKeyMsgs(msg tea.Msg) tea.Msg {
 func (m *Model) getActiveBuffer() *Buffer {
 	buf := m.buffers[m.activeBuffer]
 	if buf == nil {
-		// Just in case
-		buf = &Buffer{
-			Key:   m.activeBuffer,
-			Chat:  chat.New(m.theme, m.usernameColors),
-			Users: users.New(m.theme, m.usernameColors),
-		}
-		m.buffers[m.activeBuffer] = buf
+		log.Fatalf("Buffer %s not found", m.activeBuffer)
 	}
 	return buf
 }
