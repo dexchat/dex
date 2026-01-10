@@ -5,3 +5,11 @@ type UserListMsg struct {
 	Channel string
 	Users   []string
 }
+
+type BufferNewMessageMsg struct {
+	Server  string
+	Channel string
+	Time    string
+	From    string
+	Text    string
+}

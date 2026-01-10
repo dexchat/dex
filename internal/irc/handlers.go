@@ -2,6 +2,7 @@ package irc
 
 import (
 	"log"
+	"time"
 
 	"github.com/lrstanley/girc"
 )
@@ -13,7 +14,6 @@ func (c *Client) onUserListChange(client *girc.Client, e girc.Event) {
 	} else {
 		channelName = e.Params[0]
 	}
-	log.Printf("Handler triggered for event: %q, Source: %s, Params: %v", e.Command, e.Source, e.Params)
 	channel := client.LookupChannel(channelName)
 	if channel == nil {
 		return
@@ -47,5 +47,26 @@ func (c *Client) onUserListChange(client *girc.Client, e girc.Event) {
 		Server:  c.ServerName,
 		Channel: channelName,
 		Users:   userList,
+	})
+}
+
+func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
+	if len(e.Params) == 0 {
+		return
+	}
+
+	target := e.Params[0]
+	// TODO: handle private messages
+	if !girc.IsValidChannel(target) {
+		return
+	}
+
+	log.Printf("Handler triggered for event: %q, Source: %s, Params: %v", e.Command, e.Source, e.Params)
+	c.program.Send(BufferNewMessageMsg{
+		Server:  c.ServerName,
+		Channel: target,
+		Time:    time.Now().Format("15:04"),
+		From:    e.Source.Name,
+		Text:    e.Last(),
 	})
 }

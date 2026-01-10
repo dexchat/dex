@@ -41,12 +41,12 @@ func (c *Client) Connect() error {
 		}
 	})
 
-	// TODO: add a handler for QUIT
 	c.Handlers.Add(girc.RPL_ENDOFNAMES, c.onUserListChange)
 	c.Handlers.Add(girc.PART, c.onUserListChange)
 	c.Handlers.Add(girc.JOIN, c.onUserListChange)
 	c.Handlers.Add(girc.NICK, c.onUserListChange)
 	c.Handlers.Add(girc.MODE, c.onUserListChange)
+	c.Handlers.Add(girc.PRIVMSG, c.onPrivmsg)
 
 	if err := c.Client.Connect(); err != nil {
 		return fmt.Errorf("failed to connect to %s: %w", c.ServerName, err)

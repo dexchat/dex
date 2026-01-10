@@ -63,7 +63,7 @@ func New(cfg *config.Config) *Model {
 			Chat:   chat.New(m.theme, m.usernameColors),
 			Users:  users.New(m.theme, m.usernameColors),
 		}
-	
+
 		for _, channel := range server.Channels {
 			key := makeBufferKey(serverName, channel)
 			buffer := &Buffer{
@@ -134,6 +134,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 		}
 
+	case irc.BufferNewMessageMsg:
+		key := makeBufferKey(msgTyped.Server, msgTyped.Channel)
+		if buf, ok := m.buffers[key]; ok {
+			buf.Chat.AddMessage(chat.Message{
+				Time:     msgTyped.Time,
+				Username: msgTyped.From,
+				Text:     msgTyped.Text,
+			})
+		}
 	}
 
 	// Write characters in the palette input bar if it's open, instead of chat input
