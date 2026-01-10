@@ -56,6 +56,14 @@ func New(cfg *config.Config) *Model {
 	m.palette = palette.New(m.theme)
 
 	for serverName, server := range cfg.Servers {
+		serverKey := makeBufferKey(serverName, "")
+		m.buffers[serverKey] = &Buffer{
+			Key:    serverKey,
+			Server: serverName,
+			Chat:   chat.New(m.theme, m.usernameColors),
+			Users:  users.New(m.theme, m.usernameColors),
+		}
+	
 		for _, channel := range server.Channels {
 			key := makeBufferKey(serverName, channel)
 			buffer := &Buffer{
