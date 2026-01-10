@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/vaaleyard/dex/internal/ui/components/chat"
 	"github.com/vaaleyard/dex/internal/ui/components/users"
 )
@@ -9,7 +11,8 @@ import (
 type BufferKey string
 
 func makeBufferKey(server, channel string) BufferKey {
-	return BufferKey(server + ":" + channel)
+	// IRC channel names are case-insensitive, normalize to lowercase
+	return BufferKey(strings.ToLower(server) + ":" + strings.ToLower(channel))
 }
 
 type Buffer struct {
