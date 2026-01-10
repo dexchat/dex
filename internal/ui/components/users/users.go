@@ -14,7 +14,7 @@ const (
 	usersListVerticalBordersSize = 2
 )
 
-// UserListMsg is a message received from the IRC client containing the new user list.
+// UserListMsg is a message received from the IRC client containing the updated user list to be displayed
 type UserListMsg []string
 
 type Model struct {

@@ -6,7 +6,7 @@ import (
 	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
 )
 
-func (m *model) handleKeybindings(msg tea.KeyMsg) tea.Msg {
+func (m *Model) handleKeybindings(msg tea.KeyMsg) tea.Msg {
 	kb := keybindings.DefaultKeyMap()
 
 	if key.Matches(msg, kb.TogglePalette) {
@@ -14,7 +14,7 @@ func (m *model) handleKeybindings(msg tea.KeyMsg) tea.Msg {
 		return nil
 	}
 
-	// handling palette keys here ended up needing flags to conditionally update the palette
+	// Handling palette keys here ended up needing flags to conditionally update the palette
 	// and I couldn't find a good/working way to do it
 	if m.palette.IsVisible() {
 		return msg
@@ -23,10 +23,10 @@ func (m *model) handleKeybindings(msg tea.KeyMsg) tea.Msg {
 	switch {
 	case key.Matches(msg, kb.MoveUp):
 		m.channels.MoveUp()
-		return nil
+		return m.channels.Selected()
 	case key.Matches(msg, kb.MoveDown):
 		m.channels.MoveDown()
-		return nil
+		return m.channels.Selected()
 	}
 
 	return msg

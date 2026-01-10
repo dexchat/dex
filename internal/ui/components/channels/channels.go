@@ -15,6 +15,11 @@ const (
 	channelsVerticalBordersSize = 2
 )
 
+type ChannelSelectionMsg struct {
+	Channel string
+	Server  string
+}
+
 type node struct {
 	name         string
 	isServer     bool
@@ -37,7 +42,6 @@ type Model struct {
 func New(theme styles.Theme, servers map[string]*config.Server) Model {
 	var items []node
 
-	// server:channel differentiates channels with the same name in different servers
 	// example: "libera:#go": 2
 	mentionCounts := map[string]int{}
 
@@ -75,37 +79,6 @@ func New(theme styles.Theme, servers map[string]*config.Server) Model {
 
 func (m *Model) Init() tea.Cmd {
 	return nil
-}
-
-// MoveUp moves the cursor up to the previous channel.
-func (m *Model) MoveUp() {
-	if m.cursor > 0 {
-		m.cursor--
-	}
-	if m.cursor < len(m.nodes) {
-		currentItem := m.nodes[m.cursor]
-		if !currentItem.isServer {
-			m.selected = currentItem.parent + ":" + currentItem.name
-		}
-	}
-}
-
-// MoveDown moves the cursor down to the next channel.
-func (m *Model) MoveDown() {
-	if m.cursor < len(m.nodes)-1 {
-		m.cursor++
-	}
-	if m.cursor < len(m.nodes) {
-		currentItem := m.nodes[m.cursor]
-		if !currentItem.isServer {
-			m.selected = currentItem.parent + ":" + currentItem.name
-		}
-	}
-}
-
-type ChannelSelectedMsg struct {
-	Channel string
-	Server  string
 }
 
 func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -189,4 +162,43 @@ func (m *Model) View(width, height int) string {
 		BorderRightForeground(m.theme.Colors.LighterBackground).
 		Height(height).
 		Render(body)
+}
+
+// MoveUp moves the cursor up to the previous channel
+func (m *Model) MoveUp() {
+	if m.cursor > 0 {
+		m.cursor--
+	}
+	if m.cursor < len(m.nodes) {
+		currentItem := m.nodes[m.cursor]
+		if !currentItem.isServer {
+			m.selected = currentItem.parent + ":" + currentItem.name
+		}
+	}
+}
+
+// MoveDown moves the cursor down to the next channel
+func (m *Model) MoveDown() {
+	if m.cursor < len(m.nodes)-1 {
+		m.cursor++
+	}
+	if m.cursor < len(m.nodes) {
+		currentItem := m.nodes[m.cursor]
+		if !currentItem.isServer {
+			m.selected = currentItem.parent + ":" + currentItem.name
+		}
+	}
+}
+
+func (m *Model) Selected() ChannelSelectionMsg {
+	currentItem := m.nodes[m.cursor]
+	if currentItem.isServer {
+		return ChannelSelectionMsg{
+			Server: currentItem.name,
+		}
+	}
+	return ChannelSelectionMsg{
+		Channel: currentItem.name,
+		Server:  currentItem.parent,
+	}
 }

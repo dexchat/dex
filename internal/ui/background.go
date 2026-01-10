@@ -3,11 +3,11 @@ package ui
 import "github.com/charmbracelet/lipgloss"
 
 type background struct {
-	m *model
+	m *Model
 }
 
 func (b *background) View() string {
-	adjustedHeight := b.m.Height - topPadding
+	adjustedHeight := b.m.height - topPadding
 	if adjustedHeight < 0 {
 		adjustedHeight = 0
 	}
@@ -17,15 +17,16 @@ func (b *background) View() string {
 		PaddingTop(topPadding).
 		Render(b.m.channels.View(channelsPanelMaxWidth, adjustedHeight))
 
+	buf := b.m.getActiveBuffer()
 	usersView := lipgloss.NewStyle().
 		MaxWidth(usersPanelMaxWidth).
 		PaddingTop(topPadding).
-		Render(b.m.users.View(usersPanelMaxWidth, adjustedHeight))
+		Render(buf.Users.View(usersPanelMaxWidth, adjustedHeight))
 
 	chatView := lipgloss.NewStyle().
 		PaddingTop(topPadding).
 		Height(adjustedHeight).
-		Render(b.m.chat.View())
+		Render(buf.Chat.View())
 
 	return lipgloss.JoinHorizontal(lipgloss.Top,
 		channelsView,
