@@ -21,8 +21,8 @@ func (m *Model) renderMessage(msg Message, width int) string {
 		Foreground(m.usernameColors.GetColor(msg.Username))
 
 	styledTime := timeStyle.Render(msg.Time)
-	styledNick := nickStyle.Render(" " + msg.Username)
-	styledText := baseStyle.Render(" " + msg.Text)
+	styledNick := nickStyle.Render(" " + msg.Username + " ")
+	styledText := renderIRCFormattedMessage(msg.Text, baseStyle)
 
 	return baseStyle.Width(width).Render(styledTime + styledNick + styledText)
 }
