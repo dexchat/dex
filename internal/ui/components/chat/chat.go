@@ -10,6 +10,10 @@ import (
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
+type SendMessageMsg struct {
+	Text string
+}
+
 type Model struct {
 	viewport viewport.Model
 	topic    string
@@ -72,6 +76,13 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 	case tea.KeyMsg:
 		if m.input.Focused() {
+			if msg.Type == tea.KeyEnter && m.input.Value() != "" {
+				text := m.input.Value()
+				m.input.Reset()
+				cmds = append(cmds, func() tea.Msg {
+					return SendMessageMsg{Text: text}
+				})
+			}
 			return *m, tea.Batch(cmds...)
 		}
 	}
@@ -141,4 +152,8 @@ func (m *Model) SetTopic(topic string) {
 
 func (m *Model) SetNickname(nickname string) {
 	m.nickname = nickname
+}
+
+func (m *Model) Nickname() string {
+	return m.nickname
 }

@@ -13,9 +13,9 @@ https://datatracker.ietf.org/doc/html/rfc2812
   * option to don’t connect to the channels on startup
   * option to change timestamp format and/or hide it
   * enable scroll to viewport (chat or user list) based on the mouse is hovered
-  * send messages on enter
   * support for commands, e.g. /leave, /join, etc.
   * autocompletion for commands
+  * put operators first in the user list
 * check if the chat being updated every message is a performance issue
 * maybe centralize all paddings and borders numbers
 * centralize and improve all styles in the styles package, make sure there are no loose styles

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"log"
+	"time"
 
 	"github.com/vaaleyard/dex/internal/config"
 	"github.com/vaaleyard/dex/internal/irc"
@@ -29,7 +30,8 @@ const (
 )
 
 type Model struct {
-	config *config.Config
+	config           *config.Config
+	ircClientManager *irc.ClientManager
 
 	width          int
 	height         int
@@ -71,10 +73,11 @@ func New(cfg *config.Config) *Model {
 		for _, channel := range server.Channels {
 			key := makeBufferKey(server.Name, channel)
 			buffer := &Buffer{
-				Key:    key,
-				Server: server.Name,
-				Chat:   chat.New(m.theme, m.usernameColors),
-				Users:  users.New(m.theme, m.usernameColors),
+				Key:     key,
+				Server:  server.Name,
+				Chat:    chat.New(m.theme, m.usernameColors),
+				Channel: channel,
+				Users:   users.New(m.theme, m.usernameColors),
 			}
 
 			buffer.Chat.SetNickname(server.Nickname)
@@ -166,6 +169,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			CanonicalName: msgTyped.CanonicalName,
 		})
 		cmds = append(cmds, cmd)
+
+	case chat.SendMessageMsg:
+		buffer := m.getActiveBuffer()
+		if m.ircClientManager != nil && buffer.Server != "" {
+			if buffer.Channel != "" {
+				m.ircClientManager.Send(buffer.Server, buffer.Channel, msgTyped.Text)
+
+				buffer.Chat.AddMessage(chat.Message{
+					Time:     time.Now().Format("15:04"),
+					Username: buffer.Chat.Nickname(),
+					Text:     msgTyped.Text,
+				})
+			}
+		}
 	}
 
 	// Write characters in the palette input bar if it's open, instead of chat input
@@ -238,4 +255,8 @@ func (m *Model) calculateChatHeight() int {
 		return 0
 	}
 	return h
+}
+
+func (m *Model) SetManager(manager *irc.ClientManager) {
+	m.ircClientManager = manager
 }
