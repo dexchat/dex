@@ -71,11 +71,10 @@ func New(cfg *config.Config) *Model {
 		for _, channel := range server.Channels {
 			key := makeBufferKey(server.Name, channel)
 			buffer := &Buffer{
-				Key:     key,
-				Server:  server.Name,
-				Channel: channel,
-				Chat:    chat.New(m.theme, m.usernameColors),
-				Users:   users.New(m.theme, m.usernameColors),
+				Key:    key,
+				Server: server.Name,
+				Chat:   chat.New(m.theme, m.usernameColors),
+				Users:  users.New(m.theme, m.usernameColors),
 			}
 
 			buffer.Chat.SetNickname(server.Nickname)
