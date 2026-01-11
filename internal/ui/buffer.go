@@ -11,7 +11,7 @@ import (
 type BufferKey string
 
 func makeBufferKey(server, channel string) BufferKey {
-	// IRC channel names are case-insensitive, normalize to lowercase
+	// IRC channel names are case-insensitive
 	return BufferKey(strings.ToLower(server) + ":" + strings.ToLower(channel))
 }
 

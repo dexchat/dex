@@ -12,7 +12,6 @@ https://datatracker.ietf.org/doc/html/rfc2812
   * show user joins/parts in buffer -> add a field so it's possible for the user to choose have it or not
   * option to don’t connect to the channels on startup
   * option to change timestamp format and/or hide it
-  * hide topic and user list component in server buffers
   * enable scroll to viewport (chat or user list) based on the mouse is hovered
   * send messages on enter
   * support for commands, e.g. /leave, /join, etc.

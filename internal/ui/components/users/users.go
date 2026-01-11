@@ -96,21 +96,27 @@ func (m Model) View(width, height int) string {
 		contentWidth = 0
 	}
 
-	memberCount := fmt.Sprintf("%d users", len(m.users))
-	memberHeader := lipgloss.NewStyle().
-		Background(m.theme.Colors.Background).
-		Foreground(m.theme.Colors.Accent).
-		Bold(true).
-		Width(contentWidth).
-		Align(lipgloss.Center).
-		Inline(false).
-		Render(memberCount)
+	var body string
+	// Show member list/count only on channels
+	if len(m.users) > 0 {
+		memberCount := fmt.Sprintf("%d users", len(m.users))
+		memberHeader := lipgloss.NewStyle().
+			Background(m.theme.Colors.Background).
+			Foreground(m.theme.Colors.Accent).
+			Bold(true).
+			Width(contentWidth).
+			Align(lipgloss.Center).
+			Inline(false).
+			Render(memberCount)
 
-	divider := lipgloss.NewStyle().
-		Foreground(m.theme.Colors.LighterBackground).
-		Render(strings.Repeat("─", contentWidth))
+		divider := lipgloss.NewStyle().
+			Foreground(m.theme.Colors.LighterBackground).
+			Render(strings.Repeat("─", contentWidth))
 
-	body := memberHeader + "\n" + divider + "\n" + m.viewport.View()
+		body = memberHeader + "\n" + divider + "\n" + m.viewport.View()
+	} else {
+		body = m.viewport.View()
+	}
 
 	return m.theme.Styles.Sidebar.
 		Height(height).
