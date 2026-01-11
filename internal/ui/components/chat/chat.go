@@ -57,13 +57,24 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		cmds []tea.Cmd
 	)
 
+	// Filters out mouse events from writing in input bar and disable viewport keybindings (j/k)
+	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		if m.input.Focused() &&
+			msg.Action == tea.MouseActionPress &&
+			(msg.Button == tea.MouseButtonWheelUp ||
+				msg.Button == tea.MouseButtonWheelDown) {
+
+			return *m, tea.Batch(cmds...)
+		}
+	case tea.KeyMsg:
+		if m.input.Focused() {
+			return *m, tea.Batch(cmds...)
+		}
+	}
+
 	m.input, cmd = m.input.Update(msg)
 	cmds = append(cmds, cmd)
-
-	// This prevents j/k in the input box from scrolling the viewport
-	if _, ok := msg.(tea.KeyMsg); ok && m.input.Focused() {
-		return *m, tea.Batch(cmds...)
-	}
 
 	m.viewport, cmd = m.viewport.Update(msg)
 	cmds = append(cmds, cmd)
