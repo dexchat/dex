@@ -55,39 +55,37 @@ func New(cfg *config.Config) *Model {
 	m.channels = channels.New(m.theme, m.config.Servers)
 	m.palette = palette.New(m.theme)
 
-	for serverName, server := range cfg.Servers {
-		serverKey := makeBufferKey(serverName, "")
+	for _, server := range cfg.Servers {
+		serverKey := makeBufferKey(server.Name, "")
 		m.buffers[serverKey] = &Buffer{
 			Key:    serverKey,
-			Server: serverName,
+			Server: server.Name,
 			Chat:   chat.New(m.theme, m.usernameColors),
 			Users:  users.New(m.theme, m.usernameColors),
 		}
 
 		// Set the nickname configured in the config file before connecting
 		// the server may update after (and change if necessary)
-		m.buffers[serverKey].Chat.SetNickname(cfg.Servers[serverName].Nickname)
+		m.buffers[serverKey].Chat.SetNickname(server.Nickname)
 
 		for _, channel := range server.Channels {
-			key := makeBufferKey(serverName, channel)
+			key := makeBufferKey(server.Name, channel)
 			buffer := &Buffer{
 				Key:     key,
-				Server:  serverName,
+				Server:  server.Name,
 				Channel: channel,
 				Chat:    chat.New(m.theme, m.usernameColors),
 				Users:   users.New(m.theme, m.usernameColors),
 			}
 
-			buffer.Chat.SetNickname(cfg.Servers[serverName].Nickname)
+			buffer.Chat.SetNickname(server.Nickname)
 			m.buffers[key] = buffer
 		}
 	}
 
-	// Make the server buffer as active on startup so no users are displayed
-	// TODO: sort server names
-	for serverName := range cfg.Servers {
-		m.activeBuffer = makeBufferKey(serverName, "")
-		break
+	// Make the first server buffer active on startup
+	if len(cfg.Servers) > 0 {
+		m.activeBuffer = makeBufferKey(cfg.Servers[0].Name, "")
 	}
 
 	return &m

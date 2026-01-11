@@ -36,10 +36,10 @@ type Model struct {
 
 	theme styles.Theme
 
-	servers map[string]*config.Server
+	servers []*config.Server
 }
 
-func New(theme styles.Theme, servers map[string]*config.Server) Model {
+func New(theme styles.Theme, servers []*config.Server) Model {
 	var items []node
 
 	// example: "libera:#go": 2
@@ -48,19 +48,19 @@ func New(theme styles.Theme, servers map[string]*config.Server) Model {
 	// example: "libera:#go": true
 	unreadChannels := map[string]bool{}
 
-	for serverName, server := range servers {
+	for _, server := range servers {
 		items = append(items, node{
-			name:     serverName,
+			name:     server.Name,
 			isServer: true,
 		})
 
 		for _, channel := range server.Channels {
-			key := serverName + ":" + channel
+			key := server.Name + ":" + channel
 			isMentioned := mentionCounts[key] > 0
 			items = append(items, node{
 				name:         channel,
 				isServer:     false,
-				parent:       serverName,
+				parent:       server.Name,
 				mentioned:    isMentioned,
 				mentionCount: mentionCounts[key],
 				hasUnread:    unreadChannels[key] && !isMentioned,

@@ -30,8 +30,8 @@ func main() {
 
 	p := tea.NewProgram(ui.New(cfg), tea.WithAltScreen(), tea.WithMouseCellMotion())
 
-	for name, server := range cfg.Servers {
-		client := irc.NewClient(name, server, p)
+	for _, server := range cfg.Servers {
+		client := irc.NewClient(server.Name, server, p)
 
 		go func(name string, client *irc.Client) {
 			if err := client.Connect(); err != nil {
@@ -43,7 +43,7 @@ func main() {
 					Text:    err.Error(),
 				})
 			}
-		}(name, client)
+		}(server.Name, client)
 	}
 
 	if _, err := p.Run(); err != nil {
