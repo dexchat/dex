@@ -15,7 +15,7 @@ https://datatracker.ietf.org/doc/html/rfc2812
   * option to don’t connect to the channels on startup
   * option to change timestamp format and/or hide it
   * sort server names
-  * hide user list in server buffers
+  * hide topic and user list component in server buffers
   * connect to multiple servers
   * enable scroll to viewport (chat or user list) based on the mouse is hovered
   * send messages on enter
@@ -35,7 +35,7 @@ https://datatracker.ietf.org/doc/html/rfc2812
 * option to disable mouse/scroll support
 * new messages indicator
 * tagged messages indicator
-* improve channel list UI, it's kinda ugly
+* improve channel list UI and user list member count, it's kinda ugly - ask for suggestions to someone
 * improve ctrl+c quit color
 
 ## Features to implement
