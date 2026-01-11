@@ -57,6 +57,9 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		cmds []tea.Cmd
 	)
 
+	m.input, cmd = m.input.Update(msg)
+	cmds = append(cmds, cmd)
+
 	// Filters out mouse events from writing in input bar and disable viewport keybindings (j/k)
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
@@ -72,9 +75,6 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return *m, tea.Batch(cmds...)
 		}
 	}
-
-	m.input, cmd = m.input.Update(msg)
-	cmds = append(cmds, cmd)
 
 	m.viewport, cmd = m.viewport.Update(msg)
 	cmds = append(cmds, cmd)
