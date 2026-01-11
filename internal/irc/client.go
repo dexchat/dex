@@ -46,6 +46,12 @@ func (c *Client) Connect() error {
 			client.Cmd.Join(channel)
 		}
 
+		c.program.Send(ChannelTopicMsg{
+			Server:  c.ServerName,
+			Channel: "",
+			Topic:   "IRC: " + c.Server(),
+		})
+
 		c.program.Send(NickUpdateMsg{
 			Server: c.ServerName,
 			Nick:   client.GetNick(),
