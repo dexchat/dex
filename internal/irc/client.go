@@ -36,6 +36,12 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 func (c *Client) Connect() error {
 	// Configure auto-join on connect
 	c.Handlers.Add(girc.CONNECTED, func(client *girc.Client, e girc.Event) {
+		c.program.Send(ChannelTopicMsg{
+			Server:  c.ServerName,
+			Channel: "",
+			Topic:   "IRC: " + c.Server(),
+		})
+
 		for _, channel := range c.Channels {
 			client.Cmd.Join(channel)
 		}

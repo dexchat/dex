@@ -122,7 +122,7 @@ func (c *Client) onServerMessage(_ *girc.Client, e girc.Event) {
 		Server:  c.ServerName,
 		Channel: "",
 		Time:    time.Now().Format("15:04"),
-		From:    "*",
+		From:    c.ServerName,
 		Text:    e.Last(),
 	})
 }
