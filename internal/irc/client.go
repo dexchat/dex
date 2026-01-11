@@ -51,6 +51,11 @@ func (c *Client) Connect() error {
 	c.Handlers.Add(girc.NICK, c.onUserListChange)
 	c.Handlers.Add(girc.MODE, c.onUserListChange)
 	c.Handlers.Add(girc.PRIVMSG, c.onPrivmsg)
+	c.Handlers.Add(girc.NOTICE, c.onServerMessage)
+	c.Handlers.Add(girc.RPL_WELCOME, c.onServerMessage)
+	c.Handlers.Add(girc.RPL_MOTD, c.onServerMessage)
+	c.Handlers.Add(girc.RPL_MOTDSTART, c.onServerMessage)
+	c.Handlers.Add(girc.RPL_ENDOFMOTD, c.onServerMessage)
 
 	if err := c.Client.Connect(); err != nil {
 		return fmt.Errorf("failed to connect to %s: %w", c.ServerName, err)

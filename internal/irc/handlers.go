@@ -92,3 +92,17 @@ func (c *Client) onTopic(_ *girc.Client, e girc.Event) {
 		Topic:   e.Last(),
 	})
 }
+
+func (c *Client) onServerMessage(_ *girc.Client, e girc.Event) {
+	if e.Command == girc.NOTICE && len(e.Params) > 0 && girc.IsValidChannel(e.Params[0]) {
+		return
+	}
+
+	c.program.Send(BufferNewMessageMsg{
+		Server:  c.ServerName,
+		Channel: "",
+		Time:    time.Now().Format("15:04"),
+		From:    "*",
+		Text:    e.Last(),
+	})
+}
