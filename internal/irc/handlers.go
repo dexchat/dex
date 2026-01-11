@@ -135,3 +135,10 @@ func (c *Client) onNickUpdate(client *girc.Client, e girc.Event) {
 		})
 	}
 }
+
+func (c *Client) onQuit(client *girc.Client, e girc.Event) {
+	// WHO triggers RPL_ENDOFWHO which calls onUserListChange
+	for _, channelName := range c.Channels {
+		client.Cmd.Who(channelName)
+	}
+}

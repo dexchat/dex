@@ -8,13 +8,11 @@ https://datatracker.ietf.org/doc/html/rfc2812
 
 ## TODO
 * IRC:
-  * user quit handle
   * reconnect on disconnect
   * show user joins/parts in buffer -> add a field so it's possible for the user to choose have it or not
   * correct channel name cases after connecting
   * option to don’t connect to the channels on startup
   * option to change timestamp format and/or hide it
-  * sort server names
   * hide topic and user list component in server buffers
   * enable scroll to viewport (chat or user list) based on the mouse is hovered
   * send messages on enter
