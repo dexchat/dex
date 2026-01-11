@@ -19,3 +19,8 @@ type ChannelTopicMsg struct {
 	Channel string
 	Topic   string
 }
+
+type NickUpdateMsg struct {
+	Server string
+	Nick   string
+}

@@ -106,3 +106,12 @@ func (c *Client) onServerMessage(_ *girc.Client, e girc.Event) {
 		Text:    e.Last(),
 	})
 }
+
+func (c *Client) onNickUpdate(client *girc.Client, e girc.Event) {
+	if e.Source.Name == client.GetNick() || e.Params[0] == client.GetNick() {
+		c.program.Send(NickUpdateMsg{
+			Server: c.ServerName,
+			Nick:   client.GetNick(),
+		})
+	}
+}

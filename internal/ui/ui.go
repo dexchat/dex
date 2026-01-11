@@ -64,6 +64,10 @@ func New(cfg *config.Config) *Model {
 			Users:  users.New(m.theme, m.usernameColors),
 		}
 
+		// Set the nickname configured in the config file before connecting
+		// the server may update after (and change if necessary)
+		m.buffers[serverKey].Chat.SetNickname(cfg.Servers[serverName].Nickname)
+
 		for _, channel := range server.Channels {
 			key := makeBufferKey(serverName, channel)
 			buffer := &Buffer{
@@ -74,6 +78,7 @@ func New(cfg *config.Config) *Model {
 				Users:   users.New(m.theme, m.usernameColors),
 			}
 
+			buffer.Chat.SetNickname(cfg.Servers[serverName].Nickname)
 			m.buffers[key] = buffer
 		}
 	}
@@ -148,6 +153,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		key := makeBufferKey(msgTyped.Server, msgTyped.Channel)
 		if buf, ok := m.buffers[key]; ok {
 			buf.Chat.SetTopic(msgTyped.Topic)
+		}
+
+	case irc.NickUpdateMsg:
+		for _, buf := range m.buffers {
+			if buf.Server == msgTyped.Server {
+				buf.Chat.SetNickname(msgTyped.Nick)
+			}
+			buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 		}
 	}
 

@@ -39,6 +39,11 @@ func (c *Client) Connect() error {
 		for _, channel := range c.Channels {
 			client.Cmd.Join(channel)
 		}
+
+		c.program.Send(NickUpdateMsg{
+			Server: c.ServerName,
+			Nick:   client.GetNick(),
+		})
 	})
 
 	// TODO: handle QUIT
@@ -56,6 +61,8 @@ func (c *Client) Connect() error {
 	c.Handlers.Add(girc.RPL_MOTD, c.onServerMessage)
 	c.Handlers.Add(girc.RPL_MOTDSTART, c.onServerMessage)
 	c.Handlers.Add(girc.RPL_ENDOFMOTD, c.onServerMessage)
+	c.Handlers.Add(girc.NICK, c.onNickUpdate)
+	c.Handlers.Add(girc.RPL_WELCOME, c.onNickUpdate)
 
 	if err := c.Client.Connect(); err != nil {
 		return fmt.Errorf("failed to connect to %s: %w", c.ServerName, err)

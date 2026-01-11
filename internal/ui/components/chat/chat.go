@@ -41,7 +41,7 @@ func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 		usernameColors: usernameColors,
 		input:          input,
 		viewport:       viewport.New(0, 0),
-		nickname:       "johnbogle",
+		nickname:       "",
 	}
 
 	return m
@@ -137,4 +137,8 @@ func (m *Model) AddMessage(msg Message) {
 
 func (m *Model) SetTopic(topic string) {
 	m.topic = topic
+}
+
+func (m *Model) SetNickname(nickname string) {
+	m.nickname = nickname
 }
