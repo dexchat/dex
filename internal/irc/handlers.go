@@ -8,11 +8,29 @@ import (
 
 func (c *Client) onUserListChange(client *girc.Client, e girc.Event) {
 	var channelName string
-	if e.Command == girc.RPL_ENDOFNAMES {
+	switch e.Command {
+	case girc.RPL_ENDOFNAMES, girc.RPL_ENDOFWHO:
+		// Format: <nick> <channel> :End of /NAMES list
+		if len(e.Params) < 2 {
+			return
+		}
 		channelName = e.Params[1]
-	} else {
+	default:
 		channelName = e.Params[0]
 	}
+
+	// In case of user MODE events, for example
+	if !girc.IsValidChannel(channelName) {
+		return
+	}
+
+	// For JOIN/PART events, girc may not have updated its state yet
+	// Schedule a refresh using WHO which will trigger RPL_ENDOFWHO with updated data
+	if e.Command == girc.JOIN || e.Command == girc.PART {
+		client.Cmd.Who(channelName)
+		return
+	}
+
 	channel := client.LookupChannel(channelName)
 	if channel == nil {
 		return
@@ -24,18 +42,20 @@ func (c *Client) onUserListChange(client *girc.Client, e girc.Event) {
 		prefix := ""
 		user := client.LookupUser(nick)
 
-		if perms, ok := user.Perms.Lookup(channelName); ok {
-			switch {
-			case perms.Owner:
-				prefix = girc.OwnerPrefix
-			case perms.Admin:
-				prefix = girc.AdminPrefix
-			case perms.Op:
-				prefix = girc.OperatorPrefix
-			case perms.HalfOp:
-				prefix = girc.HalfOperatorPrefix
-			case perms.Voice:
-				prefix = girc.VoicePrefix
+		if user != nil {
+			if perms, ok := user.Perms.Lookup(channelName); ok {
+				switch {
+				case perms.Owner:
+					prefix = girc.OwnerPrefix
+				case perms.Admin:
+					prefix = girc.AdminPrefix
+				case perms.Op:
+					prefix = girc.OperatorPrefix
+				case perms.HalfOp:
+					prefix = girc.HalfOperatorPrefix
+				case perms.Voice:
+					prefix = girc.VoicePrefix
+				}
 			}
 		}
 
