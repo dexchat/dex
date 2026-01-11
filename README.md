@@ -16,7 +16,6 @@ https://datatracker.ietf.org/doc/html/rfc2812
   * option to change timestamp format and/or hide it
   * sort server names
   * hide topic and user list component in server buffers
-  * connect to multiple servers
   * enable scroll to viewport (chat or user list) based on the mouse is hovered
   * send messages on enter
   * support for commands, e.g. /leave, /join, etc.

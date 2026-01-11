@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vaaleyard/dex/internal/config"
@@ -28,13 +29,22 @@ func main() {
 	}
 
 	p := tea.NewProgram(ui.New(cfg), tea.WithAltScreen(), tea.WithMouseCellMotion())
-	client := irc.NewClient("libera", cfg.Servers["libera"], p)
 
-	go func() {
-		if err := client.Connect(); err != nil {
-			fmt.Printf("Failed to connect to %s: %v\n", "libera", err)
-		}
-	}()
+	for name, server := range cfg.Servers {
+		client := irc.NewClient(name, server, p)
+
+		go func(name string, client *irc.Client) {
+			if err := client.Connect(); err != nil {
+				p.Send(irc.BufferNewMessageMsg{
+					Server:  name,
+					Channel: "",
+					Time:    time.Now().Format("15:04"),
+					From:    name,
+					Text:    err.Error(),
+				})
+			}
+		}(name, client)
+	}
 
 	if _, err := p.Run(); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error running app: %v\n", err)
