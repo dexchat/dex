@@ -20,6 +20,11 @@ type ChannelSelectionMsg struct {
 	Server  string
 }
 
+type ChannelNameUpdateMsg struct {
+	Server        string
+	CanonicalName string
+}
+
 type node struct {
 	name         string
 	isServer     bool
@@ -82,6 +87,15 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case ChannelNameUpdateMsg:
+		for i, n := range m.nodes {
+			if !n.isServer && n.parent == msg.Server && strings.EqualFold(n.name, msg.CanonicalName) {
+				m.nodes[i].name = msg.CanonicalName
+				break
+			}
+		}
+	}
 	return m, nil
 }
 

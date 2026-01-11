@@ -24,3 +24,8 @@ type NickUpdateMsg struct {
 	Server string
 	Nick   string
 }
+
+type ChannelNameUpdateMsg struct {
+	Server        string
+	CanonicalName string
+}

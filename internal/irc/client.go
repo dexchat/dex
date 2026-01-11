@@ -34,14 +34,8 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 }
 
 func (c *Client) Connect() error {
-	// Configure auto-join on connect
 	c.Handlers.Add(girc.CONNECTED, func(client *girc.Client, e girc.Event) {
-		c.program.Send(ChannelTopicMsg{
-			Server:  c.ServerName,
-			Channel: "",
-			Topic:   "IRC: " + c.Server(),
-		})
-
+		// Auto-join on connect
 		for _, channel := range c.Channels {
 			client.Cmd.Join(channel)
 		}
@@ -53,7 +47,7 @@ func (c *Client) Connect() error {
 		})
 	})
 
-	// TODO: get the correct channel names (with the correct case)
+	c.Handlers.Add(girc.JOIN, c.onJoin)
 	c.Handlers.Add(girc.RPL_ENDOFNAMES, c.onUserListChange)
 	c.Handlers.Add(girc.RPL_ENDOFWHO, c.onUserListChange)
 	c.Handlers.Add(girc.RPL_TOPIC, c.onTopic)

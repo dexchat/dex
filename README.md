@@ -10,7 +10,6 @@ https://datatracker.ietf.org/doc/html/rfc2812
 * IRC:
   * reconnect on disconnect
   * show user joins/parts in buffer -> add a field so it's possible for the user to choose have it or not
-  * correct channel name cases after connecting
   * option to don’t connect to the channels on startup
   * option to change timestamp format and/or hide it
   * hide topic and user list component in server buffers

@@ -1,6 +1,7 @@
 package irc
 
 import (
+	"strings"
 	"time"
 
 	"github.com/lrstanley/girc"
@@ -74,15 +75,15 @@ func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
 		return
 	}
 
-	channel := e.Params[0]
+	channelName := e.Params[0]
 	// TODO: handle private messages
-	if !girc.IsValidChannel(channel) {
+	if !girc.IsValidChannel(channelName) {
 		return
 	}
 
 	c.program.Send(BufferNewMessageMsg{
 		Server:  c.ServerName,
-		Channel: channel,
+		Channel: channelName,
 		Time:    time.Now().Format("15:04"),
 		From:    e.Source.Name,
 		Text:    e.Last(),
@@ -94,21 +95,21 @@ func (c *Client) onTopic(_ *girc.Client, e girc.Event) {
 		return
 	}
 
-	var channel string
+	var channelName string
 	if e.Command == girc.RPL_TOPIC {
-		// RPL_TOPIC (332): <nick> <channel> :<topic>
+		// RPL_TOPIC (332): <nick> <channelName> :<topic>
 		if len(e.Params) < 2 {
 			return
 		}
-		channel = e.Params[1]
+		channelName = e.Params[1]
 	} else {
-		// TOPIC: <channel> :<topic>
-		channel = e.Params[0]
+		// TOPIC: <channelName> :<topic>
+		channelName = e.Params[0]
 	}
 
 	c.program.Send(ChannelTopicMsg{
 		Server:  c.ServerName,
-		Channel: channel,
+		Channel: channelName,
 		Topic:   e.Last(),
 	})
 }
@@ -140,5 +141,26 @@ func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 	// WHO triggers RPL_ENDOFWHO which calls onUserListChange
 	for _, channelName := range c.Channels {
 		client.Cmd.Who(channelName)
+	}
+}
+
+func (c *Client) onJoin(_ *girc.Client, e girc.Event) {
+	if len(e.Params) == 0 {
+		return
+	}
+	channelName := e.Params[0]
+	c.updateChannelCase(channelName)
+}
+
+func (c *Client) updateChannelCase(channelName string) {
+	for i, ch := range c.Channels {
+		if strings.EqualFold(ch, channelName) && ch != channelName {
+			c.Channels[i] = channelName
+			c.program.Send(ChannelNameUpdateMsg{
+				Server:        c.ServerName,
+				CanonicalName: channelName,
+			})
+			return
+		}
 	}
 }

@@ -160,6 +160,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 		}
+
+	case irc.ChannelNameUpdateMsg:
+		m.channels, cmd = m.channels.Update(channels.ChannelNameUpdateMsg{
+			Server:        msgTyped.Server,
+			CanonicalName: msgTyped.CanonicalName,
+		})
+		cmds = append(cmds, cmd)
 	}
 
 	// Write characters in the palette input bar if it's open, instead of chat input
