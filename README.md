@@ -8,6 +8,7 @@ https://datatracker.ietf.org/doc/html/rfc2812
 
 ## TODO
 * IRC:
+  * handle disconnects: disable channels or smtg. The client returns messages like: `libera failed to connect to libera: timed out waiting for a requested PING response`
   * reconnect on disconnect
   * show user joins/parts in buffer -> add a field so it's possible for the user to choose have it or not
   * option to don’t connect to the channels on startup
