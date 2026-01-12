@@ -180,9 +180,16 @@ func (m Model) View(width, height int) string {
 
 // MoveUp moves the cursor up to the previous channel
 func (m Model) MoveUp() Model {
+	if len(m.nodes) == 0 {
+		return m
+	}
+
 	if m.cursor > 0 {
 		m.cursor--
+	} else {
+		m.cursor = len(m.nodes) - 1
 	}
+
 	if m.cursor < len(m.nodes) {
 		currentItem := m.nodes[m.cursor]
 		if !currentItem.isServer {
@@ -194,9 +201,16 @@ func (m Model) MoveUp() Model {
 
 // MoveDown moves the cursor down to the next channel
 func (m Model) MoveDown() Model {
+	if len(m.nodes) == 0 {
+		return m
+	}
+
 	if m.cursor < len(m.nodes)-1 {
 		m.cursor++
+	} else {
+		m.cursor = 0
 	}
+
 	if m.cursor < len(m.nodes) {
 		currentItem := m.nodes[m.cursor]
 		if !currentItem.isServer {
