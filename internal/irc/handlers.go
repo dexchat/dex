@@ -1,6 +1,7 @@
 package irc
 
 import (
+	"sort"
 	"strings"
 	"time"
 
@@ -62,6 +63,8 @@ func (c *Client) onUserListChange(client *girc.Client, e girc.Event) {
 
 		userList[i] = prefix + nick
 	}
+
+	sortUserList(userList)
 
 	c.program.Send(UserListMsg{
 		Server:  c.ServerName,
@@ -163,4 +166,48 @@ func (c *Client) updateChannelCase(channelName string) {
 			return
 		}
 	}
+}
+
+func sortUserList(users []string) {
+	sort.Slice(users, func(i, j int) bool {
+		getNick := func(user string) string {
+			if len(user) > 0 {
+				switch user[0:1] {
+				case girc.OwnerPrefix, girc.AdminPrefix, girc.OperatorPrefix, girc.HalfOperatorPrefix, girc.VoicePrefix:
+					return user[1:]
+				}
+			}
+			return user
+		}
+
+		getPriority := func(user string) int {
+			if len(user) > 0 {
+				switch user[0:1] {
+				case girc.OwnerPrefix:
+					return 5
+				case girc.AdminPrefix:
+					return 4
+				case girc.OperatorPrefix:
+					return 3
+				case girc.HalfOperatorPrefix:
+					return 2
+				case girc.VoicePrefix:
+					return 1
+				}
+			}
+			return 0
+		}
+
+		priorityA := getPriority(users[i])
+		priorityB := getPriority(users[j])
+
+		if priorityA != priorityB {
+			return priorityA > priorityB
+		}
+
+		nickA := getNick(users[i])
+		nickB := getNick(users[j])
+
+		return strings.ToLower(nickA) < strings.ToLower(nickB)
+	})
 }
