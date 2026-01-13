@@ -101,6 +101,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				break
 			}
 		}
+	case NewBufferMsg:
+		m.nodes = append(m.nodes, node{
+			name:     msg.Buffer,
+			isServer: false,
+			parent:   msg.Server,
+		})
 	}
 	return m, nil
 }

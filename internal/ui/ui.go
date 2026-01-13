@@ -80,6 +80,10 @@ func New(cfg *config.Config) *Model {
 				Users:  users.New(m.theme, m.usernameColors),
 			}
 
+			// Although the Nickname is set per server, it is
+			// being set both in server and buffer. The Chat
+			// model doesn't access the config to fetch it, and each
+			// chat buffer needs to display a nickname in the input bar
 			buffer.Chat.SetNickname(server.Nickname)
 			m.buffers[key] = buffer
 		}
@@ -140,7 +144,35 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case irc.BufferNewMessageMsg:
-		key := makeBufferKey(msgTyped.Server, msgTyped.Channel)
+		key := makeBufferKey(msgTyped.Server, msgTyped.Buffer)
+
+		// Create a buffer dynamically for PMs if it doesn't exist
+		if _, ok := m.buffers[key]; !ok && msgTyped.Buffer != "" {
+			buf := &Buffer{
+				Key:    key,
+				Server: msgTyped.Server,
+				Chat:   chat.New(m.theme, m.usernameColors),
+				Buffer: msgTyped.Buffer,
+				Users:  users.New(m.theme, m.usernameColors),
+			}
+
+			// Use server buffer to fetch the nickname
+			serverKey := makeBufferKey(msgTyped.Server, "")
+			if serverBuf, ok := m.buffers[serverKey]; ok {
+				buf.Chat.SetNickname(serverBuf.Chat.Nickname())
+			}
+
+			m.buffers[key] = buf
+
+			// Notify the channels component to add a new buffer node
+			cmds = append(cmds, func() tea.Msg {
+				return channels.NewBufferMsg{
+					Server: msgTyped.Server,
+					Buffer: msgTyped.Buffer,
+				}
+			})
+		}
+
 		if buf, ok := m.buffers[key]; ok {
 			buf.Chat.AddMessage(chat.Message{
 				Time:     msgTyped.Time,
@@ -153,6 +185,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		key := makeBufferKey(msgTyped.Server, msgTyped.Channel)
 		if buf, ok := m.buffers[key]; ok {
 			buf.Chat.SetTopic(msgTyped.Topic)
+			// In case the channel topic is more than one line
+			buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 		}
 
 	case irc.NickUpdateMsg:

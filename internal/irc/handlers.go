@@ -78,10 +78,11 @@ func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
 		return
 	}
 
-	channelName := e.Params[0]
-	// TODO: handle private messages
-	if !girc.IsValidChannel(channelName) {
-		return
+	target := e.Params[0]
+
+	// For PMs, use sender nick as the buffer identifier
+	if !girc.IsValidChannel(target) {
+		target = e.Source.Name
 	}
 
 	c.program.Send(BufferNewMessageMsg{
@@ -123,11 +124,11 @@ func (c *Client) onServerMessage(_ *girc.Client, e girc.Event) {
 	}
 
 	c.program.Send(BufferNewMessageMsg{
-		Server:  c.ServerName,
-		Channel: "",
-		Time:    time.Now().Format("15:04"),
-		From:    c.ServerName,
-		Text:    e.Last(),
+		Server: c.ServerName,
+		Buffer: "",
+		Time:   time.Now().Format("15:04"),
+		From:   c.ServerName,
+		Text:   e.Last(),
 	})
 }
 
