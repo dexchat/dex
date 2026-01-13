@@ -73,11 +73,11 @@ func New(cfg *config.Config) *Model {
 		for _, channel := range server.Channels {
 			key := makeBufferKey(server.Name, channel)
 			buffer := &Buffer{
-				Key:     key,
-				Server:  server.Name,
-				Chat:    chat.New(m.theme, m.usernameColors),
-				Channel: channel,
-				Users:   users.New(m.theme, m.usernameColors),
+				Key:    key,
+				Server: server.Name,
+				Chat:   chat.New(m.theme, m.usernameColors),
+				Buffer: channel,
+				Users:  users.New(m.theme, m.usernameColors),
 			}
 
 			buffer.Chat.SetNickname(server.Nickname)
@@ -173,8 +173,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case chat.SendMessageMsg:
 		buffer := m.getActiveBuffer()
 		if m.ircClientManager != nil && buffer.Server != "" {
-			if buffer.Channel != "" {
-				m.ircClientManager.Send(buffer.Server, buffer.Channel, msgTyped.Text)
+			if buffer.Buffer != "" {
+				m.ircClientManager.Send(buffer.Server, buffer.Buffer, msgTyped.Text)
 
 				buffer.Chat.AddMessage(chat.Message{
 					Time:     time.Now().Format("15:04"),

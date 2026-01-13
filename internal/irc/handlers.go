@@ -85,11 +85,11 @@ func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
 	}
 
 	c.program.Send(BufferNewMessageMsg{
-		Server:  c.ServerName,
-		Channel: channelName,
-		Time:    time.Now().Format("15:04"),
-		From:    e.Source.Name,
-		Text:    e.Last(),
+		Server: c.ServerName,
+		Buffer: target,
+		Time:   time.Now().Format("15:04"),
+		From:   e.Source.Name,
+		Text:   e.Last(),
 	})
 }
 

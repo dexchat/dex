@@ -16,9 +16,9 @@ func makeBufferKey(server, channel string) BufferKey {
 }
 
 type Buffer struct {
-	Key     BufferKey
-	Server  string
-	Channel string
+	Key    BufferKey
+	Server string
+	Buffer string
 
 	Chat  chat.Model
 	Users users.Model

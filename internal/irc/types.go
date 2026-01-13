@@ -7,11 +7,11 @@ type UserListMsg struct {
 }
 
 type BufferNewMessageMsg struct {
-	Server  string
-	Channel string
-	Time    string
-	From    string
-	Text    string
+	Server string
+	Buffer string
+	Time   string
+	From   string
+	Text   string
 }
 
 type ChannelTopicMsg struct {

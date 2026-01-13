@@ -25,6 +25,12 @@ type ChannelNameUpdateMsg struct {
 	CanonicalName string
 }
 
+// NewBufferMsg is a custom message type used to notify this component to add a new buffer in the tree
+type NewBufferMsg struct {
+	Server string
+	Buffer string
+}
+
 type node struct {
 	name         string
 	isServer     bool
@@ -122,7 +128,7 @@ func (m Model) View(width, height int) string {
 		} else {
 			channelText := node.name
 			if node.mentioned && node.mentionCount > 0 {
-				channelText = fmt.Sprintf("%s (%d)", node.name, node.mentionCount)
+				channelText = fmt.Sprintf("%s (%d)", channelText, node.mentionCount)
 			}
 			textPart = channelText
 		}

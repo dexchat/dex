@@ -26,11 +26,11 @@ func (m *ClientManager) ConnectAll() {
 		go func(name string, c *Client) {
 			if err := c.Connect(); err != nil {
 				c.program.Send(BufferNewMessageMsg{
-					Server:  name,
-					Channel: "",
-					Time:    time.Now().Format("15:04"),
-					From:    name,
-					Text:    err.Error(),
+					Server: name,
+					Buffer: "",
+					Time:   time.Now().Format("15:04"),
+					From:   name,
+					Text:   err.Error(),
 				})
 			}
 		}(name, client)
