@@ -1,9 +1,11 @@
 package irc
 
 import (
+	"fmt"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/lrstanley/girc"
 	"github.com/vaaleyard/dex/internal/config"
 )
 
@@ -37,10 +39,18 @@ func (m *ClientManager) ConnectAll() {
 	}
 }
 
-func (m *ClientManager) Send(server, channel, message string) {
+func (m *ClientManager) Send(server, channel, message string) error {
 	if client, ok := m.clients[server]; ok {
+		if !client.IsConnected() {
+			return fmt.Errorf("not connected to %s", server)
+		}
+		if girc.IsValidChannel(channel) && !client.IsInChannel(channel) {
+			return fmt.Errorf("not in channel %s", channel)
+		}
 		client.Cmd.Message(channel, message)
+		return nil
 	}
+	return fmt.Errorf("server %s not found", server)
 }
 
 func (m *ClientManager) DisconnectAll() {
