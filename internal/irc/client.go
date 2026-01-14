@@ -11,8 +11,8 @@ import (
 // Client is for a single server connection
 type Client struct {
 	*girc.Client
-	ServerName string
-	Channels   []string
+	serverName string
+	channels   []string
 	program    *tea.Program
 }
 
@@ -27,8 +27,8 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 
 	return &Client{
 		Client:     client,
-		ServerName: serverName,
-		Channels:   config.Channels,
+		serverName: serverName,
+		channels:   config.Channels,
 		program:    teaProgram,
 	}
 }
@@ -58,7 +58,7 @@ func (c *Client) Connect() error {
 	c.Handlers.Add(girc.NICK, c.onNickUpdate)
 
 	if err := c.Client.Connect(); err != nil {
-		return fmt.Errorf("failed to connect to %s: %w", c.ServerName, err)
+		return fmt.Errorf("failed to connect to %s: %w", c.serverName, err)
 	}
 
 	return nil

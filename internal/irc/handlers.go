@@ -1,6 +1,8 @@
 package irc
 
 import (
+	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -67,7 +69,7 @@ func (c *Client) onUserListChange(client *girc.Client, e girc.Event) {
 	sortUserList(userList)
 
 	c.program.Send(UserListMsg{
-		Server:  c.ServerName,
+		Server:  c.serverName,
 		Channel: channelName,
 		Users:   userList,
 	})
@@ -86,7 +88,7 @@ func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
 	}
 
 	c.program.Send(BufferNewMessageMsg{
-		Server: c.ServerName,
+		Server: c.serverName,
 		Buffer: target,
 		Time:   time.Now().Format("15:04"),
 		From:   e.Source.Name,
@@ -112,7 +114,7 @@ func (c *Client) onTopic(_ *girc.Client, e girc.Event) {
 	}
 
 	c.program.Send(ChannelTopicMsg{
-		Server:  c.ServerName,
+		Server:  c.serverName,
 		Channel: channelName,
 		Topic:   e.Last(),
 	})
@@ -124,10 +126,10 @@ func (c *Client) onServerMessage(_ *girc.Client, e girc.Event) {
 	}
 
 	c.program.Send(BufferNewMessageMsg{
-		Server: c.ServerName,
+		Server: c.serverName,
 		Buffer: "",
 		Time:   time.Now().Format("15:04"),
-		From:   c.ServerName,
+		From:   c.serverName,
 		Text:   e.Last(),
 	})
 }
@@ -135,7 +137,7 @@ func (c *Client) onServerMessage(_ *girc.Client, e girc.Event) {
 func (c *Client) onNickUpdate(client *girc.Client, e girc.Event) {
 	if e.Source.Name == client.GetNick() || e.Params[0] == client.GetNick() {
 		c.program.Send(NickUpdateMsg{
-			Server: c.ServerName,
+			Server: c.serverName,
 			Nick:   client.GetNick(),
 		})
 	}
@@ -143,7 +145,7 @@ func (c *Client) onNickUpdate(client *girc.Client, e girc.Event) {
 
 func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 	// WHO triggers RPL_ENDOFWHO which calls onUserListChange
-	for _, channelName := range c.Channels {
+	for _, channelName := range c.channels {
 		client.Cmd.Who(channelName)
 	}
 }
@@ -157,11 +159,11 @@ func (c *Client) onJoin(_ *girc.Client, e girc.Event) {
 }
 
 func (c *Client) updateChannelCase(channelName string) {
-	for i, ch := range c.Channels {
+	for i, ch := range c.channels {
 		if strings.EqualFold(ch, channelName) && ch != channelName {
-			c.Channels[i] = channelName
+			c.channels[i] = channelName
 			c.program.Send(ChannelNameUpdateMsg{
-				Server:        c.ServerName,
+				Server:        c.serverName,
 				CanonicalName: channelName,
 			})
 			return
@@ -214,33 +216,75 @@ func sortUserList(users []string) {
 }
 func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 	// Auto-join on connect
-	for _, channel := range c.Channels {
+	for _, channel := range c.channels {
 		client.Cmd.Join(channel)
 	}
 
 	c.program.Send(ChannelTopicMsg{
-		Server:  c.ServerName,
+		Server:  c.serverName,
 		Channel: "",
 		Topic:   "IRC: " + c.Server(),
 	})
 }
 
+func (c *Client) startReconnectLoop() {
+	go func() {
+		attempt := 0
+		for {
+			backoffSeconds := math.Min(math.Pow(2, float64(attempt)), 300)
+
+			c.program.Send(BufferNewMessageMsg{
+				Server: c.serverName,
+				Buffer: "",
+				Time:   time.Now().Format("15:04"),
+				From:   "--",
+				Text:   fmt.Sprintf("irc: reconnecting in %d seconds...", int(backoffSeconds)),
+			})
+
+			time.Sleep(time.Duration(backoffSeconds) * time.Second)
+
+			if err := c.Client.Connect(); err == nil {
+				c.program.Send(BufferNewMessageMsg{
+					Server: c.serverName,
+					Buffer: "",
+					Time:   time.Now().Format("15:04"),
+					From:   "--",
+					Text:   "irc: reconnected to server",
+				})
+				return
+			} else {
+				c.program.Send(BufferNewMessageMsg{
+					Server: c.serverName,
+					Buffer: "",
+					Time:   time.Now().Format("15:04"),
+					From:   "--",
+					Text:   fmt.Sprintf("irc: reconnect failed: %v", err),
+				})
+			}
+
+			attempt++
+		}
+	}()
+}
+
 func (c *Client) onDisconnect(_ *girc.Client, _ girc.Event) {
 	c.program.Send(BufferNewMessageMsg{
-		Server: c.ServerName,
+		Server: c.serverName,
 		Buffer: "",
 		Time:   time.Now().Format("15:04"),
 		From:   "--",
 		Text:   "irc: disconnected from server",
 	})
 
-	for _, channelName := range c.Channels {
+	for _, channelName := range c.channels {
 		c.program.Send(BufferNewMessageMsg{
-			Server: c.ServerName,
+			Server: c.serverName,
 			Buffer: channelName,
 			Time:   time.Now().Format("15:04"),
 			From:   "--",
 			Text:   "irc: disconnected from server",
 		})
 	}
+
+	c.startReconnectLoop()
 }
