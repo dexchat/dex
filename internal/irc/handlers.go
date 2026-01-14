@@ -212,3 +212,35 @@ func sortUserList(users []string) {
 		return strings.ToLower(nickA) < strings.ToLower(nickB)
 	})
 }
+func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
+	// Auto-join on connect
+	for _, channel := range c.Channels {
+		client.Cmd.Join(channel)
+	}
+
+	c.program.Send(ChannelTopicMsg{
+		Server:  c.ServerName,
+		Channel: "",
+		Topic:   "IRC: " + c.Server(),
+	})
+}
+
+func (c *Client) onDisconnect(_ *girc.Client, _ girc.Event) {
+	c.program.Send(BufferNewMessageMsg{
+		Server: c.ServerName,
+		Buffer: "",
+		Time:   time.Now().Format("15:04"),
+		From:   "--",
+		Text:   "irc: disconnected from server",
+	})
+
+	for _, channelName := range c.Channels {
+		c.program.Send(BufferNewMessageMsg{
+			Server: c.ServerName,
+			Buffer: channelName,
+			Time:   time.Now().Format("15:04"),
+			From:   "--",
+			Text:   "irc: disconnected from server",
+		})
+	}
+}

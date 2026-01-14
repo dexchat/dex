@@ -34,37 +34,28 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 }
 
 func (c *Client) Connect() error {
-	c.Handlers.Add(girc.CONNECTED, func(client *girc.Client, e girc.Event) {
-		// Auto-join on connect
-		for _, channel := range c.Channels {
-			client.Cmd.Join(channel)
-		}
-
-		c.program.Send(ChannelTopicMsg{
-			Server:  c.ServerName,
-			Channel: "",
-			Topic:   "IRC: " + c.Server(),
-		})
-	})
-
+	c.Handlers.Add(girc.CONNECTED, c.onConnect)
+	c.Handlers.Add(girc.DISCONNECTED, c.onDisconnect)
 	c.Handlers.Add(girc.JOIN, c.onJoin)
-	c.Handlers.Add(girc.RPL_ENDOFNAMES, c.onUserListChange)
-	c.Handlers.Add(girc.RPL_ENDOFWHO, c.onUserListChange)
-	c.Handlers.Add(girc.RPL_TOPIC, c.onTopic)
+
+	c.Handlers.Add(girc.PRIVMSG, c.onPrivmsg)
+	c.Handlers.Add(girc.NOTICE, c.onServerMessage)
 	c.Handlers.Add(girc.TOPIC, c.onTopic)
 	c.Handlers.Add(girc.QUIT, c.onQuit)
 	c.Handlers.Add(girc.PART, c.onUserListChange)
 	c.Handlers.Add(girc.JOIN, c.onUserListChange)
 	c.Handlers.Add(girc.NICK, c.onUserListChange)
 	c.Handlers.Add(girc.MODE, c.onUserListChange)
-	c.Handlers.Add(girc.PRIVMSG, c.onPrivmsg)
-	c.Handlers.Add(girc.NOTICE, c.onServerMessage)
+
+	c.Handlers.Add(girc.RPL_ENDOFNAMES, c.onUserListChange)
+	c.Handlers.Add(girc.RPL_ENDOFWHO, c.onUserListChange)
+	c.Handlers.Add(girc.RPL_TOPIC, c.onTopic)
 	c.Handlers.Add(girc.RPL_WELCOME, c.onServerMessage)
 	c.Handlers.Add(girc.RPL_MOTD, c.onServerMessage)
 	c.Handlers.Add(girc.RPL_MOTDSTART, c.onServerMessage)
 	c.Handlers.Add(girc.RPL_ENDOFMOTD, c.onServerMessage)
-	c.Handlers.Add(girc.NICK, c.onNickUpdate)
 	c.Handlers.Add(girc.RPL_WELCOME, c.onNickUpdate)
+	c.Handlers.Add(girc.NICK, c.onNickUpdate)
 
 	if err := c.Client.Connect(); err != nil {
 		return fmt.Errorf("failed to connect to %s: %w", c.ServerName, err)
