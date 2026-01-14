@@ -214,11 +214,10 @@ func sortUserList(users []string) {
 		return strings.ToLower(nickA) < strings.ToLower(nickB)
 	})
 }
+
 func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 	// Auto-join on connect
-	for _, channel := range c.channels {
-		client.Cmd.Join(channel)
-	}
+	client.Cmd.Join(c.channels...)
 
 	c.program.Send(ChannelTopicMsg{
 		Server:  c.serverName,
