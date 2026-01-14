@@ -31,6 +31,8 @@ func main() {
 	p := tea.NewProgram(tui, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 	ircClientManager := irc.NewClientManager(cfg.Servers, p)
+	defer ircClientManager.DisconnectAll()
+
 	tui.SetManager(ircClientManager)
 	ircClientManager.ConnectAll()
 

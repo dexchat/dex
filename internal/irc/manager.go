@@ -42,3 +42,9 @@ func (m *ClientManager) Send(server, channel, message string) {
 		client.Cmd.Message(channel, message)
 	}
 }
+
+func (m *ClientManager) DisconnectAll() {
+	for _, client := range m.clients {
+		client.Close()
+	}
+}
