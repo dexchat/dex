@@ -47,6 +47,13 @@ func (c *Client) Connect() error {
 	c.Handlers.Add(girc.NICK, c.onUserListChange)
 	c.Handlers.Add(girc.MODE, c.onUserListChange)
 
+	c.Handlers.Add(girc.ERR_NOCHANMODES, c.onJoinError)
+	c.Handlers.Add(girc.ERR_INVITEONLYCHAN, c.onJoinError)
+	c.Handlers.Add(girc.ERR_RESTRICTED, c.onJoinError)
+	c.Handlers.Add(girc.ERR_BANNEDFROMCHAN, c.onJoinError)
+	c.Handlers.Add(girc.ERR_CHANNELISFULL, c.onJoinError)
+	c.Handlers.Add(girc.ERR_BADCHANNELKEY, c.onJoinError)
+
 	c.Handlers.Add(girc.RPL_ENDOFNAMES, c.onUserListChange)
 	c.Handlers.Add(girc.RPL_ENDOFWHO, c.onUserListChange)
 	c.Handlers.Add(girc.RPL_TOPIC, c.onTopic)

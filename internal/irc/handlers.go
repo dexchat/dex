@@ -287,3 +287,13 @@ func (c *Client) onDisconnect(_ *girc.Client, _ girc.Event) {
 
 	c.startReconnectLoop()
 }
+
+func (c *Client) onJoinError(_ *girc.Client, e girc.Event) {
+	c.program.Send(BufferNewMessageMsg{
+		Server: c.serverName,
+		Buffer: e.Params[1],
+		Time:   time.Now().Format("15:04"),
+		From:   "--",
+		Text:   fmt.Sprintf("irc: %s", e.Last()),
+	})
+}
