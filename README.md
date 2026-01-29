@@ -4,7 +4,8 @@
 
 
 ## reference
-https://datatracker.ietf.org/doc/html/rfc2812
+* https://datatracker.ietf.org/doc/html/rfc2812
+* https://modern.ircdocs.horse/
 
 ## TODO
 * IRC:
