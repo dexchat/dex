@@ -172,6 +172,30 @@ func (c *Client) onJoin(client *girc.Client, e girc.Event) {
 	}
 }
 
+func (c *Client) onPart(client *girc.Client, e girc.Event) {
+	if len(e.Params) == 0 {
+		return
+	}
+	channelName := e.Params[0]
+
+	if e.Source != nil {
+		userName := e.Source.Name
+		// do not display self-part
+		if userName != client.GetNick() {
+			c.program.Send(BufferNewMessageMsg{
+				Server: c.serverName,
+				Buffer: channelName,
+				Time:   time.Now().Format("15:04"),
+				From:   "--",
+				Text:   fmt.Sprintf("%s has left", userName),
+			})
+		}
+	}
+}
+
+// updateChannelCase fixes the channel name accordingly to how it's registered in the server
+// Example: the user will join the channel #idlerpg, but the true name is #idleRPG
+// It should be called every time the user joins a channel
 func (c *Client) updateChannelCase(channelName string) {
 	for i, ch := range c.channels {
 		if strings.EqualFold(ch, channelName) && ch != channelName {

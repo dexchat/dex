@@ -37,6 +37,7 @@ func (c *Client) Connect() error {
 	c.Handlers.Add(girc.CONNECTED, c.onConnect)
 	c.Handlers.Add(girc.DISCONNECTED, c.onDisconnect)
 	c.Handlers.Add(girc.JOIN, c.onJoin)
+	c.Handlers.Add(girc.PART, c.onPart)
 
 	c.Handlers.Add(girc.PRIVMSG, c.onPrivmsg)
 	c.Handlers.Add(girc.NOTICE, c.onServerMessage)
