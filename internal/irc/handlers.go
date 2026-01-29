@@ -150,12 +150,26 @@ func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 	}
 }
 
-func (c *Client) onJoin(_ *girc.Client, e girc.Event) {
+func (c *Client) onJoin(client *girc.Client, e girc.Event) {
 	if len(e.Params) == 0 {
 		return
 	}
 	channelName := e.Params[0]
 	c.updateChannelCase(channelName)
+
+	if e.Source != nil {
+		userName := e.Source.Name
+		// do not display self-join
+		if userName != client.GetNick() {
+			c.program.Send(BufferNewMessageMsg{
+				Server: c.serverName,
+				Buffer: channelName,
+				Time:   time.Now().Format("15:04"),
+				From:   "--",
+				Text:   fmt.Sprintf("%s has joined", userName),
+			})
+		}
+	}
 }
 
 func (c *Client) updateChannelCase(channelName string) {
