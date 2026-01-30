@@ -87,10 +87,16 @@ func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
 		target = e.Source.Name
 	}
 
+	// Use server timestamp if available (ZNC/IRCv3 server-time), fallback to current time
+	ts := e.Timestamp
+	if ts.IsZero() {
+		ts = time.Now()
+	}
+
 	c.program.Send(BufferNewMessageMsg{
 		Server: c.serverName,
 		Buffer: target,
-		Time:   time.Now().Format("15:04"),
+		Time:   ts.Format("15:04"),
 		From:   e.Source.Name,
 		Text:   e.Last(),
 	})
@@ -125,10 +131,16 @@ func (c *Client) onServerMessage(_ *girc.Client, e girc.Event) {
 		return
 	}
 
+	// Use server timestamp if available, fallback to current time
+	ts := e.Timestamp
+	if ts.IsZero() {
+		ts = time.Now()
+	}
+
 	c.program.Send(BufferNewMessageMsg{
 		Server: c.serverName,
 		Buffer: "",
-		Time:   time.Now().Format("15:04"),
+		Time:   ts.Format("15:04"),
 		From:   c.serverName,
 		Text:   e.Last(),
 	})
