@@ -9,9 +9,6 @@
 
 ## TODO
 * IRC:
-  * show user joins/parts in buffer -> add a field so it's possible for the user to choose have it or not
-  * option to don’t connect to the channels on startup
-  * option to change timestamp format and/or hide it
   * enable scroll to viewport (chat or user list) based on the mouse is hovered
   * support for commands, e.g. /leave, /join, etc.
   * autocompletion for commands
@@ -23,14 +20,18 @@
 * migrate to lipgloss v2 and use their overlay
 * fix mouse sequences being typed in input bar e.g. `[<64;76;47M[<65;76;47M`
 * use all models as value and not reference
-* config: global nickname option
-* find a place to display channel modes if the user wants to
 * create keybindings for scrolling the chat viewport
-* option to disable mouse/scroll support
 * new messages indicator
 * tagged messages indicator
-* improve channel list UI and user list member count, it's kinda ugly - ask for suggestions to someone
+* improve channel list UI and user list member count, it's kinda ugly – ask for suggestions to someone
 * improve ctrl+c quit color
+* options that should be possible to set in the config file:
+  * global nickname
+  * display user join/part/quit messages
+  * do not connect to the channels on startup
+  * change the timestamp format and/or hide it
+  * display channel modes
+  * disable mouse/scroll support
 
 ## Features to implement
 * command palette with: quick jump, fuzzy channel search, join, leave, etc.
