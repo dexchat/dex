@@ -16,7 +16,7 @@ type Server struct {
 	Name     string
 	Address  string   `toml:"address"`
 	Port     int      `toml:"port"`
-	SSL      bool     `toml:"ssl"`
+	SSL      *bool    `toml:"ssl"`
 	Password string   `toml:"password"`
 	Channels []string `toml:"channels"`
 	Nickname string   `toml:"nickname"`

@@ -27,11 +27,11 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 	gircConfig := girc.Config{
 		Server:     config.Address,
 		Port:       config.Port,
-		Nick:       config.Nickname,
-		User:       config.Username,
+		Nick:       config.ConnectionNickname(),
+		User:       config.ConnectionUsername(),
 		Name:       config.Realname,
-		ServerPass: config.Password,
-		SSL:        config.SSL,
+		ServerPass: config.ConnectionPassword(),
+		SSL:        config.UseSSL(),
 		SupportedCaps: map[string][]string{
 			// echo-message is enabled to support ZNC users;
 			// ZNC, by default, only records messages it receives from the IRC server.
@@ -47,7 +47,7 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 
 	// TODO: create a config option for this
 	// Skip certificate verification for self-signed certs (useful for ZNC)
-	if config.SSL {
+	if config.UseSSL() {
 		gircConfig.TLSConfig = &tls.Config{
 			InsecureSkipVerify: true,
 		}
