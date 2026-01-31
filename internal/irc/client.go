@@ -17,13 +17,36 @@ type Client struct {
 }
 
 func NewClient(serverName string, config *config.Server, teaProgram *tea.Program) *Client {
-	client := girc.New(girc.Config{
-		Server: config.Address,
-		Port:   config.Port,
-		Nick:   config.Nickname,
-		User:   config.Username,
-		Name:   config.Realname,
-	})
+	gircConfig := girc.Config{
+		Server:     config.Address,
+		Port:       config.Port,
+		Nick:       config.Nickname,
+		User:       config.Username,
+		Name:       config.Realname,
+		ServerPass: config.Password,
+		SSL:        config.SSL,
+		SupportedCaps: map[string][]string{
+			// echo-message is enabled to support ZNC users;
+			// ZNC, by default, only records messages it receives from the IRC server.
+			// Not using this capability would prevent the own user messages from being
+			// preserved in ZNC playback
+			"echo-message": {},
+			// sever-time is enabled to fetch the correct timestamp in the ZNC playback;
+			// Not using this capability would make the playback messages
+			// to display with the current timestamp
+			"server-time": {},
+		},
+	}
+
+	// TODO: create a config option for this
+	// Skip certificate verification for self-signed certs (useful for ZNC)
+	if config.SSL {
+		gircConfig.TLSConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
+
+	client := girc.New(gircConfig)
 
 	return &Client{
 		Client:     client,
