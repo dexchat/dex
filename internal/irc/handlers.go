@@ -295,6 +295,14 @@ func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 		Channel: "",
 		Topic:   "IRC: " + c.Server(),
 	})
+
+	// Sync the nickname from the server right after the connection.
+	// When using ZNC, the nickname from the config file might be different from the
+	// nickname configured in the ZNC, so we fetch it from there and update it
+	c.program.Send(NickUpdateMsg{
+		Server: c.serverName,
+		Nick:   client.GetNick(),
+	})
 }
 
 func (c *Client) startReconnectLoop() {
