@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -207,20 +206,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case chat.SendMessageMsg:
 		buffer := m.getActiveBuffer()
-		if m.ircClientManager != nil && buffer.Server != "" && buffer.Buffer != "" {
-			if err := m.ircClientManager.Send(buffer.Server, buffer.Buffer, msgTyped.Text); err != nil {
-				buffer.Chat.AddMessage(chat.Message{
-					Time:     time.Now().Format("15:04"),
-					Username: "--",
-					Text:     fmt.Sprintf("irc: %v", err),
-				})
-			} else {
-				buffer.Chat.AddMessage(chat.Message{
-					Time:     time.Now().Format("15:04"),
-					Username: buffer.Chat.Nickname(),
-					Text:     msgTyped.Text,
-				})
-			}
+		if m.ircClientManager != nil && buffer.isValid() {
+			buffer.Chat.AddMessage(chat.Message{
+				Time:     time.Now().Format("15:04"),
+				Username: buffer.Chat.Nickname(),
+				Text:     msgTyped.Text,
+			})
+
+			// Send it asynchronously to avoid blocking the UI by girc
+			go m.ircClientManager.Send(buffer.Server, buffer.Buffer, msgTyped.Text)
 		}
 	}
 

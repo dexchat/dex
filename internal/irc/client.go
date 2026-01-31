@@ -1,7 +1,9 @@
 package irc
 
 import (
+	"crypto/tls"
 	"fmt"
+	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lrstanley/girc"
@@ -14,6 +16,11 @@ type Client struct {
 	serverName string
 	channels   []string
 	program    *tea.Program
+
+	// pendingMessages tracks messages sent from dexchat so we can ignore the echo returned by
+	// the server. Since we display the message sent instantly in the UI (before sending to the server),
+	// when the server echoes them back, we skip/ignore the echo to avoid duplicates.
+	pendingMessages sync.Map // Key format: "server:channel:message"
 }
 
 func NewClient(serverName string, config *config.Server, teaProgram *tea.Program) *Client {
@@ -64,6 +71,7 @@ func (c *Client) Connect() error {
 
 	c.Handlers.Add(girc.PRIVMSG, c.onPrivmsg)
 	c.Handlers.Add(girc.NOTICE, c.onServerMessage)
+	c.Handlers.Add(girc.ALL_EVENTS, c.onEchoMessage) // Handle echo-message capability
 	c.Handlers.Add(girc.TOPIC, c.onTopic)
 	c.Handlers.Add(girc.QUIT, c.onQuit)
 	c.Handlers.Add(girc.PART, c.onUserListChange)

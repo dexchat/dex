@@ -376,3 +376,42 @@ func (c *Client) onJoinError(_ *girc.Client, e girc.Event) {
 		Text:   fmt.Sprintf("irc: %s", e.Last()),
 	})
 }
+
+// onEchoMessage handles echo-message capability (user's own messages echoed back by the server)
+func (c *Client) onEchoMessage(client *girc.Client, e girc.Event) {
+	if !e.Echo || (e.Command != girc.PRIVMSG && e.Command != girc.NOTICE) {
+		return
+	}
+
+	if len(e.Params) == 0 {
+		return
+	}
+	target := e.Params[0]
+
+	ts := e.Timestamp
+	if ts.IsZero() {
+		ts = time.Now()
+	}
+
+	// This filter aims to support displaying the user's own messages in the
+	// ZNC playback history correctly and support multi-client connections,
+	// e.g., sending a message in client X should also display in client Y
+	// if connected to both.
+	// Check if this is an echo of a message we sent from this client
+	// If so, we already displayed it in the UI - ignore it
+	if e.Source.Name == client.GetNick() {
+		key := c.serverName + ":" + target + ":" + strings.TrimSpace(e.Last())
+		if _, pending := c.pendingMessages.LoadAndDelete(key); pending {
+			return
+		}
+		// Not in pending = sent from another client, display it
+	}
+
+	c.program.Send(BufferNewMessageMsg{
+		Server: c.serverName,
+		Buffer: target,
+		Time:   ts.Format("15:04"),
+		From:   e.Source.Name,
+		Text:   e.Last(),
+	})
+}

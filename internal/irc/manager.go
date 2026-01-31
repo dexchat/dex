@@ -2,6 +2,7 @@ package irc
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -39,18 +40,38 @@ func (m *ClientManager) ConnectAll() {
 	}
 }
 
-func (m *ClientManager) Send(server, channel, message string) error {
-	if client, ok := m.clients[server]; ok {
-		if !client.IsConnected() {
-			return fmt.Errorf("not connected to %s", server)
-		}
-		if girc.IsValidChannel(channel) && !client.IsInChannel(channel) {
-			return fmt.Errorf("not in channel %s", channel)
-		}
-		client.Cmd.Message(channel, message)
-		return nil
+func (m *ClientManager) Send(server, channel, message string) {
+	client, ok := m.clients[server]
+	if !ok {
+		return
 	}
-	return fmt.Errorf("server %s not found", server)
+
+	sendError := func(text string) {
+		client.program.Send(BufferNewMessageMsg{
+			Server: server,
+			Buffer: channel,
+			Time:   time.Now().Format("15:04"),
+			From:   "--",
+			Text:   text,
+		})
+	}
+
+	if !client.IsConnected() {
+		sendError(fmt.Sprintf("irc: not connected to %s", server))
+		return
+	}
+	if girc.IsValidChannel(channel) && !client.IsInChannel(channel) {
+		sendError(fmt.Sprintf("irc: not in channel %s", channel))
+		return
+	}
+
+	// TrimSpace normalizes whitespace because IRC servers may strip or add
+	// leading/trailing spaces, leading to the message being sent twice as
+	// the echo will differ from what we sent
+	key := server + ":" + channel + ":" + strings.TrimSpace(message)
+	client.pendingMessages.Store(key, struct{}{})
+
+	client.Cmd.Message(channel, message)
 }
 
 func (m *ClientManager) DisconnectAll() {
