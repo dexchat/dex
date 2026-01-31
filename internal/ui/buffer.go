@@ -18,8 +18,12 @@ func makeBufferKey(server, channel string) BufferKey {
 type Buffer struct {
 	Key    BufferKey
 	Server string
-	Buffer string
+	Buffer string // buffer can be a channel or a PM
 
 	Chat  chat.Model
 	Users users.Model
+}
+
+func (b *Buffer) isValid() bool {
+	return b.Server != "" && b.Buffer != ""
 }
