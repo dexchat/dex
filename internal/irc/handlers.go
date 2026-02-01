@@ -158,27 +158,25 @@ func (c *Client) onNickUpdate(client *girc.Client, e girc.Event) {
 func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 	userName := e.Source.Name
 	user := client.LookupUser(userName)
-	if user != nil {
-		reason := e.Last()
-		message := fmt.Sprintf("%s has quit", userName)
-		if reason != "" {
-			message = fmt.Sprintf("%s (%s)", message, reason)
-		}
-
-		// send quit message to all channels the user is in
-		for _, channelName := range user.ChannelList {
-			c.program.Send(BufferNewMessageMsg{
-				Server: c.serverName,
-				Buffer: channelName,
-				Time:   time.Now().Format("15:04"),
-				From:   "--",
-				Text:   message,
-			})
-		}
+	if user == nil {
+		return
 	}
 
-	// WHO triggers RPL_ENDOFWHO which calls onUserListChange
-	for _, channelName := range c.channels {
+	reason := e.Last()
+	message := fmt.Sprintf("%s has quit", userName)
+	if reason != "" {
+		message = fmt.Sprintf("%s (%s)", message, reason)
+	}
+
+	// send quit message and trigger user list refresh only for channels the user was in
+	for _, channelName := range user.ChannelList {
+		c.program.Send(BufferNewMessageMsg{
+			Server: c.serverName,
+			Buffer: channelName,
+			Time:   time.Now().Format("15:04"),
+			From:   "--",
+			Text:   message,
+		})
 		client.Cmd.Who(channelName)
 	}
 }
