@@ -137,43 +137,21 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
 
 	case irc.UserListMsg:
-		key := makeBufferKey(msgTyped.Server, msgTyped.Channel)
-		if buf, ok := m.buffers[key]; ok {
+		buf, createCmd := m.getOrCreateBuffer(msgTyped.Server, msgTyped.Channel)
+		if createCmd != nil {
+			cmds = append(cmds, createCmd)
+		}
+		if buf != nil {
 			buf.Users, cmd = buf.Users.Update(users.UserListMsg(msgTyped.Users))
 			cmds = append(cmds, cmd)
 		}
 
 	case irc.BufferNewMessageMsg:
-		key := makeBufferKey(msgTyped.Server, msgTyped.Buffer)
-
-		// Create a buffer dynamically for PMs if it doesn't exist
-		if _, ok := m.buffers[key]; !ok && msgTyped.Buffer != "" {
-			buf := &Buffer{
-				Key:    key,
-				Server: msgTyped.Server,
-				Chat:   chat.New(m.theme, m.usernameColors),
-				Buffer: msgTyped.Buffer,
-				Users:  users.New(m.theme, m.usernameColors),
-			}
-
-			// Use server buffer to fetch the nickname
-			serverKey := makeBufferKey(msgTyped.Server, "")
-			if serverBuf, ok := m.buffers[serverKey]; ok {
-				buf.Chat.SetNickname(serverBuf.Chat.Nickname())
-			}
-
-			m.buffers[key] = buf
-
-			// Notify the channels component to add a new buffer node
-			cmds = append(cmds, func() tea.Msg {
-				return channels.NewBufferMsg{
-					Server: msgTyped.Server,
-					Buffer: msgTyped.Buffer,
-				}
-			})
+		buf, createCmd := m.getOrCreateBuffer(msgTyped.Server, msgTyped.Buffer)
+		if createCmd != nil {
+			cmds = append(cmds, createCmd)
 		}
-
-		if buf, ok := m.buffers[key]; ok {
+		if buf != nil {
 			buf.Chat.AddMessage(chat.Message{
 				Time:     msgTyped.Time,
 				Username: msgTyped.From,
@@ -292,4 +270,39 @@ func (m *Model) calculateChatHeight() int {
 
 func (m *Model) SetManager(manager *irc.ClientManager) {
 	m.ircClientManager = manager
+}
+
+// getOrCreateBuffer returns the buffer for the given server/channel, creates if needed
+func (m *Model) getOrCreateBuffer(server, channel string) (*Buffer, tea.Cmd) {
+	key := makeBufferKey(server, channel)
+	if buf, ok := m.buffers[key]; ok {
+		return buf, nil
+	}
+
+	if channel == "" {
+		return nil, nil
+	}
+
+	buf := &Buffer{
+		Key:    key,
+		Server: server,
+		Buffer: channel,
+		Chat:   chat.New(m.theme, m.usernameColors),
+		Users:  users.New(m.theme, m.usernameColors),
+	}
+
+	// copy nickname from the server buffer
+	serverKey := makeBufferKey(server, "")
+	if serverBuf, exists := m.buffers[serverKey]; exists {
+		buf.Chat.SetNickname(serverBuf.Chat.Nickname())
+	}
+
+	m.buffers[key] = buf
+
+	return buf, func() tea.Msg {
+		return channels.NewBufferMsg{
+			Server: server,
+			Buffer: channel,
+		}
+	}
 }
