@@ -61,13 +61,15 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) updateContent() Model {
-	var rendered []string
-	for _, user := range m.users {
-		userStyle := lipgloss.NewStyle().
-			Background(m.theme.Colors.Background).
-			Width(m.viewport.Width).
-			Foreground(m.usernameColors.GetColor(user))
-		rendered = append(rendered, userStyle.Render(user))
+	rendered := make([]string, len(m.users))
+	baseStyle := lipgloss.NewStyle().
+		Background(m.theme.Colors.Background).
+		Width(m.viewport.Width)
+
+	for i, user := range m.users {
+		rendered[i] = baseStyle.
+			Foreground(m.usernameColors.GetColor(user)).
+			Render(user)
 	}
 	m.viewport.SetContent(strings.Join(rendered, "\n"))
 
