@@ -102,11 +102,28 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			}
 		}
 	case NewBufferMsg:
-		m.nodes = append(m.nodes, node{
+		// find the position to insert: after the server and its existing channels
+		insertIdx := len(m.nodes) // default to end
+		for i, existingNode := range m.nodes {
+			if existingNode.isServer && existingNode.name == msg.Server {
+				// found the server, now find where its channels end
+				insertIdx = i + 1
+				for j := i + 1; j < len(m.nodes); j++ {
+					if m.nodes[j].isServer {
+						break // hit the next server
+					}
+					insertIdx = j + 1
+				}
+				break
+			}
+		}
+		newNode := node{
 			name:     msg.Buffer,
 			isServer: false,
 			parent:   msg.Server,
-		})
+		}
+		// insert at the correct position
+		m.nodes = append(m.nodes[:insertIdx], append([]node{newNode}, m.nodes[insertIdx:]...)...)
 	}
 	return m, nil
 }
