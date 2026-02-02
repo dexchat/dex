@@ -359,7 +359,7 @@ func (c *Client) startReconnectLoop() {
 	}()
 }
 
-func (c *Client) onDisconnect(_ *girc.Client, _ girc.Event) {
+func (c *Client) onDisconnect(client *girc.Client, _ girc.Event) {
 	c.program.Send(BufferNewMessageMsg{
 		Server: c.serverName,
 		Buffer: "",
@@ -368,7 +368,7 @@ func (c *Client) onDisconnect(_ *girc.Client, _ girc.Event) {
 		Text:   "irc: disconnected from server",
 	})
 
-	for _, channelName := range c.channels {
+	for _, channelName := range client.ChannelList() {
 		c.program.Send(BufferNewMessageMsg{
 			Server: c.serverName,
 			Buffer: channelName,
