@@ -35,6 +35,22 @@ func (c *Client) onUserListChange(client *girc.Client, e girc.Event) {
 		return
 	}
 
+	// For NICK events, update all channels the user is in
+	if e.Command == girc.NICK {
+		newNick := e.Params[0]
+		user := client.LookupUser(newNick)
+		if user != nil {
+			for _, ch := range user.ChannelList {
+				c.refreshUserList(client, ch)
+			}
+		}
+		return
+	}
+
+	c.refreshUserList(client, channelName)
+}
+
+func (c *Client) refreshUserList(client *girc.Client, channelName string) {
 	channel := client.LookupChannel(channelName)
 	if channel == nil {
 		return
