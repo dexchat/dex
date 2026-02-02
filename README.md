@@ -32,6 +32,7 @@
   * change the timestamp format and/or hide it
   * display channel modes
   * disable mouse/scroll support
+* send a connected message when connecting after a disconnect - do not display the whole playback again (I think it resets the buffer)
 
 ## Features to implement
 * command palette with: quick jump, fuzzy channel search, join, leave, etc.
