@@ -335,7 +335,8 @@ func (c *Client) startReconnectLoop() {
 
 			time.Sleep(time.Duration(backoffSeconds) * time.Second)
 
-			if err := c.Client.Connect(); err == nil {
+			var err error
+			if err = c.Client.Connect(); err == nil {
 				c.program.Send(BufferNewMessageMsg{
 					Server: c.serverName,
 					Buffer: "",
@@ -343,16 +344,26 @@ func (c *Client) startReconnectLoop() {
 					From:   "--",
 					Text:   "irc: reconnected to server",
 				})
+
+				for _, channelName := range c.Client.ChannelList() {
+					c.program.Send(BufferNewMessageMsg{
+						Server: c.serverName,
+						Buffer: channelName,
+						Time:   time.Now().Format("15:04"),
+						From:   "--",
+						Text:   "irc: reconnected to server",
+					})
+				}
+
 				return
-			} else {
-				c.program.Send(BufferNewMessageMsg{
-					Server: c.serverName,
-					Buffer: "",
-					Time:   time.Now().Format("15:04"),
-					From:   "--",
-					Text:   fmt.Sprintf("irc: reconnect failed: %v", err),
-				})
 			}
+			c.program.Send(BufferNewMessageMsg{
+				Server: c.serverName,
+				Buffer: "",
+				Time:   time.Now().Format("15:04"),
+				From:   "--",
+				Text:   fmt.Sprintf("irc: reconnect failed: %v", err),
+			})
 
 			attempt++
 		}
