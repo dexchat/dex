@@ -6,9 +6,10 @@ type rawConfig struct {
 }
 
 // Config stores the config file sorted and ready to be used
-// Go have unordered maps which might cause inconsistencies
-// in how the UI iterates over the servers and channels
 type Config struct {
+	// Servers is used to create the buffers on startup only
+	// Later, the source of truth is the irc client channels
+	// as the user can join channels while using the app
 	Servers []*Server
 }
 
