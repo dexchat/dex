@@ -32,6 +32,7 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 		Name:       config.Realname,
 		ServerPass: config.ConnectionPassword(),
 		SSL:        config.UseSSL(),
+		AllowFlood: true,
 		SupportedCaps: map[string][]string{
 			// echo-message is enabled to support ZNC users;
 			// ZNC, by default, only records messages it receives from the IRC server.
@@ -73,11 +74,10 @@ func (c *Client) Connect() error {
 	c.Handlers.Add(girc.NOTICE, c.onServerMessage)
 	c.Handlers.Add(girc.ALL_EVENTS, c.onEchoMessage) // Handle echo-message capability
 	c.Handlers.Add(girc.TOPIC, c.onTopic)
-	c.Handlers.Add(girc.QUIT, c.onQuit)
-	c.Handlers.Add(girc.PART, c.onUserListChange)
-	c.Handlers.Add(girc.JOIN, c.onUserListChange)
-	c.Handlers.Add(girc.NICK, c.onUserListChange)
-	c.Handlers.Add(girc.MODE, c.onUserListChange)
+	c.Handlers.AddBg(girc.QUIT, c.onQuit)
+	c.Handlers.AddBg(girc.PART, c.onUserListChange)
+	c.Handlers.AddBg(girc.NICK, c.onUserListChange)
+	c.Handlers.AddBg(girc.MODE, c.onUserListChange)
 
 	c.Handlers.Add(girc.ERR_NOCHANMODES, c.onJoinError)
 	c.Handlers.Add(girc.ERR_INVITEONLYCHAN, c.onJoinError)
@@ -86,8 +86,8 @@ func (c *Client) Connect() error {
 	c.Handlers.Add(girc.ERR_CHANNELISFULL, c.onJoinError)
 	c.Handlers.Add(girc.ERR_BADCHANNELKEY, c.onJoinError)
 
-	c.Handlers.Add(girc.RPL_ENDOFNAMES, c.onUserListChange)
-	c.Handlers.Add(girc.RPL_ENDOFWHO, c.onUserListChange)
+	c.Handlers.AddBg(girc.RPL_ENDOFNAMES, c.onUserListChange)
+	c.Handlers.AddBg(girc.RPL_ENDOFWHO, c.onUserListChange)
 	c.Handlers.Add(girc.RPL_TOPIC, c.onTopic)
 	c.Handlers.Add(girc.RPL_WELCOME, c.onServerMessage)
 	c.Handlers.Add(girc.RPL_MOTD, c.onServerMessage)
