@@ -2,6 +2,7 @@ package chat
 
 import (
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -132,13 +133,39 @@ func (m *Model) SetSize(width, height int) {
 }
 
 func (m *Model) updateContent() {
-	// Re-render messages with the new width and update viewport content
-	styledMessages := make([]string, len(m.messages))
-	for i, msg := range m.messages {
-		styledMessages[i] = m.renderMessage(msg, m.viewport.Width)
+	var lastTimestamp time.Time
+	var lines []string
+
+	for _, msg := range m.messages {
+		if !lastTimestamp.IsZero() && !sameDay(lastTimestamp, msg.Timestamp) {
+			lines = append(lines, m.renderDateSeparator(msg.Timestamp, m.viewport.Width))
+		}
+		lastTimestamp = msg.Timestamp
+		lines = append(lines, m.renderMessage(msg, m.viewport.Width))
 	}
-	m.viewport.SetContent(strings.Join(styledMessages, "\n"))
+
+	m.viewport.SetContent(strings.Join(lines, "\n"))
 	m.viewport.GotoBottom()
+}
+
+func sameDay(a, b time.Time) bool {
+	return a.Year() == b.Year() && a.YearDay() == b.YearDay()
+}
+
+func (m *Model) renderDateSeparator(date time.Time, width int) string {
+	dateStr := date.Format("Mon, January 2")
+	padding := (width - len(dateStr) - 2) / 2
+	if padding < 1 {
+		padding = 1
+	}
+	dashes := strings.Repeat("─", padding)
+	separator := dashes + " " + dateStr + " " + dashes
+
+	style := lipgloss.NewStyle().
+		Background(m.theme.Colors.Background).
+		Foreground(m.theme.Colors.Timestamp)
+
+	return style.Width(width).Render(separator)
 }
 
 func (m *Model) AddMessage(msg Message) {
