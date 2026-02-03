@@ -2,7 +2,6 @@ package irc
 
 import (
 	"crypto/tls"
-	"fmt"
 	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -55,16 +54,18 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 	}
 
 	client := girc.New(gircConfig)
-
-	return &Client{
+	c := &Client{
 		Client:     client,
 		serverName: serverName,
 		channels:   config.Channels,
 		program:    teaProgram,
 	}
+	c.addHandlers()
+
+	return c
 }
 
-func (c *Client) Connect() error {
+func (c *Client) addHandlers() {
 	c.Handlers.Add(girc.CONNECTED, c.onConnect)
 	c.Handlers.Add(girc.DISCONNECTED, c.onDisconnect)
 	c.Handlers.Add(girc.JOIN, c.onJoin)
@@ -95,10 +96,4 @@ func (c *Client) Connect() error {
 	c.Handlers.Add(girc.RPL_ENDOFMOTD, c.onServerMessage)
 	c.Handlers.Add(girc.RPL_WELCOME, c.onNickUpdate)
 	c.Handlers.Add(girc.NICK, c.onNickUpdate)
-
-	if err := c.Client.Connect(); err != nil {
-		return fmt.Errorf("failed to connect to %s: %w", c.serverName, err)
-	}
-
-	return nil
 }
