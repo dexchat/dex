@@ -109,11 +109,11 @@ func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
 	}
 
 	c.program.Send(BufferNewMessageMsg{
-		Server: c.serverName,
-		Buffer: target,
-		Time:   ts.Format("15:04"),
-		From:   e.Source.Name,
-		Text:   e.Last(),
+		Server:    c.serverName,
+		Buffer:    target,
+		Timestamp: ts,
+		From:      e.Source.Name,
+		Text:      e.Last(),
 	})
 }
 
@@ -153,11 +153,11 @@ func (c *Client) onServerMessage(_ *girc.Client, e girc.Event) {
 	}
 
 	c.program.Send(BufferNewMessageMsg{
-		Server: c.serverName,
-		Buffer: "",
-		Time:   ts.Format("15:04"),
-		From:   c.serverName,
-		Text:   e.Last(),
+		Server:    c.serverName,
+		Buffer:    "",
+		Timestamp: ts,
+		From:      c.serverName,
+		Text:      e.Last(),
 	})
 }
 
@@ -186,11 +186,11 @@ func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 	// send quit message and trigger user list refresh only for channels the user was in
 	for _, channelName := range user.ChannelList {
 		c.program.Send(BufferNewMessageMsg{
-			Server: c.serverName,
-			Buffer: channelName,
-			Time:   time.Now().Format("15:04"),
-			From:   "--",
-			Text:   message,
+			Server:    c.serverName,
+			Buffer:    channelName,
+			Timestamp: time.Now(),
+			From:      "--",
+			Text:      message,
 		})
 		client.Cmd.Who(channelName)
 	}
@@ -208,11 +208,11 @@ func (c *Client) onJoin(client *girc.Client, e girc.Event) {
 		// do not display self-join
 		if userName != client.GetNick() {
 			c.program.Send(BufferNewMessageMsg{
-				Server: c.serverName,
-				Buffer: channelName,
-				Time:   time.Now().Format("15:04"),
-				From:   "--",
-				Text:   fmt.Sprintf("%s has joined", userName),
+				Server:    c.serverName,
+				Buffer:    channelName,
+				Timestamp: time.Now(),
+				From:      "--",
+				Text:      fmt.Sprintf("%s has joined", userName),
 			})
 		}
 	}
@@ -229,11 +229,11 @@ func (c *Client) onPart(client *girc.Client, e girc.Event) {
 		// do not display self-part
 		if userName != client.GetNick() {
 			c.program.Send(BufferNewMessageMsg{
-				Server: c.serverName,
-				Buffer: channelName,
-				Time:   time.Now().Format("15:04"),
-				From:   "--",
-				Text:   fmt.Sprintf("%s has left", userName),
+				Server:    c.serverName,
+				Buffer:    channelName,
+				Timestamp: time.Now(),
+				From:      "--",
+				Text:      fmt.Sprintf("%s has left", userName),
 			})
 		}
 	}
@@ -320,32 +320,31 @@ func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 
 func (c *Client) onDisconnect(client *girc.Client, _ girc.Event) {
 	c.program.Send(BufferNewMessageMsg{
-		Server: c.serverName,
-		Buffer: "",
-		Time:   time.Now().Format("15:04"),
-		From:   "--",
-		Text:   "irc: disconnected from server",
+		Server:    c.serverName,
+		Buffer:    "",
+		Timestamp: time.Now(),
+		From:      "--",
+		Text:      "irc: disconnected from server",
 	})
 
 	for _, channelName := range client.ChannelList() {
 		c.program.Send(BufferNewMessageMsg{
-			Server: c.serverName,
-			Buffer: channelName,
-			Time:   time.Now().Format("15:04"),
-			From:   "--",
-			Text:   "irc: disconnected from server",
+			Server:    c.serverName,
+			Buffer:    channelName,
+			Timestamp: time.Now(),
+			From:      "--",
+			Text:      "irc: disconnected from server",
 		})
 	}
-
 }
 
 func (c *Client) onJoinError(_ *girc.Client, e girc.Event) {
 	c.program.Send(BufferNewMessageMsg{
-		Server: c.serverName,
-		Buffer: e.Params[1],
-		Time:   time.Now().Format("15:04"),
-		From:   "--",
-		Text:   fmt.Sprintf("irc: %s", e.Last()),
+		Server:    c.serverName,
+		Buffer:    e.Params[1],
+		Timestamp: time.Now(),
+		From:      "--",
+		Text:      fmt.Sprintf("irc: %s", e.Last()),
 	})
 }
 
@@ -380,10 +379,10 @@ func (c *Client) onEchoMessage(client *girc.Client, e girc.Event) {
 	}
 
 	c.program.Send(BufferNewMessageMsg{
-		Server: c.serverName,
-		Buffer: target,
-		Time:   ts.Format("15:04"),
-		From:   e.Source.Name,
-		Text:   e.Last(),
+		Server:    c.serverName,
+		Buffer:    target,
+		Timestamp: ts,
+		From:      e.Source.Name,
+		Text:      e.Last(),
 	})
 }

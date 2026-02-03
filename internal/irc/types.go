@@ -1,5 +1,7 @@
 package irc
 
+import "time"
+
 type UserListMsg struct {
 	Server  string
 	Channel string
@@ -7,11 +9,11 @@ type UserListMsg struct {
 }
 
 type BufferNewMessageMsg struct {
-	Server string
-	Buffer string
-	Time   string
-	From   string
-	Text   string
+	Server    string
+	Buffer    string
+	Timestamp time.Time
+	From      string
+	Text      string
 }
 
 type ChannelTopicMsg struct {

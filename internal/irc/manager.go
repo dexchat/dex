@@ -33,11 +33,11 @@ func (m *ClientManager) ConnectAll() {
 				if err := c.Connect(); err != nil {
 					backoffSeconds := math.Min(math.Pow(2, float64(attempt)), 300)
 					c.program.Send(BufferNewMessageMsg{
-						Server: name,
-						Buffer: "",
-						Time:   time.Now().Format("15:04"),
-						From:   "--",
-						Text:   fmt.Sprintf("irc: %v, reconnecting in %d seconds...", err, int(backoffSeconds)),
+						Server:    name,
+						Buffer:    "",
+						Timestamp: time.Now(),
+						From:      "--",
+						Text:      fmt.Sprintf("irc: %v, reconnecting in %d seconds...", err, int(backoffSeconds)),
 					})
 					time.Sleep(time.Duration(backoffSeconds) * time.Second)
 					attempt++
@@ -57,11 +57,11 @@ func (m *ClientManager) Send(server, channel, message string) {
 
 	sendError := func(text string) {
 		client.program.Send(BufferNewMessageMsg{
-			Server: server,
-			Buffer: channel,
-			Time:   time.Now().Format("15:04"),
-			From:   "--",
-			Text:   text,
+			Server:    server,
+			Buffer:    channel,
+			Timestamp: time.Now(),
+			From:      "--",
+			Text:      text,
 		})
 	}
 

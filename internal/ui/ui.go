@@ -153,9 +153,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if buf != nil {
 			buf.Chat.AddMessage(chat.Message{
-				Time:     msgTyped.Time,
-				Username: msgTyped.From,
-				Text:     msgTyped.Text,
+				Timestamp: msgTyped.Timestamp,
+				Username:  msgTyped.From,
+				Text:      msgTyped.Text,
 			})
 		}
 
@@ -189,9 +189,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		buffer := m.getActiveBuffer()
 		if m.ircClientManager != nil && buffer.isValid() {
 			buffer.Chat.AddMessage(chat.Message{
-				Time:     time.Now().Format("15:04"),
-				Username: buffer.Chat.Nickname(),
-				Text:     msgTyped.Text,
+				Timestamp: time.Now(),
+				Username:  buffer.Chat.Nickname(),
+				Text:      msgTyped.Text,
 			})
 
 			// Send it asynchronously to avoid blocking the UI by girc
