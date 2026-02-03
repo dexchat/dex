@@ -160,8 +160,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case irc.ChannelTopicMsg:
-		key := makeBufferKey(msgTyped.Server, msgTyped.Channel)
-		if buf, ok := m.buffers[key]; ok {
+		buf, createCmd := m.getOrCreateBuffer(msgTyped.Server, msgTyped.Channel)
+		if createCmd != nil {
+			cmds = append(cmds, createCmd)
+		}
+		if buf != nil {
 			buf.Chat.SetTopic(msgTyped.Topic)
 			// In case the channel topic is more than one line
 			buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
