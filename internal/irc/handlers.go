@@ -2,7 +2,6 @@ package irc
 
 import (
 	"fmt"
-	"math"
 	"sort"
 	"strings"
 	"time"
@@ -319,57 +318,6 @@ func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 	})
 }
 
-func (c *Client) startReconnectLoop() {
-	go func() {
-		attempt := 0
-		for {
-			backoffSeconds := math.Min(math.Pow(2, float64(attempt)), 300)
-
-			c.program.Send(BufferNewMessageMsg{
-				Server: c.serverName,
-				Buffer: "",
-				Time:   time.Now().Format("15:04"),
-				From:   "--",
-				Text:   fmt.Sprintf("irc: reconnecting in %d seconds...", int(backoffSeconds)),
-			})
-
-			time.Sleep(time.Duration(backoffSeconds) * time.Second)
-
-			var err error
-			if err = c.Client.Connect(); err == nil {
-				c.program.Send(BufferNewMessageMsg{
-					Server: c.serverName,
-					Buffer: "",
-					Time:   time.Now().Format("15:04"),
-					From:   "--",
-					Text:   "irc: reconnected to server",
-				})
-
-				for _, channelName := range c.Client.ChannelList() {
-					c.program.Send(BufferNewMessageMsg{
-						Server: c.serverName,
-						Buffer: channelName,
-						Time:   time.Now().Format("15:04"),
-						From:   "--",
-						Text:   "irc: reconnected to server",
-					})
-				}
-
-				return
-			}
-			c.program.Send(BufferNewMessageMsg{
-				Server: c.serverName,
-				Buffer: "",
-				Time:   time.Now().Format("15:04"),
-				From:   "--",
-				Text:   fmt.Sprintf("irc: reconnect failed: %v", err),
-			})
-
-			attempt++
-		}
-	}()
-}
-
 func (c *Client) onDisconnect(client *girc.Client, _ girc.Event) {
 	c.program.Send(BufferNewMessageMsg{
 		Server: c.serverName,
@@ -389,7 +337,6 @@ func (c *Client) onDisconnect(client *girc.Client, _ girc.Event) {
 		})
 	}
 
-	c.startReconnectLoop()
 }
 
 func (c *Client) onJoinError(_ *girc.Client, e girc.Event) {

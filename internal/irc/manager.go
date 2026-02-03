@@ -2,6 +2,7 @@ package irc
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -27,14 +28,22 @@ func NewClientManager(servers []*config.Server, p *tea.Program) *ClientManager {
 func (m *ClientManager) ConnectAll() {
 	for name, client := range m.clients {
 		go func(name string, c *Client) {
-			if err := c.Connect(); err != nil {
-				c.program.Send(BufferNewMessageMsg{
-					Server: name,
-					Buffer: "",
-					Time:   time.Now().Format("15:04"),
-					From:   name,
-					Text:   err.Error(),
-				})
+			attempt := 0
+			for {
+				if err := c.Connect(); err != nil {
+					backoffSeconds := math.Min(math.Pow(2, float64(attempt)), 300)
+					c.program.Send(BufferNewMessageMsg{
+						Server: name,
+						Buffer: "",
+						Time:   time.Now().Format("15:04"),
+						From:   "--",
+						Text:   fmt.Sprintf("irc: %v, reconnecting in %d seconds...", err, int(backoffSeconds)),
+					})
+					time.Sleep(time.Duration(backoffSeconds) * time.Second)
+					attempt++
+					continue
+				}
+				return
 			}
 		}(name, client)
 	}
