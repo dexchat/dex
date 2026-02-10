@@ -33,6 +33,7 @@
   * display channel modes
   * disable mouse/scroll support
 * do not display the whole playback again on reconnection (I think it resets the buffer)
+* display user modes in chat alongside the nickname
 
 ## Features to implement
 * command palette with: quick jump, fuzzy channel search, join, leave, etc.
