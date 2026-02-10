@@ -2,7 +2,6 @@ package irc
 
 import (
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
@@ -29,17 +28,24 @@ func (m *ClientManager) ConnectAll() {
 	for name, client := range m.clients {
 		go func(name string, c *Client) {
 			attempt := 0
+			retryDelays := []int{10, 20, 40, 80, 160, 300}
+
 			for {
 				if err := c.Connect(); err != nil {
-					backoffSeconds := math.Min(math.Pow(2, float64(attempt)), 300)
+					var backoff int
+					if attempt < len(retryDelays) {
+						backoff = retryDelays[attempt]
+					} else {
+						backoff = retryDelays[len(retryDelays)-1]
+					}
 					c.program.Send(BufferNewMessageMsg{
 						Server:    name,
 						Buffer:    "",
 						Timestamp: time.Now(),
 						From:      "--",
-						Text:      fmt.Sprintf("irc: %v, reconnecting in %d seconds...", err, int(backoffSeconds)),
+						Text:      fmt.Sprintf("irc: %v, reconnecting in %d seconds...", err, int(backoff)),
 					})
-					time.Sleep(time.Duration(backoffSeconds) * time.Second)
+					time.Sleep(time.Duration(backoff) * time.Second)
 					attempt++
 					continue
 				}
