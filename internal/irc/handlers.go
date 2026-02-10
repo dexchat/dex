@@ -108,12 +108,14 @@ func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
 		ts = time.Now()
 	}
 
+	msgID, _ := e.Tags.Get("msgid")
 	c.program.Send(BufferNewMessageMsg{
 		Server:    c.serverName,
 		Buffer:    target,
 		Timestamp: ts,
 		From:      e.Source.Name,
 		Text:      e.Last(),
+		MsgID:     msgID,
 	})
 }
 
@@ -369,20 +371,24 @@ func (c *Client) onEchoMessage(client *girc.Client, e girc.Event) {
 	// e.g., sending a message in client X should also display in client Y
 	// if connected to both.
 	// Check if this is an echo of a message we sent from this client
-	// If so, we already displayed it in the UI - ignore it
+	// If so, mark it so the UI skips display but still stores it in history
+	ownEcho := false
 	if e.Source.Name == client.GetNick() {
 		key := c.serverName + ":" + target + ":" + strings.TrimSpace(e.Last())
 		if _, pending := c.pendingMessages.LoadAndDelete(key); pending {
-			return
+			ownEcho = true
 		}
 		// Not in pending = sent from another client, display it
 	}
 
+	msgID, _ := e.Tags.Get("msgid")
 	c.program.Send(BufferNewMessageMsg{
 		Server:    c.serverName,
 		Buffer:    target,
 		Timestamp: ts,
 		From:      e.Source.Name,
 		Text:      e.Last(),
+		MsgID:     msgID,
+		OwnEcho:   ownEcho,
 	})
 }

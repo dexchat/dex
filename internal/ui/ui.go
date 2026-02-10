@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/vaaleyard/dex/internal/config"
+	"github.com/vaaleyard/dex/internal/history"
 	"github.com/vaaleyard/dex/internal/irc"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 
@@ -28,6 +29,8 @@ const (
 	// channels right (1) + users left (1) + chat borders (2)
 	appVerticalBordersSize = 4
 )
+
+type historyFlushMsg struct{}
 
 type Model struct {
 	config           *config.Config
@@ -59,25 +62,28 @@ func New(cfg *config.Config) *Model {
 
 	for _, server := range cfg.Servers {
 		serverKey := makeBufferKey(server.Name, "")
-		m.buffers[serverKey] = &Buffer{
-			Key:    serverKey,
-			Server: server.Name,
-			Chat:   chat.New(m.theme, m.usernameColors),
-			Users:  users.New(m.theme, m.usernameColors),
+		serverBuf := &Buffer{
+			Key:     serverKey,
+			Server:  server.Name,
+			Chat:    chat.New(m.theme, m.usernameColors),
+			Users:   users.New(m.theme, m.usernameColors),
+			History: history.Load(server.Name, ""),
 		}
-
-		// Set the nickname configured in the config file before connecting
+		// Set the nickname configured in the config file before connecting;
 		// the server may update after (and change if necessary)
-		m.buffers[serverKey].Chat.SetNickname(server.Nickname)
+		serverBuf.Chat.SetNickname(server.Nickname)
+		serverBuf.LoadHistory()
+		m.buffers[serverKey] = serverBuf
 
 		for _, channel := range server.Channels {
 			key := makeBufferKey(server.Name, channel)
 			buffer := &Buffer{
-				Key:    key,
-				Server: server.Name,
-				Chat:   chat.New(m.theme, m.usernameColors),
-				Buffer: channel,
-				Users:  users.New(m.theme, m.usernameColors),
+				Key:     key,
+				Server:  server.Name,
+				Chat:    chat.New(m.theme, m.usernameColors),
+				Buffer:  channel,
+				Users:   users.New(m.theme, m.usernameColors),
+				History: history.Load(server.Name, channel),
 			}
 
 			// Although the Nickname is set per server, it is
@@ -85,6 +91,8 @@ func New(cfg *config.Config) *Model {
 			// model doesn't access the config to fetch it, and each
 			// chat buffer needs to display a nickname in the input bar
 			buffer.Chat.SetNickname(server.Nickname)
+
+			buffer.LoadHistory()
 			m.buffers[key] = buffer
 		}
 	}
@@ -99,7 +107,10 @@ func New(cfg *config.Config) *Model {
 
 func (m *Model) Init() tea.Cmd {
 	buf := m.getActiveBuffer()
-	return buf.Chat.Init()
+	return tea.Batch(
+		buf.Chat.Init(),
+		m.scheduleHistoryFlush(),
+	)
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -112,6 +123,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		if msgTyped.Type == tea.KeyCtrlC {
 			if keybindings.QuitHandler() {
+				m.flushAllHistory()
 				return m, tea.Quit
 			}
 			return m, nil
@@ -152,11 +164,34 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, createCmd)
 		}
 		if buf != nil {
-			buf.Chat.AddMessage(chat.Message{
-				Timestamp: msgTyped.Timestamp,
-				Username:  msgTyped.From,
-				Text:      msgTyped.Text,
-			})
+			var msgID *string
+			if msgTyped.MsgID != "" {
+				msgID = &msgTyped.MsgID
+			}
+
+			logEntry := history.LogEntry{
+				ReceivedAt: time.Now().UnixNano(),
+				ServerTime: msgTyped.Timestamp.UnixNano(),
+				MsgID:      msgID,
+				Username:   msgTyped.From,
+				Text:       msgTyped.Text,
+			}
+
+			if buf.History.IsDuplicate(logEntry) {
+				return m, tea.Batch(cmds...)
+			}
+
+			buf.History.Insert(logEntry)
+
+			// Skip display if this is an echo of a message we sent from this client
+			// (already displayed when we sent it)
+			if !msgTyped.OwnEcho {
+				buf.Chat.AddMessage(chat.Message{
+					Timestamp: msgTyped.Timestamp,
+					Username:  msgTyped.From,
+					Text:      msgTyped.Text,
+				})
+			}
 		}
 
 	case irc.ChannelTopicMsg:
@@ -188,15 +223,28 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case chat.SendMessageMsg:
 		buffer := m.getActiveBuffer()
 		if m.ircClientManager != nil && buffer.isValid() {
+			now := time.Now()
 			buffer.Chat.AddMessage(chat.Message{
-				Timestamp: time.Now(),
+				Timestamp: now,
 				Username:  buffer.Chat.Nickname(),
 				Text:      msgTyped.Text,
 			})
 
+			// Don't insert into history here - let the echo-message or playback
+			// insert it with the correct server timestamp. We already display
+			// it immediately in the UI above.
+
 			// Send it asynchronously to avoid blocking the UI by girc
 			go m.ircClientManager.Send(buffer.Server, buffer.Buffer, msgTyped.Text)
 		}
+
+	case historyFlushMsg:
+		for _, buf := range m.buffers {
+			if err := buf.History.Flush(buf.Server, buf.Buffer); err != nil {
+				log.Printf("Failed to flush history for %s/%s: %v", buf.Server, buf.Buffer, err)
+			}
+		}
+		cmds = append(cmds, m.scheduleHistoryFlush())
 	}
 
 	// Write characters in the palette input bar if it's open, instead of chat input
@@ -287,11 +335,12 @@ func (m *Model) getOrCreateBuffer(server, channel string) (*Buffer, tea.Cmd) {
 	}
 
 	buf := &Buffer{
-		Key:    key,
-		Server: server,
-		Buffer: channel,
-		Chat:   chat.New(m.theme, m.usernameColors),
-		Users:  users.New(m.theme, m.usernameColors),
+		Key:     key,
+		Server:  server,
+		Buffer:  channel,
+		Chat:    chat.New(m.theme, m.usernameColors),
+		Users:   users.New(m.theme, m.usernameColors),
+		History: history.Load(server, channel),
 	}
 
 	// copy nickname from the server buffer
@@ -302,10 +351,26 @@ func (m *Model) getOrCreateBuffer(server, channel string) (*Buffer, tea.Cmd) {
 
 	m.buffers[key] = buf
 
+	buf.LoadHistory()
+
 	return buf, func() tea.Msg {
 		return channels.NewBufferMsg{
 			Server: server,
 			Buffer: channel,
+		}
+	}
+}
+
+func (m *Model) scheduleHistoryFlush() tea.Cmd {
+	return tea.Tick(5*time.Second, func(_ time.Time) tea.Msg {
+		return historyFlushMsg{}
+	})
+}
+
+func (m *Model) flushAllHistory() {
+	for _, buf := range m.buffers {
+		if err := buf.History.Flush(buf.Server, buf.Buffer); err != nil {
+			log.Printf("Failed to flush history for %s/%s: %v", buf.Server, buf.Buffer, err)
 		}
 	}
 }

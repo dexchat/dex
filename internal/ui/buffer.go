@@ -2,7 +2,9 @@ package ui
 
 import (
 	"strings"
+	"time"
 
+	"github.com/vaaleyard/dex/internal/history"
 	"github.com/vaaleyard/dex/internal/ui/components/chat"
 	"github.com/vaaleyard/dex/internal/ui/components/users"
 )
@@ -20,10 +22,21 @@ type Buffer struct {
 	Server string
 	Buffer string // buffer can be a channel or a PM
 
-	Chat  chat.Model
-	Users users.Model
+	Chat    chat.Model
+	Users   users.Model
+	History *history.Log
 }
 
 func (b *Buffer) isValid() bool {
 	return b.Server != "" && b.Buffer != ""
+}
+
+func (b *Buffer) LoadHistory() {
+	for _, entry := range b.History.Entries() {
+		b.Chat.AddMessage(chat.Message{
+			Timestamp: time.Unix(0, entry.ServerTime),
+			Username:  entry.Username,
+			Text:      entry.Text,
+		})
+	}
 }
