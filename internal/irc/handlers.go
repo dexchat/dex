@@ -318,6 +318,24 @@ func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 		Server: c.serverName,
 		Nick:   client.GetNick(),
 	})
+
+	c.program.Send(BufferNewMessageMsg{
+		Server:    c.serverName,
+		Buffer:    "",
+		Timestamp: time.Now(),
+		From:      "--",
+		Text:      "irc: connected",
+	})
+
+	for _, channelName := range client.ChannelList() {
+		c.program.Send(BufferNewMessageMsg{
+			Server:    c.serverName,
+			Buffer:    channelName,
+			Timestamp: time.Now(),
+			From:      "--",
+			Text:      "irc: connected",
+		})
+	}
 }
 
 func (c *Client) onDisconnect(client *girc.Client, _ girc.Event) {
