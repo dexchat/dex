@@ -170,11 +170,10 @@ func (m Model) View(width, height int) string {
 			itemStyle = itemStyle.Background(m.theme.Colors.BorderColor)
 		}
 
-		styledText := itemStyle.Render(textPart)
 		if node.isServer {
-			line = styledText
+			line = itemStyle.Render(textPart)
 		} else {
-			line = fmt.Sprintf("  %s", styledText)
+			line = itemStyle.PaddingLeft(2).Render(textPart)
 		}
 
 		lines = append(lines, line)
