@@ -44,6 +44,7 @@ func (m *ClientManager) ConnectAll() {
 						Timestamp: time.Now(),
 						From:      "--",
 						Text:      fmt.Sprintf("irc: %v, reconnecting in %d seconds...", err, int(backoff)),
+						Type:      MessageTypeDisconnected,
 					})
 					time.Sleep(time.Duration(backoff) * time.Second)
 					attempt++

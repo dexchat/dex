@@ -8,6 +8,15 @@ type UserListMsg struct {
 	Users   []string
 }
 
+type MessageType int
+
+const (
+	MessageTypeNormal MessageType = iota
+	MessageTypeConnected
+	MessageTypeDisconnected
+	MessageTypeServer
+)
+
 type BufferNewMessageMsg struct {
 	Server    string
 	Buffer    string
@@ -16,6 +25,7 @@ type BufferNewMessageMsg struct {
 	Text      string
 	MsgID     string // IRCv3 msgid, nil if the server does not support it
 	OwnEcho   bool   // True if this is the own echo-message of a message sent from this client
+	Type      MessageType
 }
 
 type ChannelTopicMsg struct {

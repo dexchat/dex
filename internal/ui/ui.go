@@ -175,6 +175,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				MsgID:      msgID,
 				Username:   msgTyped.From,
 				Text:       msgTyped.Text,
+				Type:       int(msgTyped.Type),
 			}
 
 			if buf.History.IsDuplicate(logEntry) {
@@ -190,6 +191,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					Timestamp: msgTyped.Timestamp,
 					Username:  msgTyped.From,
 					Text:      msgTyped.Text,
+					Type:      msgTyped.Type,
 				})
 			}
 		}

@@ -24,6 +24,10 @@ func AyuDarkTheme() Theme {
 	theme.Colors.StatusBg = lipgloss.Color("#253340")
 	theme.Colors.StatusText = lipgloss.Color("#B3B1AD")
 	theme.Colors.ServerColor = lipgloss.Color("#59C2FF")
+	theme.Colors.ConnectedMsg = lipgloss.Color("#95e6cb")
+	theme.Colors.DisconnectedMsg = lipgloss.Color("#f07178")
+	theme.Colors.ServerEventMsg = lipgloss.Color("#6e6012")
+	theme.Colors.ServerMsg = lipgloss.Color("#e8ca20")
 	theme.Colors.Usernames = []lipgloss.Color{
 		lipgloss.Color("#39BAE6"),
 		lipgloss.Color("#FFB454"),

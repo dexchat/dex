@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/vaaleyard/dex/internal/history"
+	"github.com/vaaleyard/dex/internal/irc"
 	"github.com/vaaleyard/dex/internal/ui/components/chat"
 	"github.com/vaaleyard/dex/internal/ui/components/users"
 )
@@ -37,6 +38,7 @@ func (b *Buffer) LoadHistory() {
 			Timestamp: time.Unix(0, entry.ServerTime),
 			Username:  entry.Username,
 			Text:      entry.Text,
+			Type:      irc.MessageType(entry.Type),
 		})
 	}
 }

@@ -22,6 +22,10 @@ type Theme struct {
 		StatusBg          lipgloss.Color
 		StatusText        lipgloss.Color
 		ServerColor       lipgloss.Color
+		ConnectedMsg      lipgloss.Color
+		DisconnectedMsg   lipgloss.Color
+		ServerEventMsg    lipgloss.Color
+		ServerMsg         lipgloss.Color
 		Usernames         []lipgloss.Color
 	}
 
