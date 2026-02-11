@@ -34,6 +34,9 @@
   * disable mouse/scroll support
 * do not display the whole playback again on reconnection (I think it resets the buffer)
 * display user modes in chat alongside the nickname
+* display username in join/parts
+* display nick in gray if user from history is not in channel
+* match own nick color in input bar
 
 ## Features to implement
 * command palette with: quick jump, fuzzy channel search, join, leave, etc.
