@@ -160,6 +160,7 @@ func (c *Client) onServerMessage(_ *girc.Client, e girc.Event) {
 		Timestamp: ts,
 		From:      c.serverName,
 		Text:      e.Last(),
+		Type:      MessageTypeServer,
 	})
 }
 
@@ -191,7 +192,7 @@ func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 			Server:    c.serverName,
 			Buffer:    channelName,
 			Timestamp: time.Now(),
-			From:      "--",
+			From:      "<--",
 			Text:      message,
 		})
 		client.Cmd.Who(channelName)
@@ -213,7 +214,7 @@ func (c *Client) onJoin(client *girc.Client, e girc.Event) {
 				Server:    c.serverName,
 				Buffer:    channelName,
 				Timestamp: time.Now(),
-				From:      "--",
+				From:      "-->",
 				Text:      fmt.Sprintf("%s has joined", userName),
 			})
 		}
@@ -234,7 +235,7 @@ func (c *Client) onPart(client *girc.Client, e girc.Event) {
 				Server:    c.serverName,
 				Buffer:    channelName,
 				Timestamp: time.Now(),
-				From:      "--",
+				From:      "<--",
 				Text:      fmt.Sprintf("%s has left", userName),
 			})
 		}
@@ -325,6 +326,7 @@ func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 		Timestamp: time.Now(),
 		From:      "--",
 		Text:      "irc: connected",
+		Type:      MessageTypeConnected,
 	})
 
 	for _, channelName := range client.ChannelList() {
@@ -334,6 +336,7 @@ func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 			Timestamp: time.Now(),
 			From:      "--",
 			Text:      "irc: connected",
+			Type:      MessageTypeConnected,
 		})
 	}
 }
@@ -345,6 +348,7 @@ func (c *Client) onDisconnect(client *girc.Client, _ girc.Event) {
 		Timestamp: time.Now(),
 		From:      "--",
 		Text:      "irc: disconnected from server",
+		Type:      MessageTypeDisconnected,
 	})
 
 	for _, channelName := range client.ChannelList() {
@@ -354,6 +358,7 @@ func (c *Client) onDisconnect(client *girc.Client, _ girc.Event) {
 			Timestamp: time.Now(),
 			From:      "--",
 			Text:      "irc: disconnected from server",
+			Type:      MessageTypeDisconnected,
 		})
 	}
 }
