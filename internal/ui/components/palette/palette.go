@@ -31,8 +31,8 @@ func New(theme styles.Theme) *Model {
 	input := textinput.New()
 	input.Prompt = "> "
 	input.TextStyle = lipgloss.NewStyle().
-		Background(theme.Colors.Background).
-		Foreground(theme.Colors.Text)
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground)
 
 	return &Model{
 		theme:   theme,
@@ -87,7 +87,7 @@ func (m *Model) View() string {
 
 	contentWidth := m.width - commandPaletteBoxPaddingSize*2
 	bgStyle := lipgloss.NewStyle().
-		Background(m.theme.Colors.Background).
+		Background(m.theme.Colors.Base.Background).
 		Width(contentWidth)
 
 	input := bgStyle.
@@ -116,9 +116,9 @@ func (m *Model) View() string {
 
 	commandPaletteBox := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder(), true).
-		BorderBackground(m.theme.Colors.Background).
-		BorderForeground(m.theme.Colors.Accent).
-		Background(m.theme.Colors.Background).
+		BorderBackground(m.theme.Colors.Base.Background).
+		BorderForeground(m.theme.Colors.Palette.Border).
+		Background(m.theme.Colors.Base.Background).
 		Width(m.width).
 		Padding(commandPaletteBoxPaddingSize)
 
@@ -215,13 +215,13 @@ func (m *Model) renderCommandLine(index int, cmd action) string {
 	highlight := index == m.cursor
 
 	// Determine styles based on highlight state
-	backgroundColor := m.theme.Colors.Background
-	textColor := m.theme.Colors.Text
-	accentColor := m.theme.Colors.Accent
+	backgroundColor := m.theme.Colors.Base.Background
+	textColor := m.theme.Colors.Base.Foreground
+	accentColor := m.theme.Colors.Base.Accent
 	if highlight {
-		backgroundColor = m.theme.Colors.Accent
-		textColor = m.theme.Colors.Background
-		accentColor = m.theme.Colors.Background
+		backgroundColor = m.theme.Colors.Palette.Highlight
+		textColor = m.theme.Colors.Base.Background
+		accentColor = m.theme.Colors.Base.Background
 	}
 
 	descWidth := m.width - commandPaletteBoxPaddingSize*2 - nameMaxLen - actionLinePaddingSize*2 - keyMaxLen
@@ -241,7 +241,7 @@ func (m *Model) renderCommandLine(index int, cmd action) string {
 		Render(cmd.Description)
 	keyStr := lipgloss.NewStyle().
 		Background(backgroundColor).
-		Foreground(m.theme.Colors.Timestamp).
+		Foreground(m.theme.Colors.Base.Dimmed).
 		Width(keyMaxLen).
 		Render(cmd.Keybinding.Help().Key)
 

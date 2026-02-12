@@ -12,31 +12,30 @@ func renderFooter(width int, theme styles.Theme) string {
 	quitKeybinding := keybindings.DefaultKeyMap().Quit
 
 	defaultStyle := lipgloss.NewStyle().
-		Background(theme.Colors.Background)
+		Background(theme.Colors.Base.Background)
 
 	if keybindings.QuitHandlerIsWaitingForSecondPress() {
 		styledKey := defaultStyle.
-			Foreground(theme.Colors.Text).
+			Foreground(theme.Colors.Base.Foreground).
 			Render(quitKeybinding.Help().Key)
 		styledDesc := defaultStyle.
-			Foreground(theme.Colors.ErrorMsg).
+			Foreground(theme.Colors.Base.Error).
 			Render(" again to exit")
 
 		footer = styledKey + styledDesc
 	} else {
-
 		styledKey := defaultStyle.
-			Foreground(theme.Colors.Timestamp).
+			Foreground(theme.Colors.Base.Dimmed).
 			Render(helpKeybinding.Help().Key)
 		styledDesc := defaultStyle.
-			Foreground(theme.Colors.StatusBg).
+			Foreground(theme.Colors.Base.Subtle).
 			Render(" for help")
 
 		footer = styledKey + styledDesc
 	}
 
 	style := lipgloss.NewStyle().
-		Background(theme.Colors.Background).
+		Background(theme.Colors.Base.Background).
 		Width(width).
 		Align(lipgloss.Center)
 

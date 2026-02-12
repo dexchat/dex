@@ -21,23 +21,23 @@ func (m *Model) setInputWidth(width int) {
 
 func (m *Model) renderInputBox() string {
 	nicknamePrefix := lipgloss.NewStyle().
-		Foreground(m.theme.Colors.Accent).
+		Foreground(m.theme.Colors.Chat.Nickname).
 		Bold(true).
 		Render(m.nickname)
 
 	separator := lipgloss.NewStyle().
-		Foreground(m.theme.Colors.BorderColor).
-		Background(m.theme.Colors.LighterBackground).
+		Foreground(m.theme.Colors.Chat.Separator).
+		Background(m.theme.Colors.Base.Surface).
 		Render(" | ")
 
 	inputView := nicknamePrefix + separator + m.input.View()
 
 	inputBox := m.theme.Styles.InputField.
 		Margin(0, InputBoxMargin, 0, InputBoxMargin).
-		MarginBackground(m.theme.Colors.Background).
+		MarginBackground(m.theme.Colors.Base.Background).
 		Border(lipgloss.NormalBorder()).
-		BorderBackground(m.theme.Colors.LighterBackground).
-		BorderForeground(m.theme.Colors.LighterBackground).
+		BorderBackground(m.theme.Colors.Base.Surface).
+		BorderForeground(m.theme.Colors.Base.Surface).
 		MarginTop(InputBoxPaddingTop).
 		Render(inputView)
 

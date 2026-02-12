@@ -55,7 +55,7 @@ func New(cfg *config.Config) *Model {
 		buffers: make(map[BufferKey]*Buffer),
 		theme:   styles.AyuDarkTheme(),
 	}
-	m.usernameColors = styles.NewUsernameColors(m.theme.Colors.Usernames)
+	m.usernameColors = styles.NewUsernameColors(m.theme.Colors.Nicknames)
 
 	m.channels = channels.New(m.theme, m.config.Servers)
 	m.palette = palette.New(m.theme)

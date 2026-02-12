@@ -5,44 +5,53 @@ import (
 )
 
 type Theme struct {
-	Colors struct {
-		Background        lipgloss.Color
-		LighterBackground lipgloss.Color
-		Text              lipgloss.Color
-		Accent            lipgloss.Color
-		SidebarBg         lipgloss.Color
-		InputBg           lipgloss.Color
-		BorderColor       lipgloss.Color
-		SelfMsg           lipgloss.Color
-		SystemMsg         lipgloss.Color
-		ErrorMsg          lipgloss.Color
-		Timestamp         lipgloss.Color
-		MentionColor      lipgloss.Color
-		UnreadColor       lipgloss.Color
-		StatusBg          lipgloss.Color
-		StatusText        lipgloss.Color
-		ServerColor       lipgloss.Color
-		ConnectedMsg      lipgloss.Color
-		DisconnectedMsg   lipgloss.Color
-		ServerEventMsg    lipgloss.Color
-		ServerMsg         lipgloss.Color
-		Usernames         []lipgloss.Color
+	Colors Colors
+	Styles Styles
+}
+
+type Colors struct {
+	Base struct {
+		Background lipgloss.Color
+		Foreground lipgloss.Color
+		Surface    lipgloss.Color
+		Border     lipgloss.Color
+		Accent     lipgloss.Color
+		Error      lipgloss.Color
+		Dimmed     lipgloss.Color
+		Subtle     lipgloss.Color
 	}
 
-	Styles struct {
-		App           lipgloss.Style
-		Sidebar       lipgloss.Style
-		UnreadItem    lipgloss.Style
-		MentionedItem lipgloss.Style
-		ServerItem    lipgloss.Style
-		ChatArea      lipgloss.Style
-		OwnMessage    lipgloss.Style
-		SystemMessage lipgloss.Style
-		ErrorMessage  lipgloss.Style
-		Timestamp     lipgloss.Style
-		Mention       lipgloss.Style
-		InputField    lipgloss.Style
-		StatusLine    lipgloss.Style
-		Usernames     lipgloss.Style
+	Sidebar struct {
+		Server    lipgloss.Color
+		Unread    lipgloss.Color
+		Mention   lipgloss.Color
+		Selection lipgloss.Color
 	}
+
+	Chat struct {
+		Nickname      lipgloss.Color
+		Separator     lipgloss.Color
+		Self          lipgloss.Color
+		Connected     lipgloss.Color
+		Disconnected  lipgloss.Color
+		UserEvents    lipgloss.Color
+		ServerMessage lipgloss.Color
+	}
+
+	Palette struct {
+		Border    lipgloss.Color
+		Highlight lipgloss.Color
+	}
+
+	Nicknames []lipgloss.Color
+}
+
+type Styles struct {
+	App           lipgloss.Style
+	Sidebar       lipgloss.Style
+	UnreadItem    lipgloss.Style
+	MentionedItem lipgloss.Style
+	ServerItem    lipgloss.Style
+	ChatArea      lipgloss.Style
+	InputField    lipgloss.Style
 }

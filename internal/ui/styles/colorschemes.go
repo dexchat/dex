@@ -2,103 +2,80 @@ package styles
 
 import "github.com/charmbracelet/lipgloss"
 
-// TODO: Improve the name of each color
-
-// Ayu
 func AyuDarkTheme() Theme {
 	theme := Theme{}
 
-	theme.Colors.Background = lipgloss.Color("#0D1017")
-	theme.Colors.LighterBackground = lipgloss.Color("#131721")
-	theme.Colors.Text = lipgloss.Color("#B3B1AD")
-	theme.Colors.Accent = lipgloss.Color("#59C2FF")
-	theme.Colors.SidebarBg = lipgloss.Color("#131721")
-	theme.Colors.InputBg = lipgloss.Color("#1F2430")
-	theme.Colors.BorderColor = lipgloss.Color("#253340")
-	theme.Colors.SelfMsg = lipgloss.Color("#BAE67E")
-	theme.Colors.SystemMsg = lipgloss.Color("#FFB454")
-	theme.Colors.ErrorMsg = lipgloss.Color("#FF3333")
-	theme.Colors.Timestamp = lipgloss.Color("#626A73")
-	theme.Colors.MentionColor = lipgloss.Color("#F07178")
-	theme.Colors.UnreadColor = lipgloss.Color("#73D0FF")
-	theme.Colors.StatusBg = lipgloss.Color("#253340")
-	theme.Colors.StatusText = lipgloss.Color("#B3B1AD")
-	theme.Colors.ServerColor = lipgloss.Color("#59C2FF")
-	theme.Colors.ConnectedMsg = lipgloss.Color("#95e6cb")
-	theme.Colors.DisconnectedMsg = lipgloss.Color("#f07178")
-	theme.Colors.ServerEventMsg = lipgloss.Color("#6e6012")
-	theme.Colors.ServerMsg = lipgloss.Color("#e8ca20")
-	theme.Colors.Usernames = []lipgloss.Color{
-		lipgloss.Color("#39BAE6"),
-		lipgloss.Color("#FFB454"),
-		lipgloss.Color("#59C2FF"),
-		lipgloss.Color("#AAD94C"),
-		lipgloss.Color("#95E6CB"),
-		lipgloss.Color("#F07178"),
-		lipgloss.Color("#FF8F40"),
-		lipgloss.Color("#D2A6FF"),
+	theme.Colors.Base.Background = "#0D1017"
+	theme.Colors.Base.Foreground = "#B3B1AD"
+	theme.Colors.Base.Surface = "#131721"
+	theme.Colors.Base.Border = "#253340"
+	theme.Colors.Base.Accent = "#59C2FF"
+	theme.Colors.Base.Error = "#FF3333"
+	theme.Colors.Base.Dimmed = "#626A73"
+	theme.Colors.Base.Subtle = "#253340"
+
+	theme.Colors.Sidebar.Server = "#59C2FF"
+	theme.Colors.Sidebar.Unread = "#73D0FF"
+	theme.Colors.Sidebar.Mention = "#F07178"
+	theme.Colors.Sidebar.Selection = "#253340"
+
+	theme.Colors.Chat.Nickname = "#59C2FF"
+	theme.Colors.Chat.Separator = "#253340"
+	theme.Colors.Chat.Self = "#BAE67E"
+	theme.Colors.Chat.Connected = "#95E6CB"
+	theme.Colors.Chat.Disconnected = "#F07178"
+	theme.Colors.Chat.UserEvents = "#6E6012"
+	theme.Colors.Chat.ServerMessage = "#E8CA20"
+
+	theme.Colors.Palette.Border = "#59C2FF"
+	theme.Colors.Palette.Highlight = "#59C2FF"
+
+	theme.Colors.Nicknames = []lipgloss.Color{
+		"#39BAE6",
+		"#FFB454",
+		"#59C2FF",
+		"#AAD94C",
+		"#95E6CB",
+		"#F07178",
+		"#FF8F40",
+		"#D2A6FF",
 	}
 
 	theme.Styles.App = lipgloss.NewStyle().
-		Background(theme.Colors.Background).
-		Foreground(theme.Colors.Text)
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground)
 
 	theme.Styles.Sidebar = lipgloss.NewStyle().
-		Background(theme.Colors.Background).
-		Foreground(theme.Colors.Text).
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground).
 		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(theme.Colors.Background).
-		BorderBackground(theme.Colors.Background)
+		BorderForeground(theme.Colors.Base.Background).
+		BorderBackground(theme.Colors.Base.Background)
 
 	theme.Styles.UnreadItem = lipgloss.NewStyle().
-		Background(theme.Colors.Background).
-		Foreground(theme.Colors.UnreadColor)
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Unread)
 
 	theme.Styles.MentionedItem = lipgloss.NewStyle().
-		Background(theme.Colors.Background).
-		Foreground(theme.Colors.MentionColor).
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Mention).
 		Bold(true)
 
 	theme.Styles.ServerItem = lipgloss.NewStyle().
-		Background(theme.Colors.Background).
-		Foreground(theme.Colors.ServerColor).
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Server).
 		Bold(true)
 
 	theme.Styles.ChatArea = lipgloss.NewStyle().
-		Background(theme.Colors.Background).
-		Foreground(theme.Colors.Text).
-		BorderForeground(theme.Colors.Background).
-		BorderBackground(theme.Colors.Background).
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground).
+		BorderForeground(theme.Colors.Base.Background).
+		BorderBackground(theme.Colors.Base.Background).
 		Border(lipgloss.NormalBorder())
 
-	theme.Styles.OwnMessage = lipgloss.NewStyle().
-		Foreground(theme.Colors.SelfMsg)
-
-	theme.Styles.SystemMessage = lipgloss.NewStyle().
-		Foreground(theme.Colors.SystemMsg).
-		Background(theme.Colors.Background)
-
-	theme.Styles.ErrorMessage = lipgloss.NewStyle().
-		Foreground(theme.Colors.ErrorMsg)
-
-	theme.Styles.Timestamp = lipgloss.NewStyle().
-		Foreground(theme.Colors.Timestamp)
-
-	theme.Styles.Mention = lipgloss.NewStyle().
-		Foreground(theme.Colors.MentionColor).
-		Bold(true)
-
 	theme.Styles.InputField = lipgloss.NewStyle().
-		Background(theme.Colors.LighterBackground).
-		Foreground(theme.Colors.Text)
-
-	theme.Styles.StatusLine = lipgloss.NewStyle().
-		Background(theme.Colors.StatusBg).
-		Foreground(theme.Colors.StatusText)
-
-	theme.Styles.Usernames = lipgloss.NewStyle().
-		Background(theme.Colors.Background).
-		Foreground(theme.Colors.Usernames[7])
+		Background(theme.Colors.Base.Surface).
+		Foreground(theme.Colors.Base.Foreground)
 
 	return theme
 }

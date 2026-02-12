@@ -16,28 +16,28 @@ type Message struct {
 
 func (m *Model) renderMessage(msg Message, width int) string {
 	baseStyle := lipgloss.NewStyle().
-		Background(m.theme.Colors.Background)
+		Background(m.theme.Colors.Base.Background)
 
 	timeStyle := baseStyle.
-		Foreground(m.theme.Colors.Timestamp)
+		Foreground(m.theme.Colors.Base.Dimmed)
 
 	styledTime := timeStyle.Render(msg.Timestamp.Format("15:04"))
 
 	switch {
 	case msg.Username == "-->" || msg.Username == "<--":
-		eventStyle := baseStyle.Foreground(m.theme.Colors.ServerEventMsg)
+		eventStyle := baseStyle.Foreground(m.theme.Colors.Chat.UserEvents)
 		return baseStyle.Width(width).Render(styledTime + eventStyle.Render(" "+msg.Username+" "+msg.Text))
 
 	case msg.Type == irc.MessageTypeConnected:
-		textStyle := baseStyle.Foreground(m.theme.Colors.ConnectedMsg)
+		textStyle := baseStyle.Foreground(m.theme.Colors.Chat.Connected)
 		return baseStyle.Width(width).Render(styledTime + textStyle.Render(" "+msg.Username+" "+msg.Text))
 
 	case msg.Type == irc.MessageTypeDisconnected:
-		textStyle := baseStyle.Foreground(m.theme.Colors.DisconnectedMsg)
+		textStyle := baseStyle.Foreground(m.theme.Colors.Chat.Disconnected)
 		return baseStyle.Width(width).Render(styledTime + textStyle.Render(" "+msg.Username+" "+msg.Text))
 
 	case msg.Type == irc.MessageTypeServer:
-		serverStyle := baseStyle.Foreground(m.theme.Colors.ServerMsg)
+		serverStyle := baseStyle.Foreground(m.theme.Colors.Chat.ServerMessage)
 		return baseStyle.Width(width).Render(styledTime + serverStyle.Render(" "+msg.Username+" "+msg.Text))
 
 	default:

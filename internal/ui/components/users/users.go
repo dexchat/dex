@@ -63,7 +63,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 func (m Model) updateContent() Model {
 	rendered := make([]string, len(m.users))
 	baseStyle := lipgloss.NewStyle().
-		Background(m.theme.Colors.Background).
+		Background(m.theme.Colors.Base.Background).
 		Width(m.viewport.Width)
 
 	for i, user := range m.users {
@@ -103,8 +103,8 @@ func (m Model) View(width, height int) string {
 	if len(m.users) > 0 {
 		memberCount := fmt.Sprintf("%d users", len(m.users))
 		memberHeader := lipgloss.NewStyle().
-			Background(m.theme.Colors.Background).
-			Foreground(m.theme.Colors.Accent).
+			Background(m.theme.Colors.Base.Background).
+			Foreground(m.theme.Colors.Base.Accent).
 			Bold(true).
 			Width(contentWidth).
 			Align(lipgloss.Center).
@@ -112,7 +112,7 @@ func (m Model) View(width, height int) string {
 			Render(memberCount)
 
 		divider := lipgloss.NewStyle().
-			Foreground(m.theme.Colors.LighterBackground).
+			Foreground(m.theme.Colors.Base.Surface).
 			Render(strings.Repeat("─", contentWidth))
 
 		body = memberHeader + "\n" + divider + "\n" + m.viewport.View()
@@ -122,6 +122,6 @@ func (m Model) View(width, height int) string {
 
 	return m.theme.Styles.Sidebar.
 		Height(height).
-		BorderLeftForeground(m.theme.Colors.LighterBackground).
+		BorderLeftForeground(m.theme.Colors.Base.Surface).
 		Render(body)
 }

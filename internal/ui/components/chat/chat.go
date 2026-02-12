@@ -32,12 +32,8 @@ func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 	input.Focus()
 	input.Prompt = ""
 	input.Placeholder = "Send message..."
-	input.PlaceholderStyle = lipgloss.NewStyle().
-		Background(theme.Colors.LighterBackground).
-		Foreground(theme.Colors.Text)
-	input.TextStyle = lipgloss.NewStyle().
-		Background(theme.Colors.LighterBackground).
-		Foreground(theme.Colors.Text)
+	input.PlaceholderStyle = theme.Styles.InputField
+	input.TextStyle = theme.Styles.InputField
 
 	m := Model{
 		messages:       make([]Message, 0),
@@ -100,7 +96,7 @@ func (m *Model) View() string {
 
 	// The viewport content is set by updateContent
 	chatViewport := lipgloss.NewStyle().
-		Background(m.theme.Colors.Background).
+		Background(m.theme.Colors.Base.Background).
 		PaddingLeft(1).
 		PaddingRight(1).
 		Render(m.viewport.View())
@@ -162,8 +158,8 @@ func (m *Model) renderDateSeparator(date time.Time, width int) string {
 	separator := dashes + " " + dateStr + " " + dashes
 
 	style := lipgloss.NewStyle().
-		Background(m.theme.Colors.Background).
-		Foreground(m.theme.Colors.Timestamp)
+		Background(m.theme.Colors.Base.Background).
+		Foreground(m.theme.Colors.Base.Dimmed)
 
 	return style.Width(width).Render(separator)
 }

@@ -167,7 +167,7 @@ func (m Model) View(width, height int) string {
 		}
 
 		if i == m.cursor {
-			itemStyle = itemStyle.Background(m.theme.Colors.BorderColor)
+			itemStyle = itemStyle.Background(m.theme.Colors.Sidebar.Selection)
 		}
 
 		if node.isServer {
@@ -189,7 +189,7 @@ func (m Model) View(width, height int) string {
 	}
 
 	channelsList := lipgloss.NewStyle().
-		Background(m.theme.Colors.Background).
+		Background(m.theme.Colors.Base.Background).
 		Width(contentWidth).
 		Height(listHeight).
 		Render(channelsBody)
@@ -201,7 +201,7 @@ func (m Model) View(width, height int) string {
 	)
 
 	return m.theme.Styles.Sidebar.
-		BorderRightForeground(m.theme.Colors.LighterBackground).
+		BorderRightForeground(m.theme.Colors.Base.Surface).
 		Height(height).
 		Render(body)
 }
