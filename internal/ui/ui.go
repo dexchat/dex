@@ -53,7 +53,7 @@ func New(cfg *config.Config) *Model {
 	m := Model{
 		config:  cfg,
 		buffers: make(map[BufferKey]*Buffer),
-		theme:   styles.AyuDarkTheme(),
+		theme:   styles.RosePineTheme(),
 	}
 	m.usernameColors = styles.NewUsernameColors(m.theme.Colors.Nicknames)
 

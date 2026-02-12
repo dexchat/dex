@@ -79,3 +79,81 @@ func AyuDarkTheme() Theme {
 
 	return theme
 }
+
+func RosePineTheme() Theme {
+	theme := Theme{}
+
+	theme.Colors.Base.Background = "#191724"
+	theme.Colors.Base.Foreground = "#E0DEF4"
+	theme.Colors.Base.Surface = "#1F1D2E"
+	theme.Colors.Base.Border = "#403D52"
+	theme.Colors.Base.Accent = "#C4A7E7"
+	theme.Colors.Base.Error = "#EB6F92"
+	theme.Colors.Base.Dimmed = "#6E6A86"
+	theme.Colors.Base.Subtle = "#524F67"
+
+	theme.Colors.Sidebar.Server = "#C4A7E7"
+	theme.Colors.Sidebar.Unread = "#F6C177"
+	theme.Colors.Sidebar.Mention = "#EB6F92"
+	theme.Colors.Sidebar.Selection = "#26233A"
+
+	theme.Colors.Chat.Nickname = "#EBBCBA"
+	theme.Colors.Chat.Separator = "#403D52"
+	theme.Colors.Chat.Self = "#9CCFD8"
+	theme.Colors.Chat.Connected = "#9CCFD8"
+	theme.Colors.Chat.Disconnected = "#EB6F92"
+	theme.Colors.Chat.UserEvents = "#6E6A86"
+	theme.Colors.Chat.ServerMessage = "#F6C177"
+
+	theme.Colors.Palette.Border = "#C4A7E7"
+	theme.Colors.Palette.Highlight = "#C4A7E7"
+
+	theme.Colors.Nicknames = []lipgloss.Color{
+		"#EBBCBA",
+		"#F6C177",
+		"#9CCFD8",
+		"#C4A7E7",
+		"#EB6F92",
+		"#31748F",
+		"#E0DEF4",
+		"#908CAA",
+	}
+
+	theme.Styles.App = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground)
+
+	theme.Styles.Sidebar = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground).
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(theme.Colors.Base.Background).
+		BorderBackground(theme.Colors.Base.Background)
+
+	theme.Styles.UnreadItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Unread)
+
+	theme.Styles.MentionedItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Mention).
+		Bold(true)
+
+	theme.Styles.ServerItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Server).
+		Bold(true)
+
+	theme.Styles.ChatArea = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground).
+		BorderForeground(theme.Colors.Base.Background).
+		BorderBackground(theme.Colors.Base.Background).
+		Border(lipgloss.NormalBorder())
+
+	theme.Styles.InputField = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Surface).
+		Foreground(theme.Colors.Base.Foreground)
+
+	return theme
+}
