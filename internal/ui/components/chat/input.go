@@ -21,7 +21,7 @@ func (m *Model) setInputWidth(width int) {
 
 func (m *Model) renderInputBox() string {
 	nicknamePrefix := lipgloss.NewStyle().
-		Foreground(m.theme.Colors.Chat.Nickname).
+		Foreground(m.usernameColors.GetColor(m.nickname)).
 		Bold(true).
 		Render(m.nickname)
 
