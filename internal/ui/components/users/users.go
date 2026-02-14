@@ -67,8 +67,9 @@ func (m Model) updateContent() Model {
 		Width(m.viewport.Width)
 
 	for i, user := range m.users {
+		nick := strings.TrimLeft(user, "~&@%+")
 		rendered[i] = baseStyle.
-			Foreground(m.usernameColors.GetColor(user)).
+			Foreground(m.usernameColors.GetColor(nick)).
 			Render(user)
 	}
 	m.viewport.SetContent(strings.Join(rendered, "\n"))

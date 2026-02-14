@@ -2,6 +2,7 @@ package styles
 
 import (
 	"math/rand"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -19,12 +20,12 @@ func NewUsernameColors(palette []lipgloss.Color) UsernameColors {
 }
 
 func (u *UsernameColors) GetColor(username string) lipgloss.Color {
-	if color, exists := u.colors[username]; exists {
-		return color // Return cached color
+	key := strings.ToLower(username)
+	if color, exists := u.colors[key]; exists {
+		return color
 	}
-	// Assign new random color on first encounter
 	color := u.palette[rand.Intn(len(u.palette))]
-	u.colors[username] = color
+	u.colors[key] = color
 
 	return color
 }
