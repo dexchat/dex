@@ -22,6 +22,8 @@ type Model struct {
 	nickname string
 	input    textinput.Model
 
+	channelMembers ChannelMembers
+
 	usernameColors styles.UsernameColors
 	theme          styles.Theme
 }
@@ -179,4 +181,12 @@ func (m *Model) SetNickname(nickname string) {
 
 func (m *Model) Nickname() string {
 	return m.nickname
+}
+
+func (m *Model) RefreshContent() {
+	m.updateContent()
+}
+
+func (m *Model) SetChannelMembers(members ChannelMembers) {
+	m.channelMembers = members
 }

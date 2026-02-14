@@ -92,6 +92,26 @@ func (m Model) SetSize(width, height int) Model {
 	return m.updateContent()
 }
 
+func (m Model) HasUser(nick string) bool {
+	for _, u := range m.users {
+		stripped := strings.TrimLeft(u, "~&@%+")
+		if strings.EqualFold(stripped, nick) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m Model) GetUserPrefix(nick string) string {
+	for _, u := range m.users {
+		stripped := strings.TrimLeft(u, "~&@%+")
+		if strings.EqualFold(stripped, nick) {
+			return u[:len(u)-len(stripped)]
+		}
+	}
+	return ""
+}
+
 func (m Model) View(width, height int) string {
 	contentWidth := width - usersListVerticalBordersSize
 	if contentWidth < 0 {

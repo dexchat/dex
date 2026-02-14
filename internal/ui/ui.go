@@ -92,6 +92,8 @@ func New(cfg *config.Config) *Model {
 			// chat buffer needs to display a nickname in the input bar
 			buffer.Chat.SetNickname(server.Nickname)
 
+			buffer.Chat.SetChannelMembers(&buffer.Users)
+
 			buffer.LoadHistory()
 			m.buffers[key] = buffer
 		}
@@ -156,6 +158,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if buf != nil {
 			buf.Users, cmd = buf.Users.Update(users.UserListMsg(msgTyped.Users))
 			cmds = append(cmds, cmd)
+			buf.Chat.RefreshContent()
 		}
 
 	case irc.BufferNewMessageMsg:
@@ -350,6 +353,8 @@ func (m *Model) getOrCreateBuffer(server, channel string) (*Buffer, tea.Cmd) {
 	if serverBuf, exists := m.buffers[serverKey]; exists {
 		buf.Chat.SetNickname(serverBuf.Chat.Nickname())
 	}
+
+	buf.Chat.SetChannelMembers(&buf.Users)
 
 	m.buffers[key] = buf
 

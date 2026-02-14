@@ -7,6 +7,11 @@ import (
 	"github.com/vaaleyard/dex/internal/irc"
 )
 
+type ChannelMembers interface {
+	HasUser(nick string) bool
+	GetUserPrefix(nick string) string
+}
+
 type Message struct {
 	Username  string
 	Text      string
@@ -41,9 +46,17 @@ func (m *Model) renderMessage(msg Message, width int) string {
 		return baseStyle.Width(width).Render(styledTime + serverStyle.Render(" "+msg.Username+" ") + renderIRCFormattedMessage(msg.Text, serverStyle))
 
 	default:
-		nickStyle := baseStyle.
-			Foreground(m.usernameColors.GetColor(msg.Username))
-		styledNick := nickStyle.Render(" " + msg.Username + " ")
-		return baseStyle.Width(width).Render(styledTime + styledNick + styledText)
+		nickColor := m.usernameColors.GetColor(msg.Username)
+		prefix := ""
+		if m.channelMembers != nil {
+			if !m.channelMembers.HasUser(msg.Username) {
+				nickColor = m.theme.Colors.Base.Dimmed
+			} else {
+				prefix = m.channelMembers.GetUserPrefix(msg.Username)
+			}
+		}
+		nickStyle := baseStyle.Foreground(nickColor)
+		styledNick := nickStyle.Render(" " + prefix + msg.Username + " ")
+		return baseStyle.Width(width).Render(styledTime + styledNick + renderIRCFormattedMessage(msg.Text, baseStyle))
 	}
 }
