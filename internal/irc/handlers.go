@@ -59,9 +59,11 @@ func (c *Client) refreshUserList(client *girc.Client, channelName string) {
 
 	for i, nick := range channel.UserList {
 		prefix := ""
+		displayNick := nick
 		user := client.LookupUser(nick)
 
 		if user != nil {
+			displayNick = user.Nick
 			if perms, ok := user.Perms.Lookup(channelName); ok {
 				switch {
 				case perms.Owner:
@@ -78,7 +80,7 @@ func (c *Client) refreshUserList(client *girc.Client, channelName string) {
 			}
 		}
 
-		userList[i] = prefix + nick
+		userList[i] = prefix + displayNick
 	}
 
 	sortUserList(userList)
