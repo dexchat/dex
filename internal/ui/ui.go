@@ -30,7 +30,10 @@ const (
 	appVerticalBordersSize = 4
 )
 
-type historyFlushMsg struct{}
+type (
+	historyFlushMsg    struct{}
+	startConnectionMsg struct{}
+)
 
 type Model struct {
 	config           *config.Config
@@ -112,6 +115,7 @@ func (m *Model) Init() tea.Cmd {
 	return tea.Batch(
 		buf.Chat.Init(),
 		m.scheduleHistoryFlush(),
+		func() tea.Msg { return startConnectionMsg{} },
 	)
 }
 
@@ -250,6 +254,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		cmds = append(cmds, m.scheduleHistoryFlush())
+	case startConnectionMsg:
+		if m.ircClientManager != nil {
+			m.ircClientManager.ConnectAll()
+		}
 	}
 
 	// Write characters in the palette input bar if it's open, instead of chat input

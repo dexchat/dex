@@ -35,7 +35,6 @@ func main() {
 	defer ircClientManager.DisconnectAll()
 
 	tui.SetManager(ircClientManager)
-	ircClientManager.ConnectAll()
 
 	if _, err := p.Run(); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error running app: %v\n", err)
