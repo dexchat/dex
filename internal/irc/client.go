@@ -73,7 +73,7 @@ func (c *Client) addHandlers() {
 
 	c.Handlers.Add(girc.PRIVMSG, c.onPrivmsg)
 	c.Handlers.Add(girc.NOTICE, c.onServerMessage)
-	c.Handlers.Add(girc.ALL_EVENTS, c.onEchoMessage) // Handle echo-message capability
+	c.Handlers.AddBg(girc.ALL_EVENTS, c.onEchoMessage) // Handle echo-message capability
 	c.Handlers.Add(girc.TOPIC, c.onTopic)
 	c.Handlers.AddBg(girc.QUIT, c.onQuit)
 	c.Handlers.AddBg(girc.PART, c.onUserListChange)
