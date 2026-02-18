@@ -33,12 +33,15 @@ func (b *Buffer) isValid() bool {
 }
 
 func (b *Buffer) LoadHistory() {
-	for _, entry := range b.History.Entries() {
-		b.Chat.AddMessage(chat.Message{
+	entries := b.History.Entries()
+	msgs := make([]chat.Message, len(entries))
+	for i, entry := range entries {
+		msgs[i] = chat.Message{
 			Timestamp: time.Unix(0, entry.ServerTime),
 			Username:  entry.Username,
 			Text:      entry.Text,
 			Type:      irc.MessageType(entry.Type),
-		})
+		}
 	}
+	b.Chat.AddMessages(msgs)
 }

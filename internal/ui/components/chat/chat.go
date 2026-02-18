@@ -171,6 +171,11 @@ func (m *Model) AddMessage(msg Message) {
 	m.updateContent()
 }
 
+func (m *Model) AddMessages(msgs []Message) {
+	m.messages = append(m.messages, msgs...)
+	m.updateContent()
+}
+
 func (m *Model) SetTopic(topic string) {
 	m.topic = topic
 }
