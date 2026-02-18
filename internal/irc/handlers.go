@@ -183,9 +183,11 @@ func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 	}
 
 	reason := e.Last()
-	message := fmt.Sprintf("%s has quit", userName)
+	host := e.Source.Host
+	ident := e.Source.Ident
+	message := fmt.Sprintf("%s (%s:%s) has quit", host, ident, userName)
 	if reason != "" {
-		message = fmt.Sprintf("%s (%s)", message, reason)
+		message = fmt.Sprintf("%s (%s:%s) has quit (%s)", host, ident, userName, reason)
 	}
 
 	// send quit message and trigger user list refresh only for channels the user was in
@@ -217,7 +219,7 @@ func (c *Client) onJoin(client *girc.Client, e girc.Event) {
 				Buffer:    channelName,
 				Timestamp: time.Now(),
 				From:      "-->",
-				Text:      fmt.Sprintf("%s has joined", userName),
+				Text:      fmt.Sprintf("%s (%s:%s) has joined", userName, e.Source.Host, e.Source.Ident),
 			})
 		}
 	}
@@ -238,7 +240,7 @@ func (c *Client) onPart(client *girc.Client, e girc.Event) {
 				Buffer:    channelName,
 				Timestamp: time.Now(),
 				From:      "<--",
-				Text:      fmt.Sprintf("%s has left", userName),
+				Text:      fmt.Sprintf("%s (%s:%s) has left", userName, e.Source.Host, e.Source.Ident),
 			})
 		}
 	}
