@@ -14,7 +14,6 @@
   * autocompletion for commands
 * check if the chat being updated every message is a performance issue
 * maybe centralize all paddings and borders numbers
-* centralize and improve all styles in the styles package, make sure there are no loose styles
 * implement command palette actions
 * implement a new overlay: help with all the keybindings – will only be shown in the command palette
 * migrate to lipgloss v2 and use their overlay
@@ -24,7 +23,6 @@
 * new messages indicator
 * tagged messages indicator
 * improve channel list UI and user list member count, it's kinda ugly – ask for suggestions to someone
-* improve ctrl+c quit color
 * options that should be possible to set in the config file:
   * global nickname
   * display user join/part/quit messages
@@ -32,11 +30,9 @@
   * change the timestamp format and/or hide it
   * display channel modes
   * disable mouse/scroll support
-* do not display the whole playback again on reconnection (I think it resets the buffer)
-* display user modes in chat alongside the nickname
-* display username in join/parts
-* display nick in gray if user from history is not in channel
-* match own nick color in input bar
+
+## Known bugs
+* Users with non-standard channel prefixes (e.g., `!` for channel admin/creator) may not appear in the user list. This is a [girc](https://github.com/lrstanley/girc) limitation — its NAMES reply parser only recognizes `~ & @ % +` as prefixes, ignoring any additional ones the server advertises via `ISUPPORT`. Users with unrecognized prefixes are silently dropped from the channel state.
 
 ## Features to implement
 * command palette with: quick jump, fuzzy channel search, join, leave, etc.
