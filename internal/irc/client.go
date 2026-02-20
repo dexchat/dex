@@ -71,10 +71,10 @@ func (c *Client) addHandlers() {
 	c.Handlers.Add(girc.JOIN, c.onJoin)
 	c.Handlers.Add(girc.PART, c.onPart)
 
-	c.Handlers.Add(girc.PRIVMSG, c.onPrivmsg)
-	c.Handlers.Add(girc.NOTICE, c.onServerMessage)
+	c.Handlers.AddBg(girc.PRIVMSG, c.onPrivmsg)
+	c.Handlers.AddBg(girc.NOTICE, c.onServerMessage)
 	c.Handlers.AddBg(girc.ALL_EVENTS, c.onEchoMessage) // Handle echo-message capability
-	c.Handlers.Add(girc.TOPIC, c.onTopic)
+	c.Handlers.AddBg(girc.TOPIC, c.onTopic)
 	c.Handlers.AddBg(girc.QUIT, c.onQuit)
 	c.Handlers.AddBg(girc.PART, c.onUserListChange)
 	c.Handlers.AddBg(girc.NICK, c.onUserListChange)
@@ -89,11 +89,11 @@ func (c *Client) addHandlers() {
 
 	c.Handlers.AddBg(girc.RPL_ENDOFNAMES, c.onUserListChange)
 	c.Handlers.AddBg(girc.RPL_ENDOFWHO, c.onUserListChange)
-	c.Handlers.Add(girc.RPL_TOPIC, c.onTopic)
-	c.Handlers.Add(girc.RPL_WELCOME, c.onServerMessage)
-	c.Handlers.Add(girc.RPL_MOTD, c.onServerMessage)
-	c.Handlers.Add(girc.RPL_MOTDSTART, c.onServerMessage)
-	c.Handlers.Add(girc.RPL_ENDOFMOTD, c.onServerMessage)
+	c.Handlers.AddBg(girc.RPL_TOPIC, c.onTopic)
+	c.Handlers.AddBg(girc.RPL_WELCOME, c.onServerMessage)
+	c.Handlers.AddBg(girc.RPL_MOTD, c.onServerMessage)
+	c.Handlers.AddBg(girc.RPL_MOTDSTART, c.onServerMessage)
+	c.Handlers.AddBg(girc.RPL_ENDOFMOTD, c.onServerMessage)
 	c.Handlers.Add(girc.RPL_WELCOME, c.onNickUpdate)
 	c.Handlers.Add(girc.NICK, c.onNickUpdate)
 }
