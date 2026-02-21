@@ -47,9 +47,10 @@ type Model struct {
 	buffers      map[BufferKey]*Buffer
 	activeBuffer BufferKey
 
-	channels channels.Model
-	palette  *palette.Model
-	overlay  *overlay.Model
+	channels     channels.Model
+	palette      *palette.Model
+	overlay      *overlay.Model
+	flushPending bool
 }
 
 func New(cfg *config.Config) *Model {
@@ -100,6 +101,10 @@ func New(cfg *config.Config) *Model {
 			buffer.LoadHistory()
 			m.buffers[key] = buffer
 		}
+	}
+
+	for _, buf := range m.buffers {
+		buf.Chat.FlushQueue()
 	}
 
 	// Make the first server buffer active on startup
@@ -154,6 +159,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 		buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
 
+	case irc.ChannelJoinedMsg:
+		_, createCmd := m.getOrCreateBuffer(msgTyped.Server, msgTyped.Channel)
+		if createCmd != nil {
+			cmds = append(cmds, createCmd)
+		}
+
 	case irc.UserListMsg:
 		buf, createCmd := m.getOrCreateBuffer(msgTyped.Server, msgTyped.Channel)
 		if createCmd != nil {
@@ -165,42 +176,22 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			buf.Chat.RefreshContent()
 		}
 
-	case irc.BufferNewMessageMsg:
-		buf, createCmd := m.getOrCreateBuffer(msgTyped.Server, msgTyped.Buffer)
-		if createCmd != nil {
-			cmds = append(cmds, createCmd)
+	case irc.BufferNewMessageBatchMsg:
+		for _, msg := range msgTyped {
+			if newBufCmd := m.processIncomingMessage(msg); newBufCmd != nil {
+				cmds = append(cmds, newBufCmd)
+			}
 		}
-		if buf != nil {
-			var msgID *string
-			if msgTyped.MsgID != "" {
-				msgID = &msgTyped.MsgID
-			}
+		if cmd := m.scheduleFlush(); cmd != nil {
+			cmds = append(cmds, cmd)
+		}
 
-			logEntry := history.LogEntry{
-				ReceivedAt: time.Now().UnixNano(),
-				ServerTime: msgTyped.Timestamp.UnixNano(),
-				MsgID:      msgID,
-				Username:   msgTyped.From,
-				Text:       msgTyped.Text,
-				Type:       int(msgTyped.Type),
-			}
-
-			if buf.History.IsDuplicate(logEntry) {
-				return m, tea.Batch(cmds...)
-			}
-
-			buf.History.Insert(logEntry)
-
-			// Skip display if this is an echo of a message we sent from this client
-			// (already displayed when we sent it)
-			if !msgTyped.OwnEcho {
-				buf.Chat.AddMessage(chat.Message{
-					Timestamp: msgTyped.Timestamp,
-					Username:  msgTyped.From,
-					Text:      msgTyped.Text,
-					Type:      msgTyped.Type,
-				})
-			}
+	case irc.BufferNewMessageMsg:
+		if newBufCmd := m.processIncomingMessage(msgTyped); newBufCmd != nil {
+			cmds = append(cmds, newBufCmd)
+		}
+		if cmd := m.scheduleFlush(); cmd != nil {
+			cmds = append(cmds, cmd)
 		}
 
 	case irc.ChannelTopicMsg:
@@ -258,6 +249,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.ircClientManager != nil {
 			m.ircClientManager.ConnectAll()
 		}
+
+	case flushChatMsg:
+		m.flushAllChats()
 	}
 
 	// Write characters in the palette input bar if it's open, instead of chat input

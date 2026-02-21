@@ -3,6 +3,7 @@ package irc
 import (
 	"crypto/tls"
 	"sync"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lrstanley/girc"
@@ -20,6 +21,13 @@ type Client struct {
 	// the server. Since we display the message sent instantly in the UI (before sending to the server),
 	// when the server echoes them back, we skip/ignore the echo to avoid duplicates.
 	pendingMessages sync.Map // Key format: "server:channel:message"
+
+	// messageQueue collects BufferNewMessageMsg and flushes them to bubbletea every 50ms,
+	// reducing the number of messages in bubbletea's queue when a lot of messages are returned
+	// by the server in the same second (for example, in ZNC)
+	messageQueue   []BufferNewMessageMsg
+	messageQueueMu sync.Mutex
+	flushPending   bool
 }
 
 func NewClient(serverName string, config *config.Server, teaProgram *tea.Program) *Client {
@@ -63,6 +71,26 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 	c.addHandlers()
 
 	return c
+}
+
+func (c *Client) queueMessage(msg BufferNewMessageMsg) {
+	c.messageQueueMu.Lock()
+	c.messageQueue = append(c.messageQueue, msg)
+	if !c.flushPending {
+		c.flushPending = true
+		go func() {
+			time.Sleep(50 * time.Millisecond)
+			c.messageQueueMu.Lock()
+			batch := c.messageQueue
+			c.messageQueue = nil
+			c.flushPending = false
+			c.messageQueueMu.Unlock()
+			if len(batch) > 0 {
+				c.program.Send(BufferNewMessageBatchMsg(batch))
+			}
+		}()
+	}
+	c.messageQueueMu.Unlock()
 }
 
 func (c *Client) addHandlers() {

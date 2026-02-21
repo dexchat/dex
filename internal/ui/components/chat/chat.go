@@ -22,6 +22,8 @@ type Model struct {
 	nickname string
 	input    textinput.Model
 
+	needsRender bool
+
 	channelMembers ChannelMembers
 
 	usernameColors styles.UsernameColors
@@ -171,9 +173,16 @@ func (m *Model) AddMessage(msg Message) {
 	m.updateContent()
 }
 
-func (m *Model) AddMessages(msgs []Message) {
-	m.messages = append(m.messages, msgs...)
-	m.updateContent()
+func (m *Model) QueueMessage(msg Message) {
+	m.messages = append(m.messages, msg)
+	m.needsRender = true
+}
+
+func (m *Model) FlushQueue() {
+	if m.needsRender {
+		m.updateContent()
+		m.needsRender = false
+	}
 }
 
 func (m *Model) SetTopic(topic string) {

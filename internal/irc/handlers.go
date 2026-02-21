@@ -111,7 +111,7 @@ func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
 	}
 
 	msgID, _ := e.Tags.Get("msgid")
-	c.program.Send(BufferNewMessageMsg{
+	c.queueMessage(BufferNewMessageMsg{
 		Server:    c.serverName,
 		Buffer:    target,
 		Timestamp: ts,
@@ -156,7 +156,7 @@ func (c *Client) onServerMessage(_ *girc.Client, e girc.Event) {
 		ts = time.Now()
 	}
 
-	c.program.Send(BufferNewMessageMsg{
+	c.queueMessage(BufferNewMessageMsg{
 		Server:    c.serverName,
 		Buffer:    "",
 		Timestamp: ts,
@@ -212,8 +212,12 @@ func (c *Client) onJoin(client *girc.Client, e girc.Event) {
 
 	if e.Source != nil {
 		userName := e.Source.Name
-		// do not display self-join
-		if userName != client.GetNick() {
+		if userName == client.GetNick() {
+			c.program.Send(ChannelJoinedMsg{
+				Server:  c.serverName,
+				Channel: channelName,
+			})
+		} else {
 			c.program.Send(BufferNewMessageMsg{
 				Server:    c.serverName,
 				Buffer:    channelName,
@@ -409,7 +413,7 @@ func (c *Client) onEchoMessage(client *girc.Client, e girc.Event) {
 	}
 
 	msgID, _ := e.Tags.Get("msgid")
-	c.program.Send(BufferNewMessageMsg{
+	c.queueMessage(BufferNewMessageMsg{
 		Server:    c.serverName,
 		Buffer:    target,
 		Timestamp: ts,

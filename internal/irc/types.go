@@ -43,3 +43,10 @@ type ChannelNameUpdateMsg struct {
 	Server        string
 	CanonicalName string
 }
+
+type ChannelJoinedMsg struct {
+	Server  string
+	Channel string
+}
+
+type BufferNewMessageBatchMsg []BufferNewMessageMsg
