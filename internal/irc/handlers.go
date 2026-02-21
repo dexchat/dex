@@ -192,7 +192,7 @@ func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 
 	// send quit message and trigger user list refresh only for channels the user was in
 	for _, channelName := range user.ChannelList {
-		c.program.Send(BufferNewMessageMsg{
+		c.queueMessage(BufferNewMessageMsg{
 			Server:    c.serverName,
 			Buffer:    channelName,
 			Timestamp: time.Now(),
@@ -218,7 +218,7 @@ func (c *Client) onJoin(client *girc.Client, e girc.Event) {
 				Channel: channelName,
 			})
 		} else {
-			c.program.Send(BufferNewMessageMsg{
+			c.queueMessage(BufferNewMessageMsg{
 				Server:    c.serverName,
 				Buffer:    channelName,
 				Timestamp: time.Now(),
@@ -239,7 +239,7 @@ func (c *Client) onPart(client *girc.Client, e girc.Event) {
 		userName := e.Source.Name
 		// do not display self-part
 		if userName != client.GetNick() {
-			c.program.Send(BufferNewMessageMsg{
+			c.queueMessage(BufferNewMessageMsg{
 				Server:    c.serverName,
 				Buffer:    channelName,
 				Timestamp: time.Now(),
@@ -328,7 +328,7 @@ func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 		Nick:   client.GetNick(),
 	})
 
-	c.program.Send(BufferNewMessageMsg{
+	c.queueMessage(BufferNewMessageMsg{
 		Server:    c.serverName,
 		Buffer:    "",
 		Timestamp: time.Now(),
@@ -338,7 +338,7 @@ func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 	})
 
 	for _, channelName := range client.ChannelList() {
-		c.program.Send(BufferNewMessageMsg{
+		c.queueMessage(BufferNewMessageMsg{
 			Server:    c.serverName,
 			Buffer:    channelName,
 			Timestamp: time.Now(),
@@ -350,7 +350,7 @@ func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 }
 
 func (c *Client) onDisconnect(client *girc.Client, _ girc.Event) {
-	c.program.Send(BufferNewMessageMsg{
+	c.queueMessage(BufferNewMessageMsg{
 		Server:    c.serverName,
 		Buffer:    "",
 		Timestamp: time.Now(),
@@ -360,7 +360,7 @@ func (c *Client) onDisconnect(client *girc.Client, _ girc.Event) {
 	})
 
 	for _, channelName := range client.ChannelList() {
-		c.program.Send(BufferNewMessageMsg{
+		c.queueMessage(BufferNewMessageMsg{
 			Server:    c.serverName,
 			Buffer:    channelName,
 			Timestamp: time.Now(),
@@ -372,7 +372,7 @@ func (c *Client) onDisconnect(client *girc.Client, _ girc.Event) {
 }
 
 func (c *Client) onJoinError(_ *girc.Client, e girc.Event) {
-	c.program.Send(BufferNewMessageMsg{
+	c.queueMessage(BufferNewMessageMsg{
 		Server:    c.serverName,
 		Buffer:    e.Params[1],
 		Timestamp: time.Now(),
