@@ -19,6 +19,9 @@ func (c *Client) onUserListChange(client *girc.Client, e girc.Event) {
 		}
 		channelName = e.Params[1]
 	default:
+		if len(e.Params) == 0 {
+			return
+		}
 		channelName = e.Params[0]
 	}
 
@@ -27,9 +30,9 @@ func (c *Client) onUserListChange(client *girc.Client, e girc.Event) {
 		return
 	}
 
-	// For PART events, girc may not have updated its state yet
-	// Schedule a refresh using WHO which will trigger RPL_ENDOFWHO with updated data
-	if e.Command == girc.PART {
+	// For PART/JOIN events, girc may not have updated its state yet
+	// Schedule a WHO refresh, which will trigger RPL_ENDOFWHO with updated data
+	if e.Command == girc.JOIN || e.Command == girc.PART {
 		client.Cmd.Who(channelName)
 		return
 	}

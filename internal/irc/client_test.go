@@ -9,6 +9,23 @@ import (
 	"github.com/vaaleyard/dex/internal/config"
 )
 
+func TestJoinTriggersUserListRefresh(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+
+	handlers := externalHandlerIDs(t, client, girc.JOIN)
+	for _, id := range handlers {
+		if strings.HasSuffix(id, ":bg") {
+			return
+		}
+	}
+
+	t.Fatalf("expected JOIN to have a background user-list refresh handler, got %v", handlers)
+}
+
 func TestPendingMessageKeyNormalizesServerTargetAndMessage(t *testing.T) {
 	got := pendingMessageKey("Libera", "#Brasil", "  hello from dex  ")
 	want := pendingMessageKey("libera", "#brasil", "hello from dex")
