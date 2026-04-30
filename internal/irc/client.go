@@ -99,11 +99,12 @@ func (c *Client) addHandlers() {
 	c.Handlers.Add(girc.JOIN, c.onJoin)
 	c.Handlers.Add(girc.PART, c.onPart)
 
-	c.Handlers.AddBg(girc.PRIVMSG, c.onPrivmsg)
-	c.Handlers.AddBg(girc.NOTICE, c.onServerMessage)
-	c.Handlers.AddBg(girc.ALL_EVENTS, c.onEchoMessage) // Handle echo-message capability
+	c.Handlers.Add(girc.PRIVMSG, c.onPrivmsg)
+	c.Handlers.Add(girc.NOTICE, c.onServerMessage)
+	c.Handlers.Add(girc.ALL_EVENTS, c.onEchoMessage) // Handle echo-message capability
 	c.Handlers.AddBg(girc.TOPIC, c.onTopic)
 	c.Handlers.AddBg(girc.QUIT, c.onQuit)
+	c.Handlers.AddBg(girc.JOIN, c.onUserListChange)
 	c.Handlers.AddBg(girc.PART, c.onUserListChange)
 	c.Handlers.AddBg(girc.NICK, c.onUserListChange)
 	c.Handlers.AddBg(girc.MODE, c.onUserListChange)

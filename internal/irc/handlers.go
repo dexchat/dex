@@ -92,8 +92,11 @@ func (c *Client) refreshUserList(client *girc.Client, channelName string) {
 	})
 }
 
-func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
+func (c *Client) onPrivmsg(client *girc.Client, e girc.Event) {
 	if len(e.Params) == 0 {
+		return
+	}
+	if e.Source == nil {
 		return
 	}
 
@@ -110,6 +113,13 @@ func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
 		ts = time.Now()
 	}
 
+	ownEcho := false
+	if e.Source.ID() == client.GetID() {
+		if _, pending := c.pendingMessages.LoadAndDelete(pendingMessageKey(c.serverName, target, e.Last())); pending {
+			ownEcho = true
+		}
+	}
+
 	msgID, _ := e.Tags.Get("msgid")
 	c.queueMessage(BufferNewMessageMsg{
 		Server:    c.serverName,
@@ -118,6 +128,7 @@ func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
 		From:      e.Source.Name,
 		Text:      e.Last(),
 		MsgID:     msgID,
+		OwnEcho:   ownEcho,
 	})
 }
 
@@ -404,8 +415,8 @@ func (c *Client) onEchoMessage(client *girc.Client, e girc.Event) {
 	// Check if this is an echo of a message we sent from this client
 	// If so, mark it so the UI skips display but still stores it in history
 	ownEcho := false
-	if e.Source.Name == client.GetNick() {
-		key := c.serverName + ":" + target + ":" + strings.TrimSpace(e.Last())
+	if e.Source.ID() == client.GetID() {
+		key := pendingMessageKey(c.serverName, target, e.Last())
 		if _, pending := c.pendingMessages.LoadAndDelete(key); pending {
 			ownEcho = true
 		}

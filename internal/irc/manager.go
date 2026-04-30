@@ -84,10 +84,14 @@ func (m *ClientManager) Send(server, channel, message string) {
 	// TrimSpace normalizes whitespace because IRC servers may strip or add
 	// leading/trailing spaces, leading to the message being sent twice as
 	// the echo will differ from what we sent
-	key := server + ":" + channel + ":" + strings.TrimSpace(message)
+	key := pendingMessageKey(server, channel, message)
 	client.pendingMessages.Store(key, struct{}{})
 
 	client.Cmd.Message(channel, message)
+}
+
+func pendingMessageKey(server, target, message string) string {
+	return strings.ToLower(server) + ":" + strings.ToLower(target) + ":" + strings.TrimSpace(message)
 }
 
 func (m *ClientManager) DisconnectAll() {
