@@ -87,6 +87,7 @@ func (c *Client) refreshUserList(client *girc.Client, channelName string) {
 	}
 
 	sortUserList(userList)
+	c.setChannelUsers(channelName, userList)
 
 	c.program.Send(UserListMsg{
 		Server:  c.serverName,
@@ -190,11 +191,20 @@ func (c *Client) onNickUpdate(client *girc.Client, e girc.Event) {
 }
 
 func (c *Client) onQuit(client *girc.Client, e girc.Event) {
-	userName := e.Source.Name
-	user := client.LookupUser(userName)
-	if user == nil {
+	if e.Source == nil {
 		return
 	}
+
+	userName := e.Source.Name
+	user := client.LookupUser(userName)
+	channels := c.channelsForUser(userName)
+	if user != nil && len(user.ChannelList) > 0 {
+		channels = user.ChannelList
+	}
+	if len(channels) == 0 {
+		return
+	}
+	c.forgetUser(userName)
 
 	reason := e.Last()
 	host := e.Source.Host
@@ -205,7 +215,7 @@ func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 	}
 
 	// send quit message and trigger user list refresh only for channels the user was in
-	for _, channelName := range user.ChannelList {
+	for _, channelName := range channels {
 		c.queueMessage(BufferNewMessageMsg{
 			Server:    c.serverName,
 			Buffer:    channelName,

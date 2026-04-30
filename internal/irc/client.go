@@ -2,6 +2,7 @@ package irc
 
 import (
 	"crypto/tls"
+	"sort"
 	"sync"
 	"time"
 
@@ -28,6 +29,12 @@ type Client struct {
 	messageQueue   []BufferNewMessageMsg
 	messageQueueMu sync.Mutex
 	flushPending   bool
+
+	// userChannels stores the channels each user is part of to handle QUIT properly.
+	// girc can remove a quitting user from its state before our handler reads it,
+	// so this preserves the channel list needed to route quit messages and refreshes.
+	userChannelsMu sync.Mutex
+	userChannels   map[string]map[string]struct{}
 }
 
 func NewClient(serverName string, config *config.Server, teaProgram *tea.Program) *Client {
@@ -67,10 +74,54 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 		serverName: serverName,
 		channels:   config.Channels,
 		program:    teaProgram,
+
+		userChannels: make(map[string]map[string]struct{}),
 	}
 	c.addHandlers()
 
 	return c
+}
+
+func (c *Client) setChannelUsers(channelName string, users []string) {
+	c.userChannelsMu.Lock()
+	defer c.userChannelsMu.Unlock()
+
+	for user, channels := range c.userChannels {
+		delete(channels, channelName)
+		if len(channels) == 0 {
+			delete(c.userChannels, user)
+		}
+	}
+
+	for _, user := range users {
+		userID := girc.ToRFC1459(user)
+		if c.userChannels[userID] == nil {
+			c.userChannels[userID] = make(map[string]struct{})
+		}
+		c.userChannels[userID][channelName] = struct{}{}
+	}
+}
+
+func (c *Client) channelsForUser(nick string) []string {
+	userID := girc.ToRFC1459(nick)
+
+	c.userChannelsMu.Lock()
+	defer c.userChannelsMu.Unlock()
+
+	channels := make([]string, 0, len(c.userChannels[userID]))
+	for channelName := range c.userChannels[userID] {
+		channels = append(channels, channelName)
+	}
+	sort.Strings(channels)
+	return channels
+}
+
+func (c *Client) forgetUser(nick string) {
+	userID := girc.ToRFC1459(nick)
+
+	c.userChannelsMu.Lock()
+	delete(c.userChannels, userID)
+	c.userChannelsMu.Unlock()
 }
 
 func (c *Client) queueMessage(msg BufferNewMessageMsg) {

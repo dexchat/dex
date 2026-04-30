@@ -9,6 +9,29 @@ import (
 	"github.com/vaaleyard/dex/internal/config"
 )
 
+func TestMessageHandlersAreSynchronous(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+
+	for _, command := range []string{girc.PRIVMSG, girc.NOTICE, girc.ALL_EVENTS} {
+		t.Run(command, func(t *testing.T) {
+			handlers := externalHandlerIDs(t, client, command)
+			if len(handlers) == 0 {
+				t.Fatalf("expected %s handler to be registered", command)
+			}
+
+			for _, id := range handlers {
+				if strings.HasSuffix(id, ":bg") {
+					t.Fatalf("%s handler %q is registered as background; order-sensitive message handlers must be synchronous", command, id)
+				}
+			}
+		})
+	}
+}
+
 func TestJoinTriggersUserListRefresh(t *testing.T) {
 	client := NewClient("testnet", &config.Server{
 		Address:  "irc.example.test",
@@ -60,4 +83,72 @@ func TestPrivmsgFromSelfConsumesPendingMessage(t *testing.T) {
 	if !client.messageQueue[0].OwnEcho {
 		t.Fatal("expected self PRIVMSG matching a pending send to be marked OwnEcho")
 	}
+}
+
+func TestUserChannelSnapshotTracksAndForgetsMembership(t *testing.T) {
+	client := NewClient("libera", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+
+	client.setChannelUsers("#brasil", []string{"Guest22", "johnbogle"})
+	client.setChannelUsers("#idlerpg", []string{"guest22"})
+
+	channels := client.channelsForUser("GUEST22")
+	want := []string{"#brasil", "#idlerpg"}
+	if !reflect.DeepEqual(channels, want) {
+		t.Fatalf("channelsForUser() = %v, want %v", channels, want)
+	}
+
+	client.forgetUser("Guest22")
+	if channels := client.channelsForUser("Guest22"); len(channels) != 0 {
+		t.Fatalf("expected Guest22 to be removed from snapshot, still in %v", channels)
+	}
+}
+
+func TestQuitUsesMembershipSnapshotWhenGircStateIsAlreadyDeleted(t *testing.T) {
+	client := NewClient("libera", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+	client.flushPending = true
+	client.setChannelUsers("#brasil", []string{"Guest22"})
+
+	client.onQuit(client.Client, girc.Event{
+		Command: girc.QUIT,
+		Source:  girc.ParseSource("Guest22!~Guest22@2804:1e68:c211:45f3:5485:907e:2a08:1c7b"),
+		Params:  []string{"Quit: Client closed"},
+	})
+
+	if len(client.messageQueue) != 1 {
+		t.Fatalf("expected one quit message, got %d", len(client.messageQueue))
+	}
+	if client.messageQueue[0].Buffer != "#brasil" {
+		t.Fatalf("quit message buffer = %q, want #brasil", client.messageQueue[0].Buffer)
+	}
+	if channels := client.channelsForUser("Guest22"); len(channels) != 0 {
+		t.Fatalf("expected quit user to be removed from snapshot, still in %v", channels)
+	}
+}
+
+func externalHandlerIDs(t *testing.T, client *Client, command string) []string {
+	t.Helper()
+
+	handlers := reflect.ValueOf(client.Handlers).Elem().FieldByName("external")
+	if !handlers.IsValid() {
+		t.Fatal("girc Caller no longer exposes external handlers in the expected shape")
+	}
+
+	commandHandlers := handlers.MapIndex(reflect.ValueOf(command))
+	if !commandHandlers.IsValid() {
+		return nil
+	}
+
+	ids := make([]string, 0, commandHandlers.Len())
+	for _, key := range commandHandlers.MapKeys() {
+		ids = append(ids, key.String())
+	}
+	return ids
 }
