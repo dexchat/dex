@@ -1,10 +1,10 @@
 package palette
 
 import (
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
@@ -30,9 +30,13 @@ type Model struct {
 func New(theme styles.Theme) *Model {
 	input := textinput.New()
 	input.Prompt = "> "
-	input.TextStyle = lipgloss.NewStyle().
+	inputStyle := lipgloss.NewStyle().
 		Background(theme.Colors.Base.Background).
 		Foreground(theme.Colors.Base.Foreground)
+	inputStyles := input.Styles()
+	inputStyles.Focused.Text = inputStyle
+	inputStyles.Blurred.Text = inputStyle
+	input.SetStyles(inputStyles)
 
 	return &Model{
 		theme:   theme,
@@ -48,15 +52,15 @@ func (m *Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	if !m.visible {
 		return m, nil
 	}
 
-	keyMsg, ok := msg.(tea.KeyMsg)
+	keyMsg, ok := msg.(tea.KeyPressMsg)
 	if ok {
-		switch keyMsg.Type {
-		case tea.KeyEsc:
+		switch keyMsg.Code {
+		case tea.KeyEscape:
 			m.close()
 			return m, nil
 		case tea.KeyEnter:

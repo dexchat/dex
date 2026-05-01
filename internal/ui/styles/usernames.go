@@ -3,23 +3,21 @@ package styles
 import (
 	"math/rand"
 	"strings"
-
-	"github.com/charmbracelet/lipgloss"
 )
 
 type UsernameColors struct {
-	colors  map[string]lipgloss.Color
-	palette []lipgloss.Color
+	colors  map[string]Color
+	palette []Color
 }
 
-func NewUsernameColors(palette []lipgloss.Color) UsernameColors {
+func NewUsernameColors(palette []Color) UsernameColors {
 	return UsernameColors{
-		colors:  map[string]lipgloss.Color{},
+		colors:  map[string]Color{},
 		palette: palette,
 	}
 }
 
-func (u *UsernameColors) GetColor(username string) lipgloss.Color {
+func (u *UsernameColors) GetColor(username string) Color {
 	key := strings.ToLower(username)
 	if color, exists := u.colors[key]; exists {
 		return color

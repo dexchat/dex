@@ -3,7 +3,7 @@ package ui
 import (
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/vaaleyard/dex/internal/history"
 	"github.com/vaaleyard/dex/internal/irc"
 	"github.com/vaaleyard/dex/internal/ui/components/chat"

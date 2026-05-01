@@ -1,11 +1,12 @@
 package chat
 
 import (
+	"image/color"
 	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 const (
@@ -18,7 +19,7 @@ const (
 )
 
 // https://modern.ircdocs.horse/formatting.html#colors
-var ircColors = []lipgloss.Color{
+var ircColors = []color.Color{
 	lipgloss.Color("#FFFFFF"),
 	lipgloss.Color("#000000"),
 	lipgloss.Color("#00007F"),
@@ -44,8 +45,8 @@ type formatState struct {
 	italic    bool
 	underline bool
 	reverse   bool
-	fg        lipgloss.Color
-	bg        lipgloss.Color
+	fg        color.Color
+	bg        color.Color
 	hasFg     bool
 	hasBg     bool
 }

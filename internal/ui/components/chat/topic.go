@@ -1,6 +1,6 @@
 package chat
 
-import "github.com/charmbracelet/lipgloss"
+import "charm.land/lipgloss/v2"
 
 func (m *Model) renderTopic(width int) string {
 	styledTopic := renderIRCFormattedMessage(m.topic, lipgloss.NewStyle())

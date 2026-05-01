@@ -1,7 +1,7 @@
 package channels
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )

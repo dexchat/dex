@@ -1,12 +1,12 @@
 package ui
 
 import (
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
 )
 
-func (m *Model) handleKeybindings(msg tea.KeyMsg) tea.Msg {
+func (m *Model) handleKeybindings(msg tea.KeyPressMsg) tea.Msg {
 	kb := keybindings.DefaultKeyMap()
 
 	if key.Matches(msg, kb.TogglePalette) {

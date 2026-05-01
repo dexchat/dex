@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
@@ -28,7 +28,7 @@ type Model struct {
 }
 
 func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
-	vp := viewport.New(0, 0)
+	vp := viewport.New(viewport.WithWidth(0), viewport.WithHeight(0))
 	vp.MouseWheelEnabled = false
 
 	return Model{
@@ -64,7 +64,7 @@ func (m Model) updateContent() Model {
 	rendered := make([]string, len(m.users))
 	baseStyle := lipgloss.NewStyle().
 		Background(m.theme.Colors.Base.Background).
-		Width(m.viewport.Width)
+		Width(m.viewport.Width())
 
 	for i, user := range m.users {
 		nick := strings.TrimLeft(user, "~&@%+")
@@ -88,8 +88,8 @@ func (m Model) SetSize(width, height int) Model {
 		viewportHeight = 0
 	}
 
-	m.viewport.Width = contentWidth
-	m.viewport.Height = viewportHeight
+	m.viewport.SetWidth(contentWidth)
+	m.viewport.SetHeight(viewportHeight)
 	return m.updateContent()
 }
 

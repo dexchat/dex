@@ -3,7 +3,7 @@ package chat
 import (
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/vaaleyard/dex/internal/irc"
 )
 

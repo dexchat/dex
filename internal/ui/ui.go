@@ -9,8 +9,7 @@ import (
 	"github.com/vaaleyard/dex/internal/irc"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 
-	tea "github.com/charmbracelet/bubbletea"
-	overlay "github.com/rmhubbert/bubbletea-overlay"
+	tea "charm.land/bubbletea/v2"
 	"github.com/vaaleyard/dex/internal/ui/components/channels"
 	"github.com/vaaleyard/dex/internal/ui/components/chat"
 	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
@@ -24,8 +23,6 @@ const (
 	// the user panel is better for the eyes
 	channelsPanelMaxWidth = 25
 	usersPanelMaxWidth    = 20
-	// 2 lines of padding to not overflow the texts to the top
-	topPadding = 2
 	// channels right (1) + users left (1) + chat borders (2)
 	appVerticalBordersSize = 4
 )
@@ -49,7 +46,6 @@ type Model struct {
 
 	channels     channels.Model
 	palette      *palette.Model
-	overlay      *overlay.Model
 	flushPending bool
 }
 
@@ -131,8 +127,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	)
 
 	switch msgTyped := msg.(type) {
-	case tea.KeyMsg:
-		if msgTyped.Type == tea.KeyCtrlC {
+	case tea.KeyPressMsg:
+		if msgTyped.String() == "ctrl+c" {
 			if keybindings.QuitHandler() {
 				m.flushAllHistory()
 				return m, tea.Quit
@@ -257,11 +253,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Write characters in the palette input bar if it's open, instead of chat input
 	if m.palette.IsVisible() {
 		palModel, cmd := m.palette.Update(msg)
-		m.palette = palModel.(*palette.Model)
+		m.palette = palModel
 		cmds = append(cmds, cmd)
 	}
 
-	// Update background components, blocking keyboard input when the palette is open
+	// Update layout components, blocking keyboard input when the palette is open
 	msg = m.filterOutKeyMsgs(msg)
 	buf := m.getActiveBuffer()
 	buf.Chat, cmd = buf.Chat.Update(msg)
@@ -273,36 +269,34 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.channels, cmd = m.channels.Update(msg)
 	cmds = append(cmds, cmd)
 
-	if m.palette.IsVisible() {
-		m.overlay = overlay.New(m.palette, &background{m}, overlay.Center, overlay.Center, 0, 0)
-	} else {
-		m.overlay = nil
-	}
-
 	return m, tea.Batch(cmds...)
 }
 
-func (m *Model) View() string {
-	if m.palette.IsVisible() && m.overlay != nil {
-		return m.overlay.View()
+func (m *Model) View() tea.View {
+	content := (&layout{m}).View()
+	if m.palette.IsVisible() {
+		content = overlayCenter(m.palette.View(), content)
 	}
 
-	return (&background{m}).View()
+	view := tea.NewView(content)
+	view.AltScreen = true
+	view.MouseMode = tea.MouseModeCellMotion
+	return view
 }
 
-// filterOutKeyMsgs filters out keyboard messages from background components when palette is open
+// filterOutKeyMsgs filters out keyboard messages from layout components when palette is open
 func (m *Model) filterOutKeyMsgs(msg tea.Msg) tea.Msg {
 	// If palette is not visible, pass all messages through
 	if !m.palette.IsVisible() {
 		return msg
 	}
 
-	// If palette is visible, block keyboard input to background components
-	if _, isKeyMsg := msg.(tea.KeyMsg); isKeyMsg {
+	// If palette is visible, block keyboard input to layout components
+	if _, isKeyMsg := msg.(tea.KeyPressMsg); isKeyMsg {
 		return nil
 	}
 
-	// Allow non-keyboard messages (e.g., WindowSizeMsg) to reach background components
+	// Allow non-keyboard messages (e.g., WindowSizeMsg) to reach layout components
 	return msg
 }
 
@@ -319,11 +313,10 @@ func (m *Model) calculateChatWidth() int {
 }
 
 func (m *Model) calculateChatHeight() int {
-	h := m.height - topPadding
-	if h < 0 {
+	if m.height < 0 {
 		return 0
 	}
-	return h
+	return m.height
 }
 
 func (m *Model) SetManager(manager *irc.ClientManager) {

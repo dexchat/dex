@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/lrstanley/girc"
 	"github.com/vaaleyard/dex/internal/config"
 )
@@ -55,7 +55,7 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 		AllowFlood: true,
 		// girc sends WHO/MODE for every self-joined channel by default.
 		// On channels with a lot of users, that burst can fill ZNC's queue
-		// and delay PRIVMSG traffic. We disable those extra sync requests 
+		// and delay PRIVMSG traffic. We disable those extra sync requests
 		// and build the displayed user list from girc's tracked state
 		DisableAutoWhoOnJoin:  true,
 		DisableAutoModeOnJoin: true,

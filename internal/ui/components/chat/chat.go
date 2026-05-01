@@ -4,10 +4,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/textinput"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
@@ -36,8 +36,12 @@ func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 	input.Focus()
 	input.Prompt = ""
 	input.Placeholder = "Send message..."
-	input.PlaceholderStyle = theme.Styles.InputField
-	input.TextStyle = theme.Styles.InputField
+	inputStyles := input.Styles()
+	inputStyles.Focused.Placeholder = theme.Styles.InputField
+	inputStyles.Focused.Text = theme.Styles.InputField
+	inputStyles.Blurred.Placeholder = theme.Styles.InputField
+	inputStyles.Blurred.Text = theme.Styles.InputField
+	input.SetStyles(inputStyles)
 
 	m := Model{
 		messages:       make([]Message, 0),
@@ -45,7 +49,7 @@ func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 		theme:          theme,
 		usernameColors: usernameColors,
 		input:          input,
-		viewport:       viewport.New(0, 0),
+		viewport:       viewport.New(viewport.WithWidth(0), viewport.WithHeight(0)),
 		nickname:       "",
 	}
 
@@ -62,31 +66,33 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		cmds []tea.Cmd
 	)
 
-	m.input, cmd = m.input.Update(msg)
-	cmds = append(cmds, cmd)
-
-	// Filters out mouse events from writing in input bar and disable viewport keybindings (j/k)
 	switch msg := msg.(type) {
-	case tea.MouseMsg:
-		if m.input.Focused() &&
-			msg.Action == tea.MouseActionPress &&
-			(msg.Button == tea.MouseButtonWheelUp ||
-				msg.Button == tea.MouseButtonWheelDown) {
-
-			return *m, tea.Batch(cmds...)
-		}
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if m.input.Focused() {
-			if msg.Type == tea.KeyEnter && m.input.Value() != "" {
+			if msg.Code == tea.KeyEnter && m.input.Value() != "" {
 				text := m.input.Value()
 				m.input.Reset()
 				cmds = append(cmds, func() tea.Msg {
 					return SendMessageMsg{Text: text}
 				})
+				return *m, tea.Batch(cmds...)
 			}
+
+			switch msg.String() {
+			case "pgup", "pgdown", "ctrl+u", "ctrl+d":
+				m.viewport, cmd = m.viewport.Update(msg)
+				cmds = append(cmds, cmd)
+				return *m, tea.Batch(cmds...)
+			}
+
+			m.input, cmd = m.input.Update(msg)
+			cmds = append(cmds, cmd)
 			return *m, tea.Batch(cmds...)
 		}
 	}
+
+	m.input, cmd = m.input.Update(msg)
+	cmds = append(cmds, cmd)
 
 	m.viewport, cmd = m.viewport.Update(msg)
 	cmds = append(cmds, cmd)
@@ -95,7 +101,7 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m *Model) View() string {
-	topicView := m.renderTopic(m.viewport.Width)
+	topicView := m.renderTopic(m.viewport.Width())
 	chatInputBox := m.renderInputBox()
 
 	// The viewport content is set by updateContent
@@ -121,14 +127,15 @@ func (m *Model) SetSize(width, height int) {
 
 	topicHeight := lipgloss.Height(m.renderTopic(width))
 	inputHeight := lipgloss.Height(m.renderInputBox())
-	viewportHeight := height - topicHeight - inputHeight
+	chatAreaFrameHeight := m.theme.Styles.ChatArea.GetVerticalFrameSize()
+	viewportHeight := height - topicHeight - inputHeight - chatAreaFrameHeight
 
 	if viewportHeight < 3 {
 		viewportHeight = 3 // Minimum height for viewport
 	}
 
-	m.viewport.Width = width
-	m.viewport.Height = viewportHeight
+	m.viewport.SetWidth(width)
+	m.viewport.SetHeight(viewportHeight)
 	m.updateContent()
 }
 
@@ -138,14 +145,17 @@ func (m *Model) updateContent() {
 
 	for _, msg := range m.messages {
 		if !lastTimestamp.IsZero() && !sameDay(lastTimestamp, msg.Timestamp) {
-			lines = append(lines, m.renderDateSeparator(msg.Timestamp, m.viewport.Width))
+			lines = append(lines, m.renderDateSeparator(msg.Timestamp, m.viewport.Width()))
 		}
 		lastTimestamp = msg.Timestamp
-		lines = append(lines, m.renderMessage(msg, m.viewport.Width))
+		lines = append(lines, m.renderMessage(msg, m.viewport.Width()))
 	}
 
+	wasAtBottom := m.viewport.AtBottom()
 	m.viewport.SetContent(strings.Join(lines, "\n"))
-	m.viewport.GotoBottom()
+	if wasAtBottom {
+		m.viewport.GotoBottom()
+	}
 }
 
 func sameDay(a, b time.Time) bool {

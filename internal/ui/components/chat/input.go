@@ -1,7 +1,7 @@
 package chat
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 const (
@@ -16,7 +16,7 @@ func (m *Model) setInputWidth(width int) {
 	if inputWidth < 12 { // minimum width to not panic
 		inputWidth = 12
 	}
-	m.input.Width = inputWidth
+	m.input.SetWidth(inputWidth)
 }
 
 func (m *Model) renderInputBox() string {

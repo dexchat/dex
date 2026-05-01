@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/vaaleyard/dex/internal/config"
 	"github.com/vaaleyard/dex/internal/irc"
 	"github.com/vaaleyard/dex/internal/ui"
@@ -29,7 +29,7 @@ func main() {
 	}
 
 	tui := ui.New(cfg)
-	p := tea.NewProgram(tui, tea.WithAltScreen(), tea.WithMouseCellMotion())
+	p := tea.NewProgram(tui)
 
 	ircClientManager := irc.NewClientManager(cfg.Servers, p)
 	defer ircClientManager.DisconnectAll()

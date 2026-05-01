@@ -1,7 +1,9 @@
 package styles
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"image/color"
+
+	"charm.land/lipgloss/v2"
 )
 
 type Theme struct {
@@ -9,41 +11,43 @@ type Theme struct {
 	Styles Styles
 }
 
+type Color = color.Color
+
 type Colors struct {
 	Base struct {
-		Background lipgloss.Color
-		Foreground lipgloss.Color
-		Surface    lipgloss.Color
-		Border     lipgloss.Color
-		Accent     lipgloss.Color
-		Error      lipgloss.Color
-		Dimmed     lipgloss.Color
-		Subtle     lipgloss.Color
+		Background Color
+		Foreground Color
+		Surface    Color
+		Border     Color
+		Accent     Color
+		Error      Color
+		Dimmed     Color
+		Subtle     Color
 	}
 
 	Sidebar struct {
-		Server    lipgloss.Color
-		Unread    lipgloss.Color
-		Mention   lipgloss.Color
-		Selection lipgloss.Color
+		Server    Color
+		Unread    Color
+		Mention   Color
+		Selection Color
 	}
 
 	Chat struct {
-		Nickname      lipgloss.Color
-		Separator     lipgloss.Color
-		Self          lipgloss.Color
-		Connected     lipgloss.Color
-		Disconnected  lipgloss.Color
-		UserEvents    lipgloss.Color
-		ServerMessage lipgloss.Color
+		Nickname      Color
+		Separator     Color
+		Self          Color
+		Connected     Color
+		Disconnected  Color
+		UserEvents    Color
+		ServerMessage Color
 	}
 
 	Palette struct {
-		Border    lipgloss.Color
-		Highlight lipgloss.Color
+		Border    Color
+		Highlight Color
 	}
 
-	Nicknames []lipgloss.Color
+	Nicknames []Color
 }
 
 type Styles struct {
