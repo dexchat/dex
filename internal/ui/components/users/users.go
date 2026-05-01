@@ -29,7 +29,8 @@ type Model struct {
 
 func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 	vp := viewport.New(viewport.WithWidth(0), viewport.WithHeight(0))
-	vp.MouseWheelEnabled = false
+	vp.Style = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background)
 
 	return Model{
 		users:          make([]string, 0),
@@ -83,7 +84,7 @@ func (m Model) SetSize(width, height int) Model {
 		contentWidth = 0
 	}
 
-	viewportHeight := height - headerHeight
+	viewportHeight := height - m.theme.Styles.Sidebar.GetVerticalFrameSize() - headerHeight
 	if viewportHeight < 0 {
 		viewportHeight = 0
 	}
@@ -118,6 +119,8 @@ func (m Model) View(width, height int) string {
 	if contentWidth < 0 {
 		contentWidth = 0
 	}
+
+	m = m.SetSize(width, height)
 
 	var body string
 	// Show member list/count only on channels

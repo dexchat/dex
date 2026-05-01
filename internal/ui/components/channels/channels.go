@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/vaaleyard/dex/internal/config"
@@ -13,6 +14,7 @@ import (
 const (
 	// left (1) + right (1) borders
 	channelsVerticalBordersSize = 2
+	bottomPaddingHeight         = 1
 )
 
 type ChannelSelectionMsg struct {
@@ -44,6 +46,7 @@ type Model struct {
 	nodes    []node
 	cursor   int
 	selected string
+	viewport viewport.Model
 
 	theme styles.Theme
 
@@ -79,10 +82,19 @@ func New(theme styles.Theme, servers []*config.Server) Model {
 		}
 	}
 
+	vp := viewport.New(
+		viewport.WithWidth(0),
+		viewport.WithHeight(0),
+	)
+	vp.Style = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		PaddingBottom(bottomPaddingHeight)
+
 	return Model{
 		cursor:   0,
 		selected: "",
 		nodes:    items,
+		viewport: vp,
 		theme:    theme,
 		servers:  servers,
 	}
@@ -125,15 +137,35 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		// insert at the correct position
 		m.nodes = append(m.nodes[:insertIdx], append([]node{newNode}, m.nodes[insertIdx:]...)...)
 	}
-	return m, nil
+
+	if _, ok := msg.(tea.KeyMsg); ok {
+		return m.updateContent(), nil
+	}
+
+	var cmd tea.Cmd
+	m.viewport, cmd = m.viewport.Update(msg)
+	return m.updateContent(), cmd
 }
 
-func (m Model) View(width, height int) string {
+func (m Model) SetSize(width, height int) Model {
 	contentWidth := width - channelsVerticalBordersSize
 	if contentWidth < 0 {
 		contentWidth = 0
 	}
 
+	helpView := renderFooter(contentWidth, m.theme)
+	helpHeight := lipgloss.Height(helpView)
+	listHeight := height - m.theme.Styles.Sidebar.GetVerticalFrameSize() - helpHeight
+	if listHeight < 0 {
+		listHeight = 0
+	}
+
+	m.viewport.SetWidth(contentWidth)
+	m.viewport.SetHeight(listHeight)
+	return m.updateContent()
+}
+
+func (m Model) updateContent() Model {
 	var lines []string
 	lastServerName := ""
 
@@ -170,6 +202,8 @@ func (m Model) View(width, height int) string {
 			itemStyle = itemStyle.Background(m.theme.Colors.Sidebar.Selection)
 		}
 
+		itemStyle = itemStyle.Width(m.viewport.Width())
+
 		if node.isServer {
 			line = itemStyle.Render(textPart)
 		} else {
@@ -179,24 +213,23 @@ func (m Model) View(width, height int) string {
 		lines = append(lines, line)
 	}
 
-	channelsBody := strings.Join(lines, "\n")
-	helpView := renderFooter(contentWidth, m.theme)
-	helpHeight := lipgloss.Height(helpView)
+	m.viewport.SetContent(strings.Join(lines, "\n"))
+	return m
+}
 
-	listHeight := height - helpHeight
-	if listHeight < 0 {
-		listHeight = 0
+func (m Model) View(width, height int) string {
+	contentWidth := width - channelsVerticalBordersSize
+	if contentWidth < 0 {
+		contentWidth = 0
 	}
 
-	channelsList := lipgloss.NewStyle().
-		Background(m.theme.Colors.Base.Background).
-		Width(contentWidth).
-		Height(listHeight).
-		Render(channelsBody)
+	m = m.SetSize(width, height)
+
+	helpView := renderFooter(contentWidth, m.theme)
 
 	body := lipgloss.JoinVertical(
 		lipgloss.Left,
-		channelsList,
+		m.viewport.View(),
 		helpView,
 	)
 

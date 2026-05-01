@@ -27,6 +27,15 @@ const (
 	appVerticalBordersSize = 4
 )
 
+type scrollPane int
+
+const (
+	scrollPaneNone scrollPane = iota
+	scrollPaneChannels
+	scrollPaneChat
+	scrollPaneUsers
+)
+
 type (
 	historyFlushMsg    struct{}
 	startConnectionMsg struct{}
@@ -154,6 +163,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		buf := m.getActiveBuffer()
 		buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 		buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
+		m.channels = m.channels.SetSize(channelsPanelMaxWidth, m.calculateChatHeight())
 
 	case irc.ChannelJoinedMsg:
 		_, createCmd := m.getOrCreateBuffer(msgTyped.Server, msgTyped.Channel)
@@ -255,6 +265,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		palModel, cmd := m.palette.Update(msg)
 		m.palette = palModel
 		cmds = append(cmds, cmd)
+		if _, ok := msg.(tea.MouseWheelMsg); ok {
+			return m, tea.Batch(cmds...)
+		}
+	}
+
+	if _, ok := msg.(tea.MouseWheelMsg); ok {
+		cmds = append(cmds, m.updateHoveredScrollPane(msg))
+		return m, tea.Batch(cmds...)
 	}
 
 	// Update layout components, blocking keyboard input when the palette is open
@@ -270,6 +288,43 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
+}
+
+func (m *Model) updateHoveredScrollPane(msg tea.Msg) tea.Cmd {
+	var cmd tea.Cmd
+	buf := m.getActiveBuffer()
+
+	switch paneForMouseWheel(msg, m.width) {
+	case scrollPaneChannels:
+		m.channels, cmd = m.channels.Update(msg)
+	case scrollPaneChat:
+		buf.Chat, cmd = buf.Chat.Update(msg)
+	case scrollPaneUsers:
+		buf.Users, cmd = buf.Users.Update(msg)
+	}
+
+	return cmd
+}
+
+func paneForMouseWheel(msg tea.Msg, width int) scrollPane {
+	mouseMsg, ok := msg.(tea.MouseWheelMsg)
+	if !ok {
+		return scrollPaneNone
+	}
+
+	if mouseMsg.X < 0 || mouseMsg.X >= width {
+		return scrollPaneNone
+	}
+
+	if mouseMsg.X < channelsPanelMaxWidth {
+		return scrollPaneChannels
+	}
+
+	if mouseMsg.X >= width-usersPanelMaxWidth {
+		return scrollPaneUsers
+	}
+
+	return scrollPaneChat
 }
 
 func (m *Model) View() tea.View {

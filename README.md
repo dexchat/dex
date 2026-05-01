@@ -9,17 +9,13 @@
 
 ## TODO
 * IRC:
-  * enable scroll to viewport (chat or user list) based on the mouse is hovered
   * support for commands, e.g., /leave, /join, etc.
   * autocompletion for commands
 * check if the chat being updated every message is a performance issue
 * maybe centralize all paddings and borders numbers
 * implement command palette actions
 * implement a new overlay: help with all the keybindings – will only be shown in the command palette
-* migrate to lipgloss v2 and use their overlay
-* fix mouse sequences being typed in input bar e.g. `[<64;76;47M[<65;76;47M`
 * use all models as value and not reference
-* create keybindings for scrolling the chat viewport
 * new messages indicator
 * tagged messages indicator
 * improve channel list UI and user list member count, it's kinda ugly – ask for suggestions to someone
