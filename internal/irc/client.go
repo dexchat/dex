@@ -32,9 +32,15 @@ type Client struct {
 
 	// userChannels stores the channels each user is part of to handle QUIT properly.
 	// girc can remove a quitting user from its state before our handler reads it,
-	// so this preserves the channel list needed to route quit messages and refreshes.
+	// so this preserves the channel list needed to route quit messages and refreshes
 	userChannelsMu sync.Mutex
 	userChannels   map[string]map[string]struct{}
+
+	// userListRefreshPending tracks pending user list channel refreshes and sends
+	// them in one short batch instead of updating bubbletea for every IRC event
+	userListRefreshMu        sync.Mutex
+	userListRefreshPending   map[string]string
+	userListRefreshScheduled bool
 }
 
 func NewClient(serverName string, config *config.Server, teaProgram *tea.Program) *Client {
@@ -47,6 +53,12 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 		ServerPass: config.ConnectionPassword(),
 		SSL:        config.UseSSL(),
 		AllowFlood: true,
+		// girc sends WHO/MODE for every self-joined channel by default.
+		// On channels with a lot of users, that burst can fill ZNC's queue
+		// and delay PRIVMSG traffic. We disable those extra sync requests 
+		// and build the displayed user list from girc's tracked state
+		DisableAutoWhoOnJoin:  true,
+		DisableAutoModeOnJoin: true,
 		SupportedCaps: map[string][]string{
 			// echo-message is enabled to support ZNC users;
 			// ZNC, by default, only records messages it receives from the IRC server.

@@ -9,6 +9,8 @@ import (
 	"github.com/lrstanley/girc"
 )
 
+const userListRefreshDelay = 25 * time.Millisecond
+
 func (c *Client) onUserListChange(client *girc.Client, e girc.Event) {
 	var channelName string
 	switch e.Command {
@@ -25,31 +27,55 @@ func (c *Client) onUserListChange(client *girc.Client, e girc.Event) {
 		channelName = e.Params[0]
 	}
 
+	// For NICK events, update all channels the user is in
+	if e.Command == girc.NICK {
+		c.scheduleUserListRefresh(client, client.ChannelList()...)
+		return
+	}
+
 	// In case of user MODE events, for example
 	if !girc.IsValidChannel(channelName) {
 		return
 	}
 
-	// For PART/JOIN events, girc may not have updated its state yet
-	// Schedule a WHO refresh, which will trigger RPL_ENDOFWHO with updated data
-	if e.Command == girc.JOIN || e.Command == girc.PART {
-		client.Cmd.Who(channelName)
-		return
-	}
+	c.scheduleUserListRefresh(client, channelName)
+}
 
-	// For NICK events, update all channels the user is in
-	if e.Command == girc.NICK {
-		newNick := e.Params[0]
-		user := client.LookupUser(newNick)
-		if user != nil {
-			for _, ch := range user.ChannelList {
-				c.refreshUserList(client, ch)
-			}
+func (c *Client) scheduleUserListRefresh(client *girc.Client, channelNames ...string) {
+	c.userListRefreshMu.Lock()
+	if c.userListRefreshPending == nil {
+		c.userListRefreshPending = make(map[string]string)
+	}
+	for _, channelName := range channelNames {
+		if !girc.IsValidChannel(channelName) {
+			continue
 		}
+		c.userListRefreshPending[girc.ToRFC1459(channelName)] = channelName
+	}
+	if c.userListRefreshScheduled {
+		c.userListRefreshMu.Unlock()
 		return
 	}
+	c.userListRefreshScheduled = true
+	c.userListRefreshMu.Unlock()
 
-	c.refreshUserList(client, channelName)
+	go func() {
+		time.Sleep(userListRefreshDelay)
+
+		c.userListRefreshMu.Lock()
+		channels := make([]string, 0, len(c.userListRefreshPending))
+		for _, channelName := range c.userListRefreshPending {
+			channels = append(channels, channelName)
+		}
+		c.userListRefreshPending = nil
+		c.userListRefreshScheduled = false
+		c.userListRefreshMu.Unlock()
+
+		sort.Strings(channels)
+		for _, channelName := range channels {
+			c.refreshUserList(client, channelName)
+		}
+	}()
 }
 
 func (c *Client) refreshUserList(client *girc.Client, channelName string) {
@@ -223,8 +249,8 @@ func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 			From:      "<--",
 			Text:      message,
 		})
-		client.Cmd.Who(channelName)
 	}
+	c.scheduleUserListRefresh(client, channels...)
 }
 
 func (c *Client) onJoin(client *girc.Client, e girc.Event) {

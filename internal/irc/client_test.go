@@ -1,6 +1,7 @@
 package irc
 
 import (
+	"bytes"
 	"reflect"
 	"strings"
 	"testing"
@@ -32,21 +33,110 @@ func TestMessageHandlersAreSynchronous(t *testing.T) {
 	}
 }
 
-func TestJoinTriggersUserListRefresh(t *testing.T) {
+func TestMembershipEventsTriggerUserListRefresh(t *testing.T) {
 	client := NewClient("testnet", &config.Server{
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
 	}, nil)
 
-	handlers := externalHandlerIDs(t, client, girc.JOIN)
-	for _, id := range handlers {
-		if strings.HasSuffix(id, ":bg") {
-			return
-		}
+	for _, command := range []string{girc.JOIN, girc.PART, girc.NICK, girc.MODE, girc.RPL_ENDOFNAMES, girc.RPL_ENDOFWHO} {
+		t.Run(command, func(t *testing.T) {
+			for _, id := range externalHandlerIDs(t, client, command) {
+				if strings.HasSuffix(id, ":bg") {
+					return
+				}
+			}
+			t.Fatalf("expected %s to have a background user-list refresh handler, got %v", command, externalHandlerIDs(t, client, command))
+		})
 	}
+}
 
-	t.Fatalf("expected JOIN to have a background user-list refresh handler, got %v", handlers)
+func TestJoinAndPartUserListChangesDoNotSendWhoRefresh(t *testing.T) {
+	for _, command := range []string{girc.JOIN, girc.PART} {
+		t.Run(command, func(t *testing.T) {
+			var debug bytes.Buffer
+			ircClient := girc.New(girc.Config{
+				Server:     "irc.example.test",
+				Nick:       "tester",
+				User:       "tester",
+				AllowFlood: true,
+				Debug:      &debug,
+			})
+			client := &Client{
+				Client:       ircClient,
+				serverName:   "testnet",
+				userChannels: make(map[string]map[string]struct{}),
+			}
+
+			client.onUserListChange(ircClient, girc.Event{
+				Command: command,
+				Source:  girc.ParseSource("alice!alice@example.test"),
+				Params:  []string{"#brasil"},
+			})
+
+			if strings.Contains(debug.String(), "WHO #brasil") {
+				t.Fatalf("expected %s user-list change not to send WHO refresh, debug log:\n%s", command, debug.String())
+			}
+		})
+	}
+}
+
+func TestUserListRefreshRequestsAreCoalescedByChannel(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+
+	client.scheduleUserListRefresh(client.Client, "#brasil")
+	client.scheduleUserListRefresh(client.Client, "#Brasil")
+	client.scheduleUserListRefresh(client.Client, "#idlerpg")
+
+	client.userListRefreshMu.Lock()
+	defer client.userListRefreshMu.Unlock()
+
+	if !client.userListRefreshScheduled {
+		t.Fatal("expected user-list refresh to be scheduled")
+	}
+	if got := len(client.userListRefreshPending); got != 2 {
+		t.Fatalf("expected refreshes to be coalesced per channel, got %d pending channels", got)
+	}
+}
+
+func TestNickUserListChangeSchedulesRefreshDespiteNonChannelParam(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+	client.onUserListChange(client.Client, girc.Event{
+		Command: girc.NICK,
+		Source:  girc.ParseSource("alice!alice@example.test"),
+		Params:  []string{"alice_"},
+	})
+
+	client.userListRefreshMu.Lock()
+	defer client.userListRefreshMu.Unlock()
+
+	if !client.userListRefreshScheduled {
+		t.Fatal("expected nick change to schedule a user-list refresh")
+	}
+}
+
+func TestClientDisablesGircAutoJoinQueries(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+
+	if !client.Config.DisableAutoWhoOnJoin {
+		t.Fatal("expected dex to disable girc automatic WHO on self-JOIN")
+	}
+	if !client.Config.DisableAutoModeOnJoin {
+		t.Fatal("expected dex to disable girc automatic MODE on self-JOIN")
+	}
 }
 
 func TestPendingMessageKeyNormalizesServerTargetAndMessage(t *testing.T) {
