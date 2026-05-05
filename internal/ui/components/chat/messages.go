@@ -21,6 +21,7 @@ type Message struct {
 
 func (m *Model) renderMessage(msg Message, width int) string {
 	baseStyle := lipgloss.NewStyle().
+		Foreground(m.theme.Colors.Base.Foreground).
 		Background(m.theme.Colors.Base.Background)
 
 	timeStyle := baseStyle.
