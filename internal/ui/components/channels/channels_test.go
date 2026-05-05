@@ -63,6 +63,56 @@ func TestChannelPaneRendersRequestedHeight(t *testing.T) {
 	}
 }
 
+func TestActivityUpdateRendersUnreadBadge(t *testing.T) {
+	m := newScrollableChannelsModel()
+
+	m, _ = m.Update(ActivityUpdateMsg{
+		Server:      "libera",
+		Buffer:      "#channel-00",
+		UnreadCount: 3,
+	})
+
+	content := m.viewport.GetContent()
+	if !strings.Contains(content, "3") {
+		t.Fatalf("expected unread badge count in channel list, got:\n%s", content)
+	}
+	if !strings.Contains(content, "#channel-00") {
+		t.Fatalf("expected channel name to remain visible, got:\n%s", content)
+	}
+}
+
+func TestActivityUpdateRendersMentionBadgeBeforeUnread(t *testing.T) {
+	m := newScrollableChannelsModel()
+
+	m, _ = m.Update(ActivityUpdateMsg{
+		Server:       "libera",
+		Buffer:       "#channel-00",
+		UnreadCount:  7,
+		MentionCount: 2,
+	})
+
+	content := m.viewport.GetContent()
+	if !strings.Contains(content, "@2") {
+		t.Fatalf("expected mention badge to render, got:\n%s", content)
+	}
+}
+
+func TestActivityBadgeCapsLargeCounts(t *testing.T) {
+	m := newScrollableChannelsModel()
+
+	m, _ = m.Update(ActivityUpdateMsg{
+		Server:       "libera",
+		Buffer:       "#channel-00",
+		UnreadCount:  120,
+		MentionCount: 120,
+	})
+
+	content := m.viewport.GetContent()
+	if !strings.Contains(content, "@99+") {
+		t.Fatalf("expected capped mention badge, got:\n%s", content)
+	}
+}
+
 func newScrollableChannelsModel() Model {
 	theme := styles.RosePineTheme()
 	var channelNames []string

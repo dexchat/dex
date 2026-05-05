@@ -148,6 +148,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if sel, ok := msg.(channels.ChannelSelectionMsg); ok && sel.Server != "" {
 			key := makeBufferKey(sel.Server, sel.Channel)
 			m.activeBuffer = key
+			m.clearBufferActivity(key)
 			buf := m.getActiveBuffer()
 			buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 			buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())

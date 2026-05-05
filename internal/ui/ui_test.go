@@ -1,9 +1,13 @@
 package ui
 
 import (
+	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/vaaleyard/dex/internal/config"
+	"github.com/vaaleyard/dex/internal/irc"
 )
 
 func TestPaneForMouseWheelUsesPaneBounds(t *testing.T) {
@@ -39,4 +43,136 @@ func TestPaneForMouseWheelIgnoresNonWheelMouse(t *testing.T) {
 	if got != scrollPaneNone {
 		t.Fatalf("paneForMouseWheel() = %v, want %v", got, scrollPaneNone)
 	}
+}
+
+func TestInactiveBufferMessageIncrementsUnreadActivity(t *testing.T) {
+	m := newActivityTestModel()
+
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "hello there",
+	})
+
+	buf := m.buffers[makeBufferKey("libera", "#random")]
+	if got, want := buf.UnreadCount, 1; got != want {
+		t.Fatalf("UnreadCount = %d, want %d", got, want)
+	}
+	if got, want := buf.MentionCount, 0; got != want {
+		t.Fatalf("MentionCount = %d, want %d", got, want)
+	}
+	if content := m.channels.View(channelsPanelMaxWidth, 20); !strings.Contains(content, "1") {
+		t.Fatalf("expected unread badge in channel list, got:\n%s", content)
+	}
+}
+
+func TestInactiveBufferMentionIncrementsMentionActivity(t *testing.T) {
+	m := newActivityTestModel()
+
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "hey dexuser, can you check this?",
+	})
+
+	buf := m.buffers[makeBufferKey("libera", "#random")]
+	if got, want := buf.UnreadCount, 1; got != want {
+		t.Fatalf("UnreadCount = %d, want %d", got, want)
+	}
+	if got, want := buf.MentionCount, 1; got != want {
+		t.Fatalf("MentionCount = %d, want %d", got, want)
+	}
+	if content := m.channels.View(channelsPanelMaxWidth, 20); !strings.Contains(content, "@1") {
+		t.Fatalf("expected mention badge in channel list, got:\n%s", content)
+	}
+}
+
+func TestActiveBufferMessagesAndOwnEchoesDoNotIncrementActivity(t *testing.T) {
+	m := newActivityTestModel()
+	m.activeBuffer = makeBufferKey("libera", "#random")
+
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "hey dexuser",
+	})
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#go",
+		Timestamp: time.Now(),
+		From:      "dexuser",
+		Text:      "my own message",
+		OwnEcho:   true,
+	})
+
+	if got := m.buffers[makeBufferKey("libera", "#random")].UnreadCount; got != 0 {
+		t.Fatalf("active buffer UnreadCount = %d, want 0", got)
+	}
+	if got := m.buffers[makeBufferKey("libera", "#go")].UnreadCount; got != 0 {
+		t.Fatalf("own echo UnreadCount = %d, want 0", got)
+	}
+}
+
+func TestSelectingBufferClearsActivity(t *testing.T) {
+	m := newActivityTestModel()
+
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#go",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "dexuser: ping",
+	})
+
+	if got := m.buffers[makeBufferKey("libera", "#go")].MentionCount; got != 1 {
+		t.Fatalf("MentionCount before selecting = %d, want 1", got)
+	}
+
+	_, _ = m.Update(tea.KeyPressMsg{Code: 'n', Mod: tea.ModCtrl})
+
+	buf := m.buffers[makeBufferKey("libera", "#go")]
+	if got := buf.UnreadCount; got != 0 {
+		t.Fatalf("UnreadCount after selecting = %d, want 0", got)
+	}
+	if got := buf.MentionCount; got != 0 {
+		t.Fatalf("MentionCount after selecting = %d, want 0", got)
+	}
+	if content := m.channels.View(channelsPanelMaxWidth, 20); strings.Contains(content, "@1") {
+		t.Fatalf("expected mention badge to clear, got:\n%s", content)
+	}
+}
+
+func TestMentionDetectionRequiresWholeNickToken(t *testing.T) {
+	if !messageMentionsNick("hey dexuser: ping", "dexuser") {
+		t.Fatal("expected exact nick token to count as mention")
+	}
+	if messageMentionsNick("hey superdexuser ping", "dexuser") {
+		t.Fatal("expected substring inside a longer token not to count as mention")
+	}
+	if !messageMentionsNick("DEXUSER, ping", "dexuser") {
+		t.Fatal("expected mention matching to be case-insensitive")
+	}
+}
+
+func newActivityTestModel() *Model {
+	cfg := &config.Config{
+		Servers: []*config.Server{
+			{
+				Name:     "libera",
+				Nickname: "dexuser",
+				Channels: []string{"#go", "#random"},
+			},
+		},
+	}
+	m := New(cfg)
+	m.width = 100
+	m.height = 20
+	m.channels = m.channels.SetSize(channelsPanelMaxWidth, 20)
+	return m
 }

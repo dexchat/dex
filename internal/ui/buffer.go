@@ -26,6 +26,9 @@ type Buffer struct {
 	Chat    chat.Model
 	Users   users.Model
 	History *history.Log
+
+	UnreadCount  int
+	MentionCount int
 }
 
 func (b *Buffer) isValid() bool {

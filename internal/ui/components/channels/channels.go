@@ -27,6 +27,13 @@ type ChannelNameUpdateMsg struct {
 	CanonicalName string
 }
 
+type ActivityUpdateMsg struct {
+	Server       string
+	Buffer       string
+	UnreadCount  int
+	MentionCount int
+}
+
 // NewBufferMsg is a custom message type used to notify this component to add a new buffer in the tree
 type NewBufferMsg struct {
 	Server string
@@ -37,9 +44,8 @@ type node struct {
 	name         string
 	isServer     bool
 	parent       string
-	mentioned    bool
 	mentionCount int
-	hasUnread    bool
+	unreadCount  int
 }
 
 type Model struct {
@@ -56,12 +62,6 @@ type Model struct {
 func New(theme styles.Theme, servers []*config.Server) Model {
 	var items []node
 
-	// example: "libera:#go": 2
-	mentionCounts := map[string]int{}
-
-	// example: "libera:#go": true
-	unreadChannels := map[string]bool{}
-
 	for _, server := range servers {
 		items = append(items, node{
 			name:     server.Name,
@@ -69,15 +69,10 @@ func New(theme styles.Theme, servers []*config.Server) Model {
 		})
 
 		for _, channel := range server.Channels {
-			key := server.Name + ":" + channel
-			isMentioned := mentionCounts[key] > 0
 			items = append(items, node{
-				name:         channel,
-				isServer:     false,
-				parent:       server.Name,
-				mentioned:    isMentioned,
-				mentionCount: mentionCounts[key],
-				hasUnread:    unreadChannels[key] && !isMentioned,
+				name:     channel,
+				isServer: false,
+				parent:   server.Name,
 			})
 		}
 	}
@@ -110,6 +105,14 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		for i, n := range m.nodes {
 			if !n.isServer && n.parent == msg.Server && strings.EqualFold(n.name, msg.CanonicalName) {
 				m.nodes[i].name = msg.CanonicalName
+				break
+			}
+		}
+	case ActivityUpdateMsg:
+		for i, n := range m.nodes {
+			if !n.isServer && strings.EqualFold(n.parent, msg.Server) && strings.EqualFold(n.name, msg.Buffer) {
+				m.nodes[i].unreadCount = msg.UnreadCount
+				m.nodes[i].mentionCount = msg.MentionCount
 				break
 			}
 		}
@@ -174,28 +177,18 @@ func (m Model) updateContent() Model {
 			lines = append(lines, "")
 		}
 
-		var line string
-		var textPart string
-
 		if node.isServer {
-			textPart = node.name
 			lastServerName = node.name
-		} else {
-			channelText := node.name
-			if node.mentioned && node.mentionCount > 0 {
-				channelText = fmt.Sprintf("%s (%d)", channelText, node.mentionCount)
-			}
-			textPart = channelText
 		}
 
-		var itemStyle = m.theme.Styles.App.PaddingLeft(1).PaddingRight(1)
+		var itemStyle = m.theme.Styles.App
 
 		if node.isServer {
-			itemStyle = m.theme.Styles.ServerItem.PaddingLeft(1).PaddingRight(1)
-		} else if node.mentioned {
-			itemStyle = m.theme.Styles.MentionedItem.PaddingLeft(1).PaddingRight(1)
-		} else if node.hasUnread {
-			itemStyle = m.theme.Styles.UnreadItem.PaddingLeft(1).PaddingRight(1)
+			itemStyle = m.theme.Styles.ServerItem
+		} else if node.mentionCount > 0 {
+			itemStyle = m.theme.Styles.MentionedItem
+		} else if node.unreadCount > 0 {
+			itemStyle = m.theme.Styles.UnreadItem
 		}
 
 		if i == m.cursor {
@@ -205,16 +198,80 @@ func (m Model) updateContent() Model {
 		itemStyle = itemStyle.Width(m.viewport.Width())
 
 		if node.isServer {
-			line = itemStyle.Render(textPart)
+			lines = append(lines, itemStyle.Render(node.name))
 		} else {
-			line = itemStyle.PaddingLeft(2).Render(textPart)
+			lines = append(lines, itemStyle.Render(m.renderChannelRow(node, m.viewport.Width())))
 		}
-
-		lines = append(lines, line)
 	}
 
 	m.viewport.SetContent(strings.Join(lines, "\n"))
 	return m
+}
+
+func (m Model) renderChannelRow(node node, width int) string {
+	label := "  " + node.name
+	badge := m.renderActivityBadge(node)
+	if badge == "" {
+		return label
+	}
+
+	available := width - lipgloss.Width(badge)
+	if available < 0 {
+		available = 0
+	}
+
+	label = truncateWidth(label, available)
+	spacing := available - lipgloss.Width(label)
+	if spacing < 0 {
+		spacing = 0
+	}
+
+	return label + strings.Repeat(" ", spacing) + badge
+}
+
+func (m Model) renderActivityBadge(node node) string {
+	switch {
+	case node.mentionCount > 0:
+		return m.activityBadge("@"+formatActivityCount(node.mentionCount), m.theme.Styles.MentionedItem)
+	case node.unreadCount > 0:
+		return m.activityBadge(formatActivityCount(node.unreadCount), m.theme.Styles.UnreadItem)
+	default:
+		return ""
+	}
+}
+
+func (m Model) activityBadge(text string, style lipgloss.Style) string {
+	return style.
+		Background(m.theme.Colors.Base.Surface).
+		PaddingLeft(1).
+		PaddingRight(1).
+		Render(text)
+}
+
+func formatActivityCount(count int) string {
+	if count > 99 {
+		return "99+"
+	}
+	return fmt.Sprintf("%d", count)
+}
+
+func truncateWidth(s string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if lipgloss.Width(s) <= width {
+		return s
+	}
+
+	var out strings.Builder
+	for _, r := range s {
+		next := out.String() + string(r)
+		if lipgloss.Width(next) > width {
+			break
+		}
+		out.WriteRune(r)
+	}
+	return out.String()
 }
 
 func (m Model) View(width, height int) string {
