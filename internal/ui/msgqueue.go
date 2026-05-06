@@ -6,6 +6,7 @@ import (
 	"unicode"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/vaaleyard/dex/internal/config"
 	"github.com/vaaleyard/dex/internal/history"
 	"github.com/vaaleyard/dex/internal/irc"
 	"github.com/vaaleyard/dex/internal/ui/components/channels"
@@ -99,12 +100,31 @@ func (m *Model) clearBufferActivity(key BufferKey) {
 }
 
 func (m *Model) updateChannelActivity(buf *Buffer) {
+	settings := m.badgeSettingsForServer(buf.Server)
+	unreadCount := buf.UnreadCount
+	mentionCount := buf.MentionCount
+	if !settings.Unread {
+		unreadCount = 0
+	}
+	if !settings.Mention {
+		mentionCount = 0
+	}
+
 	m.channels, _ = m.channels.Update(channels.ActivityUpdateMsg{
 		Server:       buf.Server,
 		Buffer:       buf.Buffer,
-		UnreadCount:  buf.UnreadCount,
-		MentionCount: buf.MentionCount,
+		UnreadCount:  unreadCount,
+		MentionCount: mentionCount,
 	})
+}
+
+func (m *Model) badgeSettingsForServer(serverName string) config.BadgeSettings {
+	for _, server := range m.config.Servers {
+		if strings.EqualFold(server.Name, serverName) {
+			return m.config.ServerBadgeSettings(server)
+		}
+	}
+	return m.config.ServerBadgeSettings(nil)
 }
 
 // messageMentionsNick matches the a given nick in a text message, so "nick" counts in

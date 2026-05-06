@@ -14,16 +14,41 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("failed to read config.toml: %w", err)
 	}
 
+	cfg, err := loadFromBytes(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}
+
+func loadFromBytes(data []byte) (*Config, error) {
 	var raw rawConfig
-	if err := toml.Unmarshal(data, &raw); err != nil {
+	md, err := toml.Decode(string(data), &raw)
+	if err != nil {
 		return nil, fmt.Errorf("failed to parse config.toml: %w", err)
+	}
+	if undecoded := md.Undecoded(); len(undecoded) > 0 {
+		return nil, fmt.Errorf("failed to parse config.toml: unknown fields: %v", undecoded)
 	}
 
 	if err := validate(raw.Servers); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
 
-	cfg := &Config{}
+	cfg := &Config{
+		UI: UI{
+			UnreadBadges:  true,
+			MentionBadges: true,
+		},
+	}
+	if raw.UI.UnreadBadges != nil {
+		cfg.UI.UnreadBadges = *raw.UI.UnreadBadges
+	}
+	if raw.UI.MentionBadges != nil {
+		cfg.UI.MentionBadges = *raw.UI.MentionBadges
+	}
+
 	for name, server := range raw.Servers {
 		server.Name = name
 		sort.Strings(server.Channels)

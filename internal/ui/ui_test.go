@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -63,7 +64,7 @@ func TestInactiveBufferMessageIncrementsUnreadActivity(t *testing.T) {
 	if got, want := buf.MentionCount, 0; got != want {
 		t.Fatalf("MentionCount = %d, want %d", got, want)
 	}
-	if content := m.channels.View(channelsPanelMaxWidth, 20); !strings.Contains(content, "1") {
+	if content := plainText(m.channels.View(channelsPanelMaxWidth, 20)); !strings.Contains(content, "1") {
 		t.Fatalf("expected unread badge in channel list, got:\n%s", content)
 	}
 }
@@ -86,7 +87,7 @@ func TestInactiveBufferMentionIncrementsMentionActivity(t *testing.T) {
 	if got, want := buf.MentionCount, 1; got != want {
 		t.Fatalf("MentionCount = %d, want %d", got, want)
 	}
-	if content := m.channels.View(channelsPanelMaxWidth, 20); !strings.Contains(content, "@1") {
+	if content := plainText(m.channels.View(channelsPanelMaxWidth, 20)); !strings.Contains(content, "@1") {
 		t.Fatalf("expected mention badge in channel list, got:\n%s", content)
 	}
 }
@@ -143,8 +144,56 @@ func TestSelectingBufferClearsActivity(t *testing.T) {
 	if got := buf.MentionCount; got != 0 {
 		t.Fatalf("MentionCount after selecting = %d, want 0", got)
 	}
-	if content := m.channels.View(channelsPanelMaxWidth, 20); strings.Contains(content, "@1") {
+	if content := plainText(m.channels.View(channelsPanelMaxWidth, 20)); strings.Contains(content, "@1") {
 		t.Fatalf("expected mention badge to clear, got:\n%s", content)
+	}
+}
+
+func TestUnreadBadgeCanBeDisabledGlobally(t *testing.T) {
+	m := newActivityTestModel()
+	m.config.UI.UnreadBadges = false
+
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "hello there",
+	})
+
+	if got := m.buffers[makeBufferKey("libera", "#random")].UnreadCount; got != 1 {
+		t.Fatalf("UnreadCount = %d, want 1", got)
+	}
+	if content := plainText(m.channels.View(channelsPanelMaxWidth, 20)); strings.Contains(content, "1") {
+		t.Fatalf("expected unread badge to be hidden, got:\n%s", content)
+	}
+}
+
+func TestMentionBadgeCanBeDisabledPerServerWhileUnreadRemains(t *testing.T) {
+	m := newActivityTestModel()
+	m.config.Servers[0].MentionBadges = boolPtr(false)
+
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "hey dexuser, can you check this?",
+	})
+
+	buf := m.buffers[makeBufferKey("libera", "#random")]
+	if got, want := buf.UnreadCount, 1; got != want {
+		t.Fatalf("UnreadCount = %d, want %d", got, want)
+	}
+	if got, want := buf.MentionCount, 1; got != want {
+		t.Fatalf("MentionCount = %d, want %d", got, want)
+	}
+	content := plainText(m.channels.View(channelsPanelMaxWidth, 20))
+	if strings.Contains(content, "@1") {
+		t.Fatalf("expected mention badge to be hidden, got:\n%s", content)
+	}
+	if !strings.Contains(content, "1") {
+		t.Fatalf("expected unread badge to remain visible, got:\n%s", content)
 	}
 }
 
@@ -162,6 +211,10 @@ func TestMentionDetectionRequiresWholeNickToken(t *testing.T) {
 
 func newActivityTestModel() *Model {
 	cfg := &config.Config{
+		UI: config.UI{
+			UnreadBadges:  true,
+			MentionBadges: true,
+		},
 		Servers: []*config.Server{
 			{
 				Name:     "libera",
@@ -175,4 +228,14 @@ func newActivityTestModel() *Model {
 	m.height = 20
 	m.channels = m.channels.SetSize(channelsPanelMaxWidth, 20)
 	return m
+}
+
+func boolPtr(v bool) *bool {
+	return &v
+}
+
+var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+func plainText(s string) string {
+	return ansiPattern.ReplaceAllString(s, "")
 }
