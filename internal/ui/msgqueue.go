@@ -74,6 +74,9 @@ func (m *Model) processIncomingMessage(msg irc.BufferNewMessageMsg) tea.Cmd {
 }
 
 func (m *Model) updateActivityForMessage(buf *Buffer, msg irc.BufferNewMessageMsg) {
+	if msg.Type != irc.MessageTypeNormal {
+		return
+	}
 	if buf.Key == m.activeBuffer {
 		return
 	}

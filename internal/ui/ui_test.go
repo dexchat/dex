@@ -120,6 +120,30 @@ func TestActiveBufferMessagesAndOwnEchoesDoNotIncrementActivity(t *testing.T) {
 	}
 }
 
+func TestNonNormalMessagesDoNotIncrementActivity(t *testing.T) {
+	m := newActivityTestModel()
+
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: time.Now(),
+		From:      "--",
+		Text:      "irc: connected",
+		Type:      irc.MessageTypeConnected,
+	})
+
+	buf := m.buffers[makeBufferKey("libera", "#random")]
+	if got := buf.UnreadCount; got != 0 {
+		t.Fatalf("UnreadCount = %d, want 0", got)
+	}
+	if got := buf.MentionCount; got != 0 {
+		t.Fatalf("MentionCount = %d, want 0", got)
+	}
+	if content := plainText(m.channels.View(channelsPanelMaxWidth, 20)); strings.Contains(content, "1") {
+		t.Fatalf("expected no badge for non-normal message, got:\n%s", content)
+	}
+}
+
 func TestSelectingBufferClearsActivity(t *testing.T) {
 	m := newActivityTestModel()
 
