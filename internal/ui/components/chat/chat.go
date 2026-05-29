@@ -134,6 +134,10 @@ func (m *Model) SetSize(width, height int) {
 		viewportHeight = 3 // Minimum height for viewport
 	}
 
+	if m.viewport.Width() == width && m.viewport.Height() == viewportHeight && !m.needsRender {
+		return
+	}
+
 	m.viewport.SetWidth(width)
 	m.viewport.SetHeight(viewportHeight)
 	m.updateContent()
