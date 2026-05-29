@@ -180,7 +180,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if buf != nil {
 			buf.Users, cmd = buf.Users.Update(users.UserListMsg(msgTyped.Users))
 			cmds = append(cmds, cmd)
-			buf.Chat.RefreshContent()
+			// We refresh chat on UserListMsg to dim nick if a user
+			// send a message then leaves channel
+			if buf.Key == m.activeBuffer {
+				buf.Chat.RefreshContent()
+			}
 		}
 
 	case irc.BufferNewMessageBatchMsg:
