@@ -280,9 +280,16 @@ func (m Model) View(width, height int) string {
 		contentWidth = 0
 	}
 
-	m = m.SetSize(width, height)
-
 	helpView := renderFooter(contentWidth, m.theme)
+	helpHeight := lipgloss.Height(helpView)
+	listHeight := height - m.theme.Styles.Sidebar.GetVerticalFrameSize() - helpHeight
+	if listHeight < 0 {
+		listHeight = 0
+	}
+
+	if m.viewport.Width() != contentWidth || m.viewport.Height() != listHeight {
+		m = m.SetSize(width, height)
+	}
 
 	body := lipgloss.JoinVertical(
 		lipgloss.Left,

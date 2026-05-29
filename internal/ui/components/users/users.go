@@ -120,7 +120,14 @@ func (m Model) View(width, height int) string {
 		contentWidth = 0
 	}
 
-	m = m.SetSize(width, height)
+	viewportHeight := height - m.theme.Styles.Sidebar.GetVerticalFrameSize() - headerHeight
+	if viewportHeight < 0 {
+		viewportHeight = 0
+	}
+
+	if m.viewport.Width() != contentWidth || m.viewport.Height() != viewportHeight {
+		m = m.SetSize(width, height)
+	}
 
 	var body string
 	// Show member list/count only on channels
