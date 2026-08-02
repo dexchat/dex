@@ -8,6 +8,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/vaaleyard/dex/internal/config"
+	"github.com/vaaleyard/dex/internal/history"
 	"github.com/vaaleyard/dex/internal/irc"
 )
 
@@ -141,6 +142,76 @@ func TestNonNormalMessagesDoNotIncrementActivity(t *testing.T) {
 	}
 	if content := plainText(m.channels.View(channelsPanelMaxWidth, 20)); strings.Contains(content, "1") {
 		t.Fatalf("expected no badge for non-normal message, got:\n%s", content)
+	}
+}
+
+func TestNewBuildsChannelListWithoutLoadingChannelHistory(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+
+	writeTestHistory(t, "libera", "#go", "stored message")
+
+	cfg := &config.Config{
+		Servers: []*config.Server{
+			{
+				Name:     "libera",
+				Nickname: "dexuser",
+				Channels: []string{"#go"},
+			},
+		},
+	}
+
+	m := New(cfg)
+	buf := m.buffers[makeBufferKey("libera", "#go")]
+	if buf == nil {
+		t.Fatal("expected configured channel buffer to exist")
+	}
+	if got := len(buf.History.Entries()); got != 0 {
+		t.Fatalf("New loaded %d history entries synchronously, want 0", got)
+	}
+
+	m.channels = m.channels.SetSize(channelsPanelMaxWidth, 20)
+	if content := plainText(m.channels.View(channelsPanelMaxWidth, 20)); !strings.Contains(content, "#go") {
+		t.Fatalf("expected configured channel to render before history load, got:\n%s", content)
+	}
+}
+
+func TestConfiguredHistoryLoadPopulatesExistingBuffers(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+
+	writeTestHistory(t, "libera", "#go", "stored message")
+
+	cfg := &config.Config{
+		Servers: []*config.Server{
+			{
+				Name:     "libera",
+				Nickname: "dexuser",
+				Channels: []string{"#go"},
+			},
+		},
+	}
+
+	m := New(cfg)
+	msg := m.loadConfiguredHistory()().(historyLoadedMsg)
+	m.Update(msg)
+
+	buf := m.buffers[makeBufferKey("libera", "#go")]
+	if got := len(buf.History.Entries()); got != 1 {
+		t.Fatalf("loaded history entries = %d, want 1", got)
+	}
+}
+
+func writeTestHistory(t *testing.T, server, buffer, text string) {
+	t.Helper()
+
+	log := history.NewLog()
+	log.Insert(history.LogEntry{
+		ReceivedAt: time.Now().UnixNano(),
+		ServerTime: time.Now().UnixNano(),
+		Username:   "alice",
+		Text:       text,
+	})
+	if err := log.Flush(server, buffer); err != nil {
+		t.Fatalf("failed to write test history: %v", err)
 	}
 }
 

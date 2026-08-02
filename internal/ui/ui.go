@@ -37,8 +37,13 @@ const (
 )
 
 type (
-	historyFlushMsg    struct{}
-	startConnectionMsg struct{}
+	historyFlushMsg     struct{}
+	startConnectionMsg  struct{}
+	historyLoadedMsg    []loadedBufferHistory
+	loadedBufferHistory struct {
+		key     BufferKey
+		history *history.Log
+	}
 )
 
 type Model struct {
@@ -62,7 +67,7 @@ func New(cfg *config.Config) *Model {
 	m := Model{
 		config:  cfg,
 		buffers: make(map[BufferKey]*Buffer),
-		theme:   styles.RosePineTheme(),
+		theme:   styles.AyuDarkTheme(),
 	}
 	m.usernameColors = styles.NewUsernameColors(m.theme.Colors.Nicknames)
 
@@ -76,12 +81,11 @@ func New(cfg *config.Config) *Model {
 			Server:  server.Name,
 			Chat:    chat.New(m.theme, m.usernameColors),
 			Users:   users.New(m.theme, m.usernameColors),
-			History: history.Load(server.Name, ""),
+			History: history.NewLog(),
 		}
 		// Set the nickname configured in the config file before connecting;
 		// the server may update after (and change if necessary)
 		serverBuf.Chat.SetNickname(server.Nickname)
-		serverBuf.LoadHistory()
 		m.buffers[serverKey] = serverBuf
 
 		for _, channel := range server.Channels {
@@ -92,7 +96,7 @@ func New(cfg *config.Config) *Model {
 				Chat:    chat.New(m.theme, m.usernameColors),
 				Buffer:  channel,
 				Users:   users.New(m.theme, m.usernameColors),
-				History: history.Load(server.Name, channel),
+				History: history.NewLog(),
 			}
 
 			// Although the Nickname is set per server, it is
@@ -103,13 +107,8 @@ func New(cfg *config.Config) *Model {
 
 			buffer.Chat.SetChannelMembers(&buffer.Users)
 
-			buffer.LoadHistory()
 			m.buffers[key] = buffer
 		}
-	}
-
-	for _, buf := range m.buffers {
-		buf.Chat.FlushQueue()
 	}
 
 	// Make the first server buffer active on startup
@@ -125,7 +124,7 @@ func (m *Model) Init() tea.Cmd {
 	return tea.Batch(
 		buf.Chat.Init(),
 		m.scheduleHistoryFlush(),
-		func() tea.Msg { return startConnectionMsg{} },
+		m.loadConfiguredHistory(),
 	)
 }
 
@@ -260,6 +259,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.ircClientManager != nil {
 			m.ircClientManager.ConnectAll()
 		}
+
+	case historyLoadedMsg:
+		for _, loaded := range msgTyped {
+			buf := m.buffers[loaded.key]
+			if buf == nil {
+				continue
+			}
+			buf.History = loaded.history
+			buf.LoadHistory()
+			if buf.Key == m.activeBuffer {
+				buf.Chat.FlushQueue()
+			}
+		}
+		cmds = append(cmds, func() tea.Msg { return startConnectionMsg{} })
 
 	case flushChatMsg:
 		m.flushAllChats()
@@ -420,6 +433,40 @@ func (m *Model) getOrCreateBuffer(server, channel string) (*Buffer, tea.Cmd) {
 			Server: server,
 			Buffer: channel,
 		}
+	}
+}
+
+func (m *Model) loadConfiguredHistory() tea.Cmd {
+	type target struct {
+		key     BufferKey
+		server  string
+		channel string
+	}
+
+	targets := make([]target, 0, len(m.buffers))
+	for _, server := range m.config.Servers {
+		targets = append(targets, target{
+			key:    makeBufferKey(server.Name, ""),
+			server: server.Name,
+		})
+		for _, channel := range server.Channels {
+			targets = append(targets, target{
+				key:     makeBufferKey(server.Name, channel),
+				server:  server.Name,
+				channel: channel,
+			})
+		}
+	}
+
+	return func() tea.Msg {
+		loaded := make(historyLoadedMsg, 0, len(targets))
+		for _, target := range targets {
+			loaded = append(loaded, loadedBufferHistory{
+				key:     target.key,
+				history: history.Load(target.server, target.channel),
+			})
+		}
+		return loaded
 	}
 }
 
