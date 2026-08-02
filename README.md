@@ -7,6 +7,24 @@
 * https://datatracker.ietf.org/doc/html/rfc2812
 * https://modern.ircdocs.horse/
 
+## config
+
+```toml
+[ui]
+unread_badges = true
+mention_badges = true
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go", "#random"]
+
+# optional per-server overrides
+unread_badges = false
+mention_badges = true
+```
+
 ## TODO
 * IRC:
   * support for commands, e.g., /leave, /join, etc.
@@ -26,6 +44,14 @@
   * change the timestamp format and/or hide it
   * display channel modes
   * disable mouse/scroll support
+* FIX: lag when loading channels in the channel list
+* Think what should be included in the 0.1.0 so I can open the code
+
+
+## 0.1.0
+* config file with minimal options
+* support for /leave, /join, /quit, at least
+
 
 ## Known bugs
 * Users with non-standard channel prefixes (e.g., `!` for channel admin/creator) may not appear in the user list. This is a [girc](https://github.com/lrstanley/girc) limitation — its NAMES reply parser only recognizes `~ & @ % +` as prefixes, ignoring any additional ones the server advertises via `ISUPPORT`. Users with unrecognized prefixes are silently dropped from the channel state.
