@@ -152,6 +152,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			buf := m.getActiveBuffer()
 			buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 			buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
+			buf.Users, cmd = buf.Users.Update(users.UserListMsg(buf.members))
+			cmds = append(cmds, cmd)
+			buf.Chat.FlushQueue()
 			if historyCmd := m.requestHistoryLoad(buf); historyCmd != nil {
 				cmds = append(cmds, historyCmd)
 			}
@@ -188,11 +191,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, createCmd)
 		}
 		if buf != nil {
-			buf.Users, cmd = buf.Users.Update(users.UserListMsg(msgTyped.Users))
-			cmds = append(cmds, cmd)
-			// We refresh chat on UserListMsg to dim nick if a user
-			// send a message then leaves channel
+			buf.members = append(buf.members[:0], msgTyped.Users...)
 			if buf.Key == m.activeBuffer {
+				buf.Users, cmd = buf.Users.Update(users.UserListMsg(buf.members))
+				cmds = append(cmds, cmd)
+				// We refresh chat on UserListMsg to dim nick if a user
+				// sends a message then leaves channel.
 				buf.Chat.RefreshContent()
 			}
 		}

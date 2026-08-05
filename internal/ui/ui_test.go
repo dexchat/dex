@@ -10,6 +10,7 @@ import (
 	"github.com/vaaleyard/dex/internal/config"
 	"github.com/vaaleyard/dex/internal/history"
 	"github.com/vaaleyard/dex/internal/irc"
+	"github.com/vaaleyard/dex/internal/ui/components/users"
 )
 
 func TestPaneForMouseWheelUsesPaneBounds(t *testing.T) {
@@ -118,6 +119,26 @@ func TestActiveBufferMessagesAndOwnEchoesDoNotIncrementActivity(t *testing.T) {
 	}
 	if got := m.buffers[makeBufferKey("libera", "#go")].UnreadCount; got != 0 {
 		t.Fatalf("own echo UnreadCount = %d, want 0", got)
+	}
+}
+
+func TestInactiveUserListRendersWhenBufferIsSelected(t *testing.T) {
+	m := newActivityTestModel()
+	_, _ = m.Update(irc.UserListMsg{
+		Server:  "libera",
+		Channel: "#random",
+		Users:   []string{"alice"},
+	})
+
+	random := m.buffers[makeBufferKey("libera", "#random")]
+	if random.Users.HasUser("alice") {
+		t.Fatal("inactive user list should not render during playback")
+	}
+
+	m.activeBuffer = random.Key
+	random.Users, _ = random.Users.Update(users.UserListMsg(random.members))
+	if !random.Users.HasUser("alice") {
+		t.Fatal("selected buffer should render its saved user list")
 	}
 }
 

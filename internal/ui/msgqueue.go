@@ -27,9 +27,7 @@ func (m *Model) scheduleFlush() tea.Cmd {
 
 func (m *Model) flushAllChats() {
 	m.flushPending = false
-	for _, buf := range m.buffers {
-		buf.Chat.FlushQueue()
-	}
+	m.getActiveBuffer().Chat.FlushQueue()
 }
 
 // processIncomingMessage handles a single incoming IRC message:
