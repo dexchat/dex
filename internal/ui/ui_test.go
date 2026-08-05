@@ -191,10 +191,32 @@ func TestConfiguredHistoryLoadPopulatesExistingBuffers(t *testing.T) {
 	}
 
 	m := New(cfg)
-	msg := m.loadConfiguredHistory()().(historyLoadedMsg)
+	msg := m.loadConfiguredHistory()().(initialHistoryLoadedMsg)
 	m.Update(msg)
 
 	buf := m.buffers[makeBufferKey("libera", "#go")]
+	if got := len(buf.History.Entries()); got != 1 {
+		t.Fatalf("loaded history entries = %d, want 1", got)
+	}
+}
+
+func TestDiscoveredChannelHistoryLoadsOnlyWhenRequested(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	writeTestHistory(t, "libera", "#go", "stored message")
+
+	m := New(&config.Config{Servers: []*config.Server{{Name: "libera", Nickname: "dexuser"}}})
+	buf, createCmd := m.getOrCreateBuffer("libera", "#go")
+	if got := len(buf.History.Entries()); got != 0 {
+		t.Fatalf("new buffer loaded %d history entries synchronously, want 0", got)
+	}
+	if createCmd == nil {
+		t.Fatal("expected a sidebar creation command")
+	}
+	if buf.historyLoading {
+		t.Fatal("discovered channel should not start disk history loading at startup")
+	}
+
+	m.Update(m.requestHistoryLoad(buf)())
 	if got := len(buf.History.Entries()); got != 1 {
 		t.Fatalf("loaded history entries = %d, want 1", got)
 	}

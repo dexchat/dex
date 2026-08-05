@@ -27,6 +27,11 @@ type Buffer struct {
 	Users   users.Model
 	History *history.Log
 
+	// Channel history is intentionally loaded on demand. Starting one disk job
+	// per channel during a ZNC replay can monopolize the machine at startup.
+	historyLoaded  bool
+	historyLoading bool
+
 	UnreadCount  int
 	MentionCount int
 }
@@ -36,12 +41,14 @@ func (b *Buffer) isValid() bool {
 }
 
 func (b *Buffer) LoadHistory() {
+	messages := make([]chat.Message, 0, len(b.History.Entries()))
 	for _, entry := range b.History.Entries() {
-		b.Chat.QueueMessage(chat.Message{
+		messages = append(messages, chat.Message{
 			Timestamp: time.Unix(0, entry.ServerTime),
 			Username:  entry.Username,
 			Text:      entry.Text,
 			Type:      irc.MessageType(entry.Type),
 		})
 	}
+	b.Chat.ReplaceMessages(messages)
 }

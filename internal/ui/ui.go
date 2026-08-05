@@ -37,10 +37,11 @@ const (
 )
 
 type (
-	historyFlushMsg     struct{}
-	startConnectionMsg  struct{}
-	historyLoadedMsg    []loadedBufferHistory
-	loadedBufferHistory struct {
+	historyFlushMsg         struct{}
+	startConnectionMsg      struct{}
+	historyLoadedMsg        []loadedBufferHistory
+	initialHistoryLoadedMsg []loadedBufferHistory
+	loadedBufferHistory     struct {
 		key     BufferKey
 		history *history.Log
 	}
@@ -151,6 +152,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			buf := m.getActiveBuffer()
 			buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 			buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
+			if historyCmd := m.requestHistoryLoad(buf); historyCmd != nil {
+				cmds = append(cmds, historyCmd)
+			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -268,17 +272,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case historyLoadedMsg:
-		for _, loaded := range msgTyped {
-			buf := m.buffers[loaded.key]
-			if buf == nil {
-				continue
-			}
-			buf.History = loaded.history
-			buf.LoadHistory()
-			if buf.Key == m.activeBuffer {
-				buf.Chat.FlushQueue()
-			}
-		}
+		m.applyLoadedHistory(msgTyped)
+
+	case initialHistoryLoadedMsg:
+		m.applyLoadedHistory(msgTyped)
 		cmds = append(cmds, func() tea.Msg { return startConnectionMsg{} })
 
 	case flushChatMsg:
@@ -420,7 +417,7 @@ func (m *Model) getOrCreateBuffer(server, channel string) (*Buffer, tea.Cmd) {
 		Buffer:  channel,
 		Chat:    chat.New(m.theme, m.usernameColors),
 		Users:   users.New(m.theme, m.usernameColors),
-		History: history.Load(server, channel),
+		History: history.NewLog(),
 	}
 
 	// copy nickname from the server buffer
@@ -433,12 +430,49 @@ func (m *Model) getOrCreateBuffer(server, channel string) (*Buffer, tea.Cmd) {
 
 	m.buffers[key] = buf
 
-	buf.LoadHistory()
-
-	return buf, func() tea.Msg {
+	newBufferCmd := func() tea.Msg {
 		return channels.NewBufferMsg{
 			Server: server,
 			Buffer: channel,
+		}
+	}
+	return buf, newBufferCmd
+}
+
+func (m *Model) requestHistoryLoad(buf *Buffer) tea.Cmd {
+	if buf.historyLoaded || buf.historyLoading {
+		return nil
+	}
+	buf.historyLoading = true
+	return m.loadBufferHistory(buf.Key, buf.Server, buf.Buffer)
+}
+
+func (m *Model) loadBufferHistory(key BufferKey, server, channel string) tea.Cmd {
+	return func() tea.Msg {
+		return historyLoadedMsg{{
+			key:     key,
+			history: history.Load(server, channel),
+		}}
+	}
+}
+
+func (m *Model) applyLoadedHistory(loadedHistory []loadedBufferHistory) {
+	for _, loaded := range loadedHistory {
+		buf := m.buffers[loaded.key]
+		if buf == nil {
+			continue
+		}
+		for _, entry := range buf.History.Entries() {
+			if !loaded.history.IsDuplicate(entry) {
+				loaded.history.Insert(entry)
+			}
+		}
+		buf.History = loaded.history
+		buf.historyLoaded = true
+		buf.historyLoading = false
+		buf.LoadHistory()
+		if buf.Key == m.activeBuffer {
+			buf.Chat.FlushQueue()
 		}
 	}
 }
@@ -466,7 +500,7 @@ func (m *Model) loadConfiguredHistory() tea.Cmd {
 	}
 
 	return func() tea.Msg {
-		loaded := make(historyLoadedMsg, 0, len(targets))
+		loaded := make(initialHistoryLoadedMsg, 0, len(targets))
 		for _, target := range targets {
 			loaded = append(loaded, loadedBufferHistory{
 				key:     target.key,

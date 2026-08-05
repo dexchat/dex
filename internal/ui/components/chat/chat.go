@@ -192,6 +192,13 @@ func (m *Model) QueueMessage(msg Message) {
 	m.needsRender = true
 }
 
+// ReplaceMessages swaps the complete transcript without rendering it on the
+// current update. History loading uses this to avoid blocking the UI.
+func (m *Model) ReplaceMessages(messages []Message) {
+	m.messages = messages
+	m.needsRender = true
+}
+
 func (m *Model) FlushQueue() {
 	if m.needsRender {
 		m.updateContent()
