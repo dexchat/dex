@@ -202,10 +202,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case irc.BufferNewMessageBatchMsg:
-		for _, msg := range msgTyped {
+		current, remaining := playbackChunk(msgTyped)
+		for _, msg := range current {
 			if newBufCmd := m.processIncomingMessage(msg); newBufCmd != nil {
 				cmds = append(cmds, newBufCmd)
 			}
+		}
+		if len(remaining) > 0 {
+			cmds = append(cmds, func() tea.Msg { return remaining })
 		}
 		if cmd := m.scheduleFlush(); cmd != nil {
 			cmds = append(cmds, cmd)

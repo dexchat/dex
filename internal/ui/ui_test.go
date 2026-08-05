@@ -48,6 +48,17 @@ func TestPaneForMouseWheelIgnoresNonWheelMouse(t *testing.T) {
 	}
 }
 
+func TestPlaybackBatchIsSplitIntoResponsiveChunks(t *testing.T) {
+	messages := make(irc.BufferNewMessageBatchMsg, maxPlaybackMessagesPerUpdate+1)
+	current, remaining := playbackChunk(messages)
+	if got := len(current); got != maxPlaybackMessagesPerUpdate {
+		t.Fatalf("current playback chunk has %d messages, want %d", got, maxPlaybackMessagesPerUpdate)
+	}
+	if got := len(remaining); got != 1 {
+		t.Fatalf("remaining playback chunk has %d messages, want 1", got)
+	}
+}
+
 func TestInactiveBufferMessageIncrementsUnreadActivity(t *testing.T) {
 	m := newActivityTestModel()
 
