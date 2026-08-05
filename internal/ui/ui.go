@@ -366,6 +366,7 @@ func (m *Model) View() tea.View {
 	view := tea.NewView(content)
 	view.AltScreen = true
 	view.MouseMode = tea.MouseModeCellMotion
+	view.BackgroundColor = m.theme.Colors.Base.Background
 	return view
 }
 
