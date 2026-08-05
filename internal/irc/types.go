@@ -49,4 +49,6 @@ type ChannelJoinedMsg struct {
 	Channel string
 }
 
+type ChannelJoinedBatchMsg []ChannelJoinedMsg
+
 type BufferNewMessageBatchMsg []BufferNewMessageMsg

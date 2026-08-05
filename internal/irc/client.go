@@ -30,6 +30,13 @@ type Client struct {
 	messageQueueMu sync.Mutex
 	flushPending   bool
 
+	// channelQueue decouples self-JOIN handling from Bubble Tea. Program.Send
+	// blocks until the UI receives the message, so calling it from a normal
+	// girc handler can stop the socket reader during a ZNC replay.
+	channelQueue        []ChannelJoinedMsg
+	channelQueueMu      sync.Mutex
+	channelFlushPending bool
+
 	// userChannels stores the channels each user is part of to handle QUIT properly.
 	// girc can remove a quitting user from its state before our handler reads it,
 	// so this preserves the channel list needed to route quit messages and refreshes
@@ -154,6 +161,26 @@ func (c *Client) queueMessage(msg BufferNewMessageMsg) {
 		}()
 	}
 	c.messageQueueMu.Unlock()
+}
+
+func (c *Client) queueChannelJoined(msg ChannelJoinedMsg) {
+	c.channelQueueMu.Lock()
+	c.channelQueue = append(c.channelQueue, msg)
+	if !c.channelFlushPending {
+		c.channelFlushPending = true
+		go func() {
+			time.Sleep(50 * time.Millisecond)
+			c.channelQueueMu.Lock()
+			batch := c.channelQueue
+			c.channelQueue = nil
+			c.channelFlushPending = false
+			c.channelQueueMu.Unlock()
+			if len(batch) > 0 && c.program != nil {
+				c.program.Send(ChannelJoinedBatchMsg(batch))
+			}
+		}()
+	}
+	c.channelQueueMu.Unlock()
 }
 
 func (c *Client) addHandlers() {

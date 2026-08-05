@@ -170,6 +170,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if createCmd != nil {
 			cmds = append(cmds, createCmd)
 		}
+	case irc.ChannelJoinedBatchMsg:
+		for _, joined := range msgTyped {
+			_, createCmd := m.getOrCreateBuffer(joined.Server, joined.Channel)
+			if createCmd != nil {
+				cmds = append(cmds, createCmd)
+			}
+		}
 
 	case irc.UserListMsg:
 		buf, createCmd := m.getOrCreateBuffer(msgTyped.Server, msgTyped.Channel)

@@ -52,6 +52,26 @@ func TestMembershipEventsTriggerUserListRefresh(t *testing.T) {
 	}
 }
 
+func TestSelfJoinIsQueuedForAsynchronousUIDelivery(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+
+	client.onJoin(client.Client, girc.Event{
+		Command: girc.JOIN,
+		Source:  girc.ParseSource("tester!tester@example.test"),
+		Params:  []string{"#go"},
+	})
+
+	client.channelQueueMu.Lock()
+	defer client.channelQueueMu.Unlock()
+	if got := client.channelQueue; len(got) != 1 || got[0] != (ChannelJoinedMsg{Server: "testnet", Channel: "#go"}) {
+		t.Fatalf("queued self-JOIN = %#v, want testnet/#go", got)
+	}
+}
+
 func TestJoinAndPartUserListChangesDoNotSendWhoRefresh(t *testing.T) {
 	for _, command := range []string{girc.JOIN, girc.PART} {
 		t.Run(command, func(t *testing.T) {

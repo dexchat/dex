@@ -263,7 +263,7 @@ func (c *Client) onJoin(client *girc.Client, e girc.Event) {
 	if e.Source != nil {
 		userName := e.Source.Name
 		if userName == client.GetNick() {
-			c.program.Send(ChannelJoinedMsg{
+			c.queueChannelJoined(ChannelJoinedMsg{
 				Server:  c.serverName,
 				Channel: channelName,
 			})
