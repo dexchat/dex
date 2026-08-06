@@ -20,6 +20,8 @@ type flushChatMsg struct{}
 // starves rendering and input until the burst is exhausted.
 const maxPlaybackMessagesPerUpdate = 50
 
+const maxNotificationAge = 30 * time.Second
+
 func playbackChunk(messages irc.BufferNewMessageBatchMsg) (current, remaining irc.BufferNewMessageBatchMsg) {
 	if len(messages) <= maxPlaybackMessagesPerUpdate {
 		return messages, nil
@@ -70,6 +72,8 @@ func (m *Model) processIncomingMessage(msg irc.BufferNewMessageMsg) tea.Cmd {
 
 	buf.History.Insert(logEntry)
 
+	var notificationCmd tea.Cmd
+
 	if !msg.OwnEcho {
 		buf.Chat.QueueMessage(chat.Message{
 			Timestamp: msg.Timestamp,
@@ -78,9 +82,13 @@ func (m *Model) processIncomingMessage(msg irc.BufferNewMessageMsg) tea.Cmd {
 			Type:      msg.Type,
 		})
 		m.updateActivityForMessage(buf, msg)
+
+		if m.shouldSoundNotification(buf, msg) {
+			notificationCmd = m.soundNotificationCmd()
+		}
 	}
 
-	return createCmd
+	return tea.Batch(createCmd, notificationCmd)
 }
 
 func (m *Model) updateActivityForMessage(buf *Buffer, msg irc.BufferNewMessageMsg) {
@@ -181,6 +189,11 @@ func (m *Model) shouldSoundNotification(buf *Buffer, msg irc.BufferNewMessageMsg
 	}
 
 	if msg.Type != irc.MessageTypeNormal {
+		return false
+	}
+
+	if !msg.Timestamp.IsZero() &&
+		m.now().Sub(msg.Timestamp) > maxNotificationAge {
 		return false
 	}
 

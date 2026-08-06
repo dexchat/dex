@@ -483,6 +483,86 @@ func TestSoundNotificationCmdRespectsCooldown(t *testing.T) {
 	}
 }
 
+func TestProcessIncomingLiveMentionReturnsBell(t *testing.T) {
+	m := newActivityTestModel()
+
+	now := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)
+	m.now = func() time.Time {
+		return now
+	}
+
+	cmd := m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: now,
+		From:      "alice",
+		Text:      "dexuser: ping",
+		Type:      irc.MessageTypeNormal,
+	})
+
+	assertBellCommand(t, cmd)
+}
+
+func TestProcessIncomingLiveDirectMessageReturnsBell(t *testing.T) {
+	m := newActivityTestModel()
+
+	now := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)
+	m.now = func() time.Time {
+		return now
+	}
+
+	_, _ = m.getOrCreateBuffer("libera", "alice")
+	cmd := m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:        "libera",
+		Buffer:        "alice",
+		DirectMessage: true,
+		Timestamp:     now,
+		From:          "alice",
+		Text:          "hello",
+		Type:          irc.MessageTypeNormal,
+	})
+
+	assertBellCommand(t, cmd)
+}
+
+func TestProcessIncomingOldMentionDoesNotReturnBell(t *testing.T) {
+	m := newActivityTestModel()
+
+	now := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)
+	m.now = func() time.Time {
+		return now
+	}
+
+	cmd := m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: now.Add(-maxNotificationAge - time.Second),
+		From:      "alice",
+		Text:      "dexuser: old ping",
+		Type:      irc.MessageTypeNormal,
+	})
+
+	if cmd != nil {
+		t.Fatal("processIncomingMessage() returned a command for old playback mention")
+	}
+}
+
+func assertBellCommand(t *testing.T, cmd tea.Cmd) {
+	t.Helper()
+	if cmd == nil {
+		t.Fatal("expected bell command, got nil")
+	}
+
+	result := cmd()
+	msg, ok := result.(tea.RawMsg)
+	if !ok {
+		t.Fatalf("command returned %T, want tea.RawMsg", result)
+	}
+	if got, want := msg.Msg, "\a"; got != want {
+		t.Fatalf("RawMsg.Msg = %q, want %q", got, want)
+	}
+}
+
 func newActivityTestModel() *Model {
 	cfg := &config.Config{
 		UI: config.UI{
