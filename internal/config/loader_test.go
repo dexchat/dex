@@ -3,6 +3,7 @@ package config
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestLoadParsesUIDefaultsAndServerOverrides(t *testing.T) {
@@ -55,6 +56,130 @@ channels = ["#go"]
 	}
 	if got := cfg.UI.MentionBadges; got != true {
 		t.Fatalf("global mention_badges default = %v, want true", got)
+	}
+}
+
+func TestLoadDefaultsNotifications(t *testing.T) {
+	cfg, err := loadFromBytes([]byte(`
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+	if err != nil {
+		t.Fatalf("loadFromBytes() error = %v", err)
+	}
+
+	if !cfg.Notifications.Sound {
+		t.Fatal("Notifications.Sound = false, want true")
+	}
+	if !cfg.Notifications.Events[NotificationMention] {
+		t.Fatal("mention notifications disabled by default, want enabled")
+	}
+	if !cfg.Notifications.Events[NotificationDirectMessage] {
+		t.Fatal("direct message notifications disabled by default, want enabled")
+	}
+	if got, want := cfg.Notifications.Cooldown, 2*time.Second; got != want {
+		t.Fatalf("Notifications.Cooldown = %v, want %v", got, want)
+	}
+}
+
+func TestLoadParsesNotifications(t *testing.T) {
+	cfg, err := loadFromBytes([]byte(`
+[notifications]
+sound = false
+events = ["mention"]
+cooldown = "5s"
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+	if err != nil {
+		t.Fatalf("loadFromBytes() error = %v", err)
+	}
+
+	if cfg.Notifications.Sound {
+		t.Fatal("Notifications.Sound = true, want false")
+	}
+	if !cfg.Notifications.Events[NotificationMention] {
+		t.Fatal("mention notifications disabled, want enabled")
+	}
+	if cfg.Notifications.Events[NotificationDirectMessage] {
+		t.Fatal("direct message notifications enabled, want disabled")
+	}
+	if got, want := cfg.Notifications.Cooldown, 5*time.Second; got != want {
+		t.Fatalf("Notifications.Cooldown = %v, want %v", got, want)
+	}
+}
+
+func TestLoadAllowsEmptyNotificationEvents(t *testing.T) {
+	cfg, err := loadFromBytes([]byte(`
+[notifications]
+events = []
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+	if err != nil {
+		t.Fatalf("loadFromBytes() error = %v", err)
+	}
+	if got := len(cfg.Notifications.Events); got != 0 {
+		t.Fatalf("len(Notifications.Events) = %d, want 0", got)
+	}
+}
+
+func TestLoadRejectsUnknownNotificationEvent(t *testing.T) {
+	_, err := loadFromBytes([]byte(`
+[notifications]
+events = ["mentoin"]
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+	if err == nil || !strings.Contains(err.Error(), `unknown notification event "mentoin"`) {
+		t.Fatalf("expected unknown notification event error, got %v", err)
+	}
+}
+
+func TestLoadRejectsInvalidNotificationCooldown(t *testing.T) {
+	_, err := loadFromBytes([]byte(`
+[notifications]
+cooldown = "soon"
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+	if err == nil || !strings.Contains(err.Error(), `invalid notifications cooldown "soon"`) {
+		t.Fatalf("expected invalid notification cooldown error, got %v", err)
+	}
+}
+
+func TestLoadRejectsNegativeNotificationCooldown(t *testing.T) {
+	_, err := loadFromBytes([]byte(`
+[notifications]
+cooldown = "-2s"
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+	if err == nil || !strings.Contains(err.Error(), "notifications cooldown must not be negative") {
+		t.Fatalf("expected negative notification cooldown error, got %v", err)
 	}
 }
 

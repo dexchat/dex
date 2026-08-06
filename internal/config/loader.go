@@ -64,7 +64,14 @@ func loadFromBytes(data []byte) (*Config, error) {
 	if raw.Notifications.Events != nil {
 		cfg.Notifications.Events = make(map[string]bool, len(raw.Notifications.Events))
 		for _, event := range raw.Notifications.Events {
-			cfg.Notifications.Events[event] = true
+			switch event {
+			case NotificationMention, NotificationDirectMessage:
+				cfg.Notifications.Events[event] = true
+			default:
+				return nil, fmt.Errorf(
+					"config validation failed: unknown notification event %q",
+					event)
+			}
 		}
 	}
 	if raw.Notifications.Cooldown != "" {
@@ -74,6 +81,12 @@ func loadFromBytes(data []byte) (*Config, error) {
 				"invalid notifications cooldown %q: %w",
 				raw.Notifications.Cooldown,
 				err,
+			)
+		}
+
+		if cooldown < 0 {
+			return nil, fmt.Errorf(
+				"config validation failed: notifications cooldown must not be negative",
 			)
 		}
 		cfg.Notifications.Cooldown = cooldown
