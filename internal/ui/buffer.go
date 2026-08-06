@@ -29,7 +29,8 @@ type Buffer struct {
 
 	// members is the latest IRC snapshot. Inactive buffers retain data without
 	// paying the cost of rendering every user list during ZNC playback.
-	members []string
+	members        []string
+	memberPrefixes string
 
 	// Channel history is intentionally loaded on demand. Starting one disk job
 	// per channel during a ZNC replay can monopolize the machine at startup.

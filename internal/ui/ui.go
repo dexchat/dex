@@ -156,7 +156,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			buf := m.getActiveBuffer()
 			buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 			buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
-			buf.Users, cmd = buf.Users.Update(users.UserListMsg(buf.members))
+			buf.Users, cmd = buf.Users.Update(users.UserListMsg{Users: buf.members, Prefixes: buf.memberPrefixes})
 			cmds = append(cmds, cmd)
 			buf.Chat.FlushQueue()
 			if historyCmd := m.requestHistoryLoad(buf); historyCmd != nil {
@@ -196,8 +196,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if buf != nil {
 			buf.members = append(buf.members[:0], msgTyped.Users...)
+			buf.memberPrefixes = msgTyped.Prefixes
 			if buf.Key == m.activeBuffer {
-				buf.Users, cmd = buf.Users.Update(users.UserListMsg(buf.members))
+				buf.Users, cmd = buf.Users.Update(users.UserListMsg{Users: buf.members, Prefixes: buf.memberPrefixes})
 				cmds = append(cmds, cmd)
 				// We refresh chat on UserListMsg to dim nick if a user
 				// sends a message then leaves channel.

@@ -147,7 +147,7 @@ func TestInactiveUserListRendersWhenBufferIsSelected(t *testing.T) {
 	}
 
 	m.activeBuffer = random.Key
-	random.Users, _ = random.Users.Update(users.UserListMsg(random.members))
+	random.Users, _ = random.Users.Update(users.UserListMsg{Users: random.members})
 	if !random.Users.HasUser("alice") {
 		t.Fatal("selected buffer should render its saved user list")
 	}

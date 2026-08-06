@@ -33,6 +33,31 @@ func TestMessageHandlersAreSynchronous(t *testing.T) {
 	}
 }
 
+func TestSortUserListUsesAdvertisedPrefixOrder(t *testing.T) {
+	users := []string{
+		"zed",
+		"+voice",
+		"!highest",
+		"@operator",
+		"alice",
+		"~owner",
+	}
+
+	sortUserList(users, "(yqaohv)!~&@%+")
+
+	want := []string{
+		"!highest",
+		"~owner",
+		"@operator",
+		"+voice",
+		"alice",
+		"zed",
+	}
+	if !reflect.DeepEqual(users, want) {
+		t.Fatalf("unexpected user order: got %v, want %v", users, want)
+	}
+}
+
 func TestMembershipEventsTriggerUserListRefresh(t *testing.T) {
 	client := NewClient("testnet", &config.Server{
 		Address:  "irc.example.test",

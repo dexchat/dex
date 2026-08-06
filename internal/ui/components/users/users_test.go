@@ -34,6 +34,22 @@ func TestUserPaneRendersRequestedHeight(t *testing.T) {
 	}
 }
 
+func TestAdvertisedUserPrefixIsRecognized(t *testing.T) {
+	theme := styles.RosePineTheme()
+	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
+	m, _ = m.Update(UserListMsg{
+		Users:    []string{"!admin"},
+		Prefixes: "~!@%+",
+	})
+
+	if !m.HasUser("admin") {
+		t.Fatal("expected custom prefix to be excluded from nickname lookup")
+	}
+	if got, want := m.GetUserPrefix("admin"), "!"; got != want {
+		t.Fatalf("unexpected prefix: got %q, want %q", got, want)
+	}
+}
+
 func newScrollableUsersModel() Model {
 	theme := styles.RosePineTheme()
 	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
@@ -44,6 +60,6 @@ func newScrollableUsersModel() Model {
 		userNames = append(userNames, fmt.Sprintf("user-%02d", i))
 	}
 
-	m, _ = m.Update(UserListMsg(userNames))
+	m, _ = m.Update(UserListMsg{Users: userNames})
 	return m
 }

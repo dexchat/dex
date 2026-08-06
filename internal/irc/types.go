@@ -3,9 +3,10 @@ package irc
 import "time"
 
 type UserListMsg struct {
-	Server  string
-	Channel string
-	Users   []string
+	Server   string
+	Channel  string
+	Users    []string
+	Prefixes string
 }
 
 type MessageType int

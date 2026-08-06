@@ -18,10 +18,14 @@ const (
 )
 
 // UserListMsg is a message received from the IRC client containing the updated user list to be displayed
-type UserListMsg []string
+type UserListMsg struct {
+	Users    []string
+	Prefixes string
+}
 
 type Model struct {
 	users          []string
+	prefixes       string
 	viewport       viewport.Model
 	theme          styles.Theme
 	usernameColors styles.UsernameColors
@@ -49,7 +53,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case UserListMsg:
-		m.users = msg
+		m.users = msg.Users
+		m.prefixes = msg.Prefixes
 		return m.updateContent(), nil
 	}
 	// This prevents j/k in the input box from scrolling the viewport
@@ -68,7 +73,7 @@ func (m Model) updateContent() Model {
 		Width(m.viewport.Width())
 
 	for i, user := range m.users {
-		nick := strings.TrimLeft(user, "~&@%+")
+		nick, _ := splitUserPrefix(user, m.prefixes)
 		rendered[i] = baseStyle.
 			Foreground(m.usernameColors.GetColor(nick)).
 			Render(user)
@@ -96,7 +101,7 @@ func (m Model) SetSize(width, height int) Model {
 
 func (m Model) HasUser(nick string) bool {
 	for _, u := range m.users {
-		stripped := strings.TrimLeft(u, "~&@%+")
+		stripped, _ := splitUserPrefix(u, m.prefixes)
 		if strings.EqualFold(stripped, nick) {
 			return true
 		}
@@ -106,12 +111,19 @@ func (m Model) HasUser(nick string) bool {
 
 func (m Model) GetUserPrefix(nick string) string {
 	for _, u := range m.users {
-		stripped := strings.TrimLeft(u, "~&@%+")
+		stripped, prefix := splitUserPrefix(u, m.prefixes)
 		if strings.EqualFold(stripped, nick) {
-			return u[:len(u)-len(stripped)]
+			return prefix
 		}
 	}
 	return ""
+}
+
+func splitUserPrefix(user, prefixes string) (nick, prefix string) {
+	if user != "" && strings.Contains(prefixes, user[:1]) {
+		return user[1:], user[:1]
+	}
+	return user, ""
 }
 
 func (m Model) View(width, height int) string {

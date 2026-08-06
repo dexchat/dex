@@ -10,7 +10,7 @@ require (
 	github.com/lrstanley/girc v1.1.1
 )
 
-replace github.com/lrstanley/girc => github.com/vaaleyard/girc v0.0.0-20260430221746-f04fd155e494
+replace github.com/lrstanley/girc => github.com/vaaleyard/girc v0.0.0-20260806034234-7b7c3cb6d868
 
 require (
 	github.com/atotto/clipboard v0.1.4 // indirect
