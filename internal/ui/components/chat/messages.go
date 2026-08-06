@@ -10,6 +10,7 @@ import (
 type ChannelMembers interface {
 	HasUser(nick string) bool
 	GetUserPrefix(nick string) string
+	Nicknames() []string
 }
 
 type Message struct {

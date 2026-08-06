@@ -9,6 +9,43 @@ import (
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
+type stubChannelMembers struct {
+	nicks []string
+}
+
+func (s stubChannelMembers) HasUser(nick string) bool         { return false }
+func (s stubChannelMembers) GetUserPrefix(nick string) string { return "" }
+func (s stubChannelMembers) Nicknames() []string              { return s.nicks }
+
+func TestTabCompletesAndCyclesMatchingNicknames(t *testing.T) {
+	m := New(styles.RosePineTheme(), styles.NewUsernameColors(nil))
+	m.SetChannelMembers(stubChannelMembers{nicks: []string{"Alice", "alex", "bob"}})
+	m.input.SetValue("al")
+	m.input.CursorEnd()
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	if got := m.input.Value(); got != "Alice: " {
+		t.Fatalf("expected first matching nick, got %q", got)
+	}
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	if got := m.input.Value(); got != "alex: " {
+		t.Fatalf("expected Tab to cycle to next matching nick, got %q", got)
+	}
+}
+
+func TestTabCompletesNicknameAtCursorWithoutAddressSuffix(t *testing.T) {
+	m := New(styles.RosePineTheme(), styles.NewUsernameColors(nil))
+	m.SetChannelMembers(stubChannelMembers{nicks: []string{"Alice"}})
+	m.input.SetValue("hello al there")
+	m.input.SetCursor(len([]rune("hello al")))
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	if got := m.input.Value(); got != "hello Alice there" {
+		t.Fatalf("expected nick at cursor to be completed in place, got %q", got)
+	}
+}
+
 func TestFocusedInputAllowsMouseWheelToScrollViewport(t *testing.T) {
 	m := newScrollableChatModel()
 

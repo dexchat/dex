@@ -25,6 +25,7 @@ type Model struct {
 	needsRender bool
 
 	channelMembers ChannelMembers
+	completion     nicknameCompletion
 
 	usernameColors styles.UsernameColors
 	theme          styles.Theme
@@ -69,6 +70,12 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		if m.input.Focused() {
+			if msg.Code == tea.KeyTab {
+				m.completeNickname()
+				return *m, nil
+			}
+			m.completion = nicknameCompletion{}
+
 			if msg.Code == tea.KeyEnter && m.input.Value() != "" {
 				text := m.input.Value()
 				m.input.Reset()

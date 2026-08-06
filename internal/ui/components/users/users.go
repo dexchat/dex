@@ -119,6 +119,17 @@ func (m Model) GetUserPrefix(nick string) string {
 	return ""
 }
 
+// Nicknames returns the channel members without IRC status prefixes such as
+// operator (@) or voice (+)
+func (m Model) Nicknames() []string {
+	nicks := make([]string, 0, len(m.users))
+	for _, user := range m.users {
+		nick, _ := splitUserPrefix(user, m.prefixes)
+		nicks = append(nicks, nick)
+	}
+	return nicks
+}
+
 func splitUserPrefix(user, prefixes string) (nick, prefix string) {
 	if user != "" && strings.Contains(prefixes, user[:1]) {
 		return user[1:], user[:1]
