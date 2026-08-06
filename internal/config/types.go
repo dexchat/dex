@@ -1,19 +1,41 @@
 package config
 
+import "time"
+
+const (
+	NotificationMention       = "mention"
+	NotificationDirectMessage = "direct_message"
+)
+
 // rawConfig stores the config file as it is
 type rawConfig struct {
-	UI      rawUI              `toml:"ui"`
-	Servers map[string]*Server `toml:"servers"`
+	UI            rawUI              `toml:"ui"`
+	Notifications rawNotifications   `toml:"notifications"`
+	Servers       map[string]*Server `toml:"servers"`
 }
 
 // Config stores the config file sorted and ready to be used
 type Config struct {
 	UI UI
 
+	Notifications Notifications
+
 	// Servers is used to create the buffers on startup only
 	// Later, the source of truth is the irc client channels
 	// as the user can join channels while using the app
 	Servers []*Server
+}
+
+type rawNotifications struct {
+	Sound    *bool    `toml:"sound"`
+	Events   []string `toml:"events"`
+	Cooldown string   `toml:"cooldown"`
+}
+
+type Notifications struct {
+	Sound    bool
+	Events   map[string]bool
+	Cooldown time.Duration
 }
 
 type rawUI struct {

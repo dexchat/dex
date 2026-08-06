@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -41,12 +42,41 @@ func loadFromBytes(data []byte) (*Config, error) {
 			UnreadBadges:  true,
 			MentionBadges: true,
 		},
+		Notifications: Notifications{
+			Sound: true,
+			Events: map[string]bool{
+				NotificationMention:       true,
+				NotificationDirectMessage: true,
+			},
+			Cooldown: 2 * time.Second,
+		},
 	}
 	if raw.UI.UnreadBadges != nil {
 		cfg.UI.UnreadBadges = *raw.UI.UnreadBadges
 	}
 	if raw.UI.MentionBadges != nil {
 		cfg.UI.MentionBadges = *raw.UI.MentionBadges
+	}
+
+	if raw.Notifications.Sound != nil {
+		cfg.Notifications.Sound = *raw.Notifications.Sound
+	}
+	if raw.Notifications.Events != nil {
+		cfg.Notifications.Events = make(map[string]bool, len(raw.Notifications.Events))
+		for _, event := range raw.Notifications.Events {
+			cfg.Notifications.Events[event] = true
+		}
+	}
+	if raw.Notifications.Cooldown != "" {
+		cooldown, err := time.ParseDuration(raw.Notifications.Cooldown)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"invalid notifications cooldown %q: %w",
+				raw.Notifications.Cooldown,
+				err,
+			)
+		}
+		cfg.Notifications.Cooldown = cooldown
 	}
 
 	for name, server := range raw.Servers {
