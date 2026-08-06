@@ -174,3 +174,34 @@ func isNickChar(r rune) bool {
 	}
 	return strings.ContainsRune("_-[]\\`^{}|", r)
 }
+
+func (m *Model) shouldSoundNotification(buf *Buffer, msg irc.BufferNewMessageMsg) bool {
+	if !m.config.Notifications.Sound {
+		return false
+	}
+
+	if msg.Type != irc.MessageTypeNormal {
+		return false
+	}
+
+	if msg.OwnEcho {
+		return false
+	}
+
+	// No need for notification in the current open buffer
+	if buf.Key == m.activeBuffer {
+		return false
+	}
+
+	if msg.DirectMessage &&
+		m.config.Notifications.Events[config.NotificationDirectMessage] {
+		return true
+	}
+
+	if m.config.Notifications.Events[config.NotificationMention] &&
+		messageMentionsNick(msg.Text, buf.Chat.Nickname()) {
+		return true
+	}
+
+	return false
+}

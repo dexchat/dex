@@ -62,6 +62,9 @@ type Model struct {
 	channels     channels.Model
 	palette      *palette.Model
 	flushPending bool
+
+	lastSoundAt time.Time
+	now         func() time.Time
 }
 
 func New(cfg *config.Config) *Model {
@@ -69,6 +72,7 @@ func New(cfg *config.Config) *Model {
 		config:  cfg,
 		buffers: make(map[BufferKey]*Buffer),
 		theme:   styles.AyuDarkTheme(),
+		now:     time.Now,
 	}
 	m.usernameColors = styles.NewUsernameColors(m.theme.Colors.Nicknames)
 

@@ -358,11 +358,112 @@ func TestMentionDetectionRequiresWholeNickToken(t *testing.T) {
 	}
 }
 
+func TestShouldSoundNotification(t *testing.T) {
+	tests := []struct {
+		name      string
+		configure func(*Model, *Buffer, *irc.BufferNewMessageMsg)
+		want      bool
+	}{
+		{
+			name: "inactive mention",
+			want: true,
+		},
+		{
+			name: "inactive direct message",
+			configure: func(_ *Model, _ *Buffer, msg *irc.BufferNewMessageMsg) {
+				msg.DirectMessage = true
+				msg.Text = "hello"
+			},
+			want: true,
+		},
+		{
+			name: "ordinary channel message",
+			configure: func(_ *Model, _ *Buffer, msg *irc.BufferNewMessageMsg) {
+				msg.Text = "hello"
+			},
+			want: false,
+		},
+		{
+			name: "active buffer mention",
+			configure: func(m *Model, buf *Buffer, _ *irc.BufferNewMessageMsg) {
+				m.activeBuffer = buf.Key
+			},
+			want: false,
+		},
+		{
+			name: "own echo",
+			configure: func(_ *Model, _ *Buffer, msg *irc.BufferNewMessageMsg) {
+				msg.OwnEcho = true
+			},
+			want: false,
+		},
+		{
+			name: "server message",
+			configure: func(_ *Model, _ *Buffer, msg *irc.BufferNewMessageMsg) {
+				msg.Type = irc.MessageTypeServer
+			},
+			want: false,
+		},
+		{
+			name: "sound disabled",
+			configure: func(m *Model, _ *Buffer, _ *irc.BufferNewMessageMsg) {
+				m.config.Notifications.Sound = false
+			},
+			want: false,
+		},
+		{
+			name: "mention event disabled",
+			configure: func(m *Model, _ *Buffer, _ *irc.BufferNewMessageMsg) {
+				m.config.Notifications.Events[config.NotificationMention] = false
+			},
+			want: false,
+		},
+		{
+			name: "direct message event disabled",
+			configure: func(m *Model, _ *Buffer, msg *irc.BufferNewMessageMsg) {
+				m.config.Notifications.Events[config.NotificationDirectMessage] = false
+				msg.DirectMessage = true
+				msg.Text = "hello"
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newActivityTestModel()
+			buf := m.buffers[makeBufferKey("libera", "#random")]
+			msg := irc.BufferNewMessageMsg{
+				Server: "libera",
+				Buffer: "#random",
+				From:   "alice",
+				Text:   "dexuser: ping",
+				Type:   irc.MessageTypeNormal,
+			}
+			if tt.configure != nil {
+				tt.configure(m, buf, &msg)
+			}
+
+			if got := m.shouldSoundNotification(buf, msg); got != tt.want {
+				t.Fatalf("shouldSoundNotification() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func newActivityTestModel() *Model {
 	cfg := &config.Config{
 		UI: config.UI{
 			UnreadBadges:  true,
 			MentionBadges: true,
+		},
+		Notifications: config.Notifications{
+			Sound: true,
+			Events: map[string]bool{
+				config.NotificationMention:       true,
+				config.NotificationDirectMessage: true,
+			},
+			Cooldown: 2 * time.Second,
 		},
 		Servers: []*config.Server{
 			{

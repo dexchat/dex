@@ -131,9 +131,10 @@ func (c *Client) onPrivmsg(client *girc.Client, e girc.Event) {
 	}
 
 	target := e.Params[0]
+	directMessage := !girc.IsValidChannel(target)
 
 	// For PMs, use sender nick as the buffer identifier
-	if !girc.IsValidChannel(target) {
+	if directMessage {
 		target = e.Source.Name
 	}
 
@@ -152,13 +153,14 @@ func (c *Client) onPrivmsg(client *girc.Client, e girc.Event) {
 
 	msgID, _ := e.Tags.Get("msgid")
 	c.queueMessage(BufferNewMessageMsg{
-		Server:    c.serverName,
-		Buffer:    target,
-		Timestamp: ts,
-		From:      e.Source.Name,
-		Text:      e.Last(),
-		MsgID:     msgID,
-		OwnEcho:   ownEcho,
+		Server:        c.serverName,
+		Buffer:        target,
+		DirectMessage: directMessage,
+		Timestamp:     ts,
+		From:          e.Source.Name,
+		Text:          e.Last(),
+		MsgID:         msgID,
+		OwnEcho:       ownEcho,
 	})
 }
 
@@ -441,6 +443,7 @@ func (c *Client) onEchoMessage(client *girc.Client, e girc.Event) {
 		return
 	}
 	target := e.Params[0]
+	directMessage := !girc.IsValidChannel(target)
 
 	ts := e.Timestamp
 	if ts.IsZero() {
@@ -464,12 +467,13 @@ func (c *Client) onEchoMessage(client *girc.Client, e girc.Event) {
 
 	msgID, _ := e.Tags.Get("msgid")
 	c.queueMessage(BufferNewMessageMsg{
-		Server:    c.serverName,
-		Buffer:    target,
-		Timestamp: ts,
-		From:      e.Source.Name,
-		Text:      e.Last(),
-		MsgID:     msgID,
-		OwnEcho:   ownEcho,
+		Server:        c.serverName,
+		Buffer:        target,
+		DirectMessage: directMessage,
+		Timestamp:     ts,
+		From:          e.Source.Name,
+		Text:          e.Last(),
+		MsgID:         msgID,
+		OwnEcho:       ownEcho,
 	})
 }
