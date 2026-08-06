@@ -205,3 +205,15 @@ func (m *Model) shouldSoundNotification(buf *Buffer, msg irc.BufferNewMessageMsg
 
 	return false
 }
+
+func (m *Model) soundNotificationCmd() tea.Cmd {
+	now := m.now()
+
+	if !m.lastSoundAt.IsZero() &&
+		now.Sub(m.lastSoundAt) < m.config.Notifications.Cooldown {
+		return nil
+	}
+
+	m.lastSoundAt = now
+	return tea.Raw("\a")
+}

@@ -451,6 +451,38 @@ func TestShouldSoundNotification(t *testing.T) {
 	}
 }
 
+func TestSoundNotificationCmdRespectsCooldown(t *testing.T) {
+	m := newActivityTestModel()
+
+	now := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)
+	m.now = func() time.Time {
+		return now
+	}
+
+	cmd := m.soundNotificationCmd()
+	if cmd == nil {
+		t.Fatal("first soundNotificationCmd() returned nil")
+	}
+
+	result := cmd()
+	msg, ok := result.(tea.RawMsg)
+	if !ok {
+		t.Fatalf("soundNotificationCmd() returned %T, want tea.RawMsg", result)
+	}
+	if got, want := msg.Msg, "\a"; got != want {
+		t.Fatalf("RawMsg.Msg = %q, want %q", got, want)
+	}
+
+	if cmd := m.soundNotificationCmd(); cmd != nil {
+		t.Fatal("soundNotificationCmd() returned a command during cooldown")
+	}
+
+	now = now.Add(m.config.Notifications.Cooldown)
+	if cmd := m.soundNotificationCmd(); cmd == nil {
+		t.Fatal("soundNotificationCmd() returned nil after cooldown")
+	}
+}
+
 func newActivityTestModel() *Model {
 	cfg := &config.Config{
 		UI: config.UI{
