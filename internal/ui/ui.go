@@ -40,8 +40,12 @@ type (
 	historyFlushMsg         struct{}
 	startConnectionMsg      struct{}
 	historyLoadedMsg        []loadedBufferHistory
-	initialHistoryLoadedMsg []loadedBufferHistory
-	loadedBufferHistory     struct {
+	initialHistoryLoadedMsg struct {
+		histories []loadedBufferHistory
+		readState *history.ReadState
+		readErr   error
+	}
+	loadedBufferHistory struct {
 		key     BufferKey
 		history *history.Log
 	}
@@ -58,6 +62,7 @@ type Model struct {
 
 	buffers      map[BufferKey]*Buffer
 	activeBuffer BufferKey
+	readState    *history.ReadState
 
 	channels     channels.Model
 	palette      *palette.Model
@@ -288,7 +293,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.applyLoadedHistory(msgTyped)
 
 	case initialHistoryLoadedMsg:
-		m.applyLoadedHistory(msgTyped)
+		m.applyLoadedHistory(msgTyped.histories)
+		if msgTyped.readErr != nil {
+			log.Printf("Failed to load read state: %v", msgTyped.readErr)
+		}
+		m.readState = msgTyped.readState
+		if m.readState == nil {
+			m.readState = &history.ReadState{}
+		}
 		cmds = append(cmds, func() tea.Msg { return startConnectionMsg{} })
 
 	case flushChatMsg:
@@ -514,14 +526,19 @@ func (m *Model) loadConfiguredHistory() tea.Cmd {
 	}
 
 	return func() tea.Msg {
-		loaded := make(initialHistoryLoadedMsg, 0, len(targets))
+		loaded := make([]loadedBufferHistory, 0, len(targets))
 		for _, target := range targets {
 			loaded = append(loaded, loadedBufferHistory{
 				key:     target.key,
 				history: history.Load(target.server, target.channel),
 			})
 		}
-		return loaded
+		readState, err := history.LoadReadState()
+		return initialHistoryLoadedMsg{
+			histories: loaded,
+			readState: readState,
+			readErr:   err,
+		}
 	}
 }
 

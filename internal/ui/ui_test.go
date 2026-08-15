@@ -230,6 +230,9 @@ func TestConfiguredHistoryLoadPopulatesExistingBuffers(t *testing.T) {
 	if got := len(buf.History.Entries()); got != 1 {
 		t.Fatalf("loaded history entries = %d, want 1", got)
 	}
+	if m.readState == nil {
+		t.Fatal("read state was not loaded before startup connection")
+	}
 }
 
 func TestDiscoveredChannelHistoryLoadsOnlyWhenRequested(t *testing.T) {
