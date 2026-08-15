@@ -164,6 +164,39 @@ func (m *ClientManager) Join(server, channel, key string) {
 	client.Cmd.JoinKey(channel, key)
 }
 
+func (m *ClientManager) List(server, channel string) {
+	client, ok := m.clients[server]
+	if !ok {
+		return
+	}
+
+	sendError := func(text string) {
+		client.program.Send(BufferNewMessageMsg{
+			Server:    server,
+			Buffer:    "",
+			Timestamp: time.Now(),
+			From:      "--",
+			Text:      text,
+			Type:      MessageTypeServer,
+		})
+	}
+
+	if !client.IsConnected() {
+		sendError(fmt.Sprintf("irc: not connected to %s", server))
+		return
+	}
+	if channel != "" && (!girc.IsValidChannel(channel) || strings.Contains(channel, ",")) {
+		sendError(fmt.Sprintf("irc: invalid channel %s", channel))
+		return
+	}
+
+	if channel == "" {
+		client.Cmd.List()
+		return
+	}
+	client.Cmd.List(channel)
+}
+
 func pendingMessageKey(server, target, message string) string {
 	return strings.ToLower(server) + ":" + strings.ToLower(target) + ":" + strings.TrimSpace(message)
 }

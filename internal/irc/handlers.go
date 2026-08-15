@@ -455,6 +455,41 @@ func (c *Client) onJoinError(_ *girc.Client, e girc.Event) {
 	})
 }
 
+func (c *Client) onListReply(_ *girc.Client, e girc.Event) {
+	text := e.Last()
+	switch e.Command {
+	case girc.RPL_LISTSTART:
+		text = "Channel Users Topic"
+	case girc.RPL_LIST:
+		if len(e.Params) < 3 {
+			return
+		}
+		text = fmt.Sprintf("%s (%s users)", e.Params[1], e.Params[2])
+		if len(e.Params) > 3 && e.Last() != "" {
+			text += " " + e.Last()
+		}
+	case girc.RPL_LISTEND:
+		if text == "" {
+			text = "End of /LIST"
+		}
+	case girc.ERR_TOOMANYMATCHES:
+		text = fmt.Sprintf("irc: %s", e.Last())
+	}
+
+	ts := e.Timestamp
+	if ts.IsZero() {
+		ts = time.Now()
+	}
+	c.queueMessage(BufferNewMessageMsg{
+		Server:    c.serverName,
+		Buffer:    "",
+		Timestamp: ts,
+		From:      "--",
+		Text:      text,
+		Type:      MessageTypeServer,
+	})
+}
+
 // onEchoMessage handles echo-message capability (user's own messages echoed back by the server)
 func (c *Client) onEchoMessage(client *girc.Client, e girc.Event) {
 	if !e.Echo || (e.Command != girc.PRIVMSG && e.Command != girc.NOTICE) {

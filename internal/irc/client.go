@@ -209,6 +209,11 @@ func (c *Client) addHandlers() {
 	c.Handlers.Add(girc.ERR_TOOMANYCHANNELS, c.onJoinError)
 	c.Handlers.Add(girc.ERR_BADCHANMASK, c.onJoinError)
 
+	c.Handlers.Add(girc.RPL_LISTSTART, c.onListReply)
+	c.Handlers.Add(girc.RPL_LIST, c.onListReply)
+	c.Handlers.Add(girc.RPL_LISTEND, c.onListReply)
+	c.Handlers.Add(girc.ERR_TOOMANYMATCHES, c.onListReply)
+
 	c.Handlers.AddBg(girc.RPL_ENDOFNAMES, c.onUserListChange)
 	c.Handlers.AddBg(girc.RPL_ENDOFWHO, c.onUserListChange)
 	c.Handlers.AddBg(girc.RPL_TOPIC, c.onTopic)

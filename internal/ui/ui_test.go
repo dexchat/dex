@@ -97,6 +97,18 @@ func TestJoinWithoutChannelShowsUsageInsteadOfCreatingBuffer(t *testing.T) {
 	}
 }
 
+func TestListWithTooManyArgumentsShowsUsage(t *testing.T) {
+	m := newActivityTestModel()
+	active := m.getActiveBuffer()
+	active.Chat.SetSize(80, 10)
+
+	_, _ = m.Update(chat.SendMessageMsg{Text: "/list #go #rust"})
+
+	if view := plainText(active.Chat.View()); !strings.Contains(view, "usage: /list [channel]") {
+		t.Fatalf("missing /list usage error:\n%s", view)
+	}
+}
+
 func TestPaneForMouseWheelIgnoresNonWheelMouse(t *testing.T) {
 	got := paneForMouseWheel(tea.MouseClickMsg{
 		X:      0,

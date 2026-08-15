@@ -15,6 +15,8 @@ func (m *Model) handleCommand(buffer *Buffer, command commands.Command) {
 		m.handleJoinCommand(buffer, command.Args)
 	case "leave":
 		m.handleLeaveCommand(buffer, command.Args)
+	case "list":
+		m.handleListCommand(buffer, command.Args)
 	default:
 		m.addCommandError(buffer, "unknown command: /"+command.Name)
 	}
@@ -38,6 +40,21 @@ func (m *Model) handleJoinCommand(buffer *Buffer, args []string) {
 func (m *Model) handleLeaveCommand(buffer *Buffer, args []string) {
 	if m.ircClientManager != nil {
 		go m.ircClientManager.Part(buffer.Server, buffer.Buffer, strings.Join(args, " "))
+	}
+}
+
+func (m *Model) handleListCommand(buffer *Buffer, args []string) {
+	if len(args) > 1 {
+		m.addCommandError(buffer, "usage: /list [channel]")
+		return
+	}
+
+	channel := ""
+	if len(args) == 1 {
+		channel = args[0]
+	}
+	if m.ircClientManager != nil {
+		go m.ircClientManager.List(buffer.Server, channel)
 	}
 }
 

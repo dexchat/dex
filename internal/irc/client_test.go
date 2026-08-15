@@ -144,6 +144,45 @@ func TestJoinErrorHandlersCoverProtocolFailures(t *testing.T) {
 	}
 }
 
+func TestListReplyIsFormattedForServerBuffer(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+	client.flushPending = true
+
+	client.onListReply(client.Client, girc.Event{
+		Command: girc.RPL_LIST,
+		Params:  []string{"tester", "#go", "42", "The Go channel"},
+	})
+
+	if got := len(client.messageQueue); got != 1 {
+		t.Fatalf("LIST reply queued %d messages, want 1", got)
+	}
+	msg := client.messageQueue[0]
+	if msg.Buffer != "" {
+		t.Fatalf("LIST reply buffer = %q, want server buffer", msg.Buffer)
+	}
+	if want := "#go (42 users) The Go channel"; msg.Text != want {
+		t.Fatalf("LIST reply = %q, want %q", msg.Text, want)
+	}
+}
+
+func TestListReplyHandlersAreRegistered(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+
+	for _, numeric := range []string{girc.RPL_LISTSTART, girc.RPL_LIST, girc.RPL_LISTEND, girc.ERR_TOOMANYMATCHES} {
+		if got := externalHandlerIDs(t, client, numeric); len(got) == 0 {
+			t.Errorf("expected LIST reply handler for numeric %s", numeric)
+		}
+	}
+}
+
 func TestSelfPartDoesNotCreateAChatMessage(t *testing.T) {
 	client := NewClient("testnet", &config.Server{
 		Address:  "irc.example.test",

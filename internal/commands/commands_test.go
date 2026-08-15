@@ -41,6 +41,18 @@ func TestParse(t *testing.T) {
 			isCommand: true,
 		},
 		{
+			name:      "list channels",
+			input:     "/list",
+			want:      Command{Name: "list", Args: []string{}},
+			isCommand: true,
+		},
+		{
+			name:      "list specific channel",
+			input:     "/LIST #go",
+			want:      Command{Name: "list", Args: []string{"#go"}},
+			isCommand: true,
+		},
+		{
 			name:      "unknown slash command",
 			input:     "/unknown value",
 			want:      Command{Name: "unknown", Args: []string{"value"}},
