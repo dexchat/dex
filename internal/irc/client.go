@@ -205,6 +205,9 @@ func (c *Client) addHandlers() {
 	c.Handlers.Add(girc.ERR_BANNEDFROMCHAN, c.onJoinError)
 	c.Handlers.Add(girc.ERR_CHANNELISFULL, c.onJoinError)
 	c.Handlers.Add(girc.ERR_BADCHANNELKEY, c.onJoinError)
+	c.Handlers.Add(girc.ERR_NOSUCHCHANNEL, c.onJoinError)
+	c.Handlers.Add(girc.ERR_TOOMANYCHANNELS, c.onJoinError)
+	c.Handlers.Add(girc.ERR_BADCHANMASK, c.onJoinError)
 
 	c.Handlers.AddBg(girc.RPL_ENDOFNAMES, c.onUserListChange)
 	c.Handlers.AddBg(girc.RPL_ENDOFWHO, c.onUserListChange)

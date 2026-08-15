@@ -97,6 +97,53 @@ func TestSelfJoinIsQueuedForAsynchronousUIDelivery(t *testing.T) {
 	}
 }
 
+func TestJoinErrorIsRoutedToServerBuffer(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+	client.flushPending = true
+
+	client.onJoinError(client.Client, girc.Event{
+		Command: girc.ERR_INVITEONLYCHAN,
+		Params:  []string{"tester", "#private", "Cannot join channel (+i)"},
+	})
+
+	if got := len(client.messageQueue); got != 1 {
+		t.Fatalf("join error queued %d messages, want 1", got)
+	}
+	msg := client.messageQueue[0]
+	if msg.Buffer != "" {
+		t.Fatalf("join error buffer = %q, want server buffer", msg.Buffer)
+	}
+	if !strings.Contains(msg.Text, "#private") {
+		t.Fatalf("join error %q does not identify the rejected channel", msg.Text)
+	}
+}
+
+func TestJoinErrorHandlersCoverProtocolFailures(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+
+	for _, numeric := range []string{
+		girc.ERR_NOSUCHCHANNEL,
+		girc.ERR_TOOMANYCHANNELS,
+		girc.ERR_BADCHANNELKEY,
+		girc.ERR_BANNEDFROMCHAN,
+		girc.ERR_CHANNELISFULL,
+		girc.ERR_INVITEONLYCHAN,
+		girc.ERR_BADCHANMASK,
+	} {
+		if got := externalHandlerIDs(t, client, numeric); len(got) == 0 {
+			t.Errorf("expected JOIN error handler for numeric %s", numeric)
+		}
+	}
+}
+
 func TestSelfPartDoesNotCreateAChatMessage(t *testing.T) {
 	client := NewClient("testnet", &config.Server{
 		Address:  "irc.example.test",

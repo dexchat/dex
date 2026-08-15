@@ -69,6 +69,34 @@ func TestLeaveDoesNotRemoveChannelBeforeServerConfirmation(t *testing.T) {
 	}
 }
 
+func TestJoinDoesNotCreateChannelBeforeServerConfirmation(t *testing.T) {
+	m := newActivityTestModel()
+	channelKey := makeBufferKey("libera", "#new")
+
+	_, _ = m.Update(chat.SendMessageMsg{Text: "/join #new"})
+
+	if _, exists := m.buffers[channelKey]; exists {
+		t.Fatal("/join should not create a channel before the server confirms JOIN")
+	}
+
+	_, _ = m.Update(irc.ChannelJoinedMsg{Server: "libera", Channel: "#new"})
+	if _, exists := m.buffers[channelKey]; !exists {
+		t.Fatal("self-JOIN confirmation should create the channel buffer")
+	}
+}
+
+func TestJoinWithoutChannelShowsUsageInsteadOfCreatingBuffer(t *testing.T) {
+	m := newActivityTestModel()
+	active := m.getActiveBuffer()
+	active.Chat.SetSize(80, 10)
+
+	_, _ = m.Update(chat.SendMessageMsg{Text: "/join"})
+
+	if view := plainText(active.Chat.View()); !strings.Contains(view, "usage: /join <channel> [key]") {
+		t.Fatalf("missing /join usage error:\n%s", view)
+	}
+}
+
 func TestPaneForMouseWheelIgnoresNonWheelMouse(t *testing.T) {
 	got := paneForMouseWheel(tea.MouseClickMsg{
 		X:      0,

@@ -29,6 +29,18 @@ func TestParse(t *testing.T) {
 			isCommand: true,
 		},
 		{
+			name:      "join channel",
+			input:     "/join #go",
+			want:      Command{Name: "join", Args: []string{"#go"}},
+			isCommand: true,
+		},
+		{
+			name:      "join channel with key",
+			input:     "/JOIN #private secret",
+			want:      Command{Name: "join", Args: []string{"#private", "secret"}},
+			isCommand: true,
+		},
+		{
 			name:      "unknown slash command",
 			input:     "/unknown value",
 			want:      Command{Name: "unknown", Args: []string{"value"}},

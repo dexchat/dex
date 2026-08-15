@@ -127,6 +127,43 @@ func (m *ClientManager) Part(server, channel, reason string) {
 	client.Cmd.PartMessage(channel, reason)
 }
 
+func (m *ClientManager) Join(server, channel, key string) {
+	client, ok := m.clients[server]
+	if !ok {
+		return
+	}
+
+	sendError := func(text string) {
+		client.program.Send(BufferNewMessageMsg{
+			Server:    server,
+			Buffer:    "",
+			Timestamp: time.Now(),
+			From:      "--",
+			Text:      text,
+			Type:      MessageTypeServer,
+		})
+	}
+
+	if !client.IsConnected() {
+		sendError(fmt.Sprintf("irc: not connected to %s", server))
+		return
+	}
+	if !girc.IsValidChannel(channel) || strings.Contains(channel, ",") {
+		sendError(fmt.Sprintf("irc: invalid channel %s", channel))
+		return
+	}
+	if client.IsInChannel(channel) {
+		sendError(fmt.Sprintf("irc: already in channel %s", channel))
+		return
+	}
+
+	if key == "" {
+		client.Cmd.Join(channel)
+		return
+	}
+	client.Cmd.JoinKey(channel, key)
+}
+
 func pendingMessageKey(server, target, message string) string {
 	return strings.ToLower(server) + ":" + strings.ToLower(target) + ":" + strings.TrimSpace(message)
 }

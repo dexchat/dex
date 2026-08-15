@@ -437,12 +437,21 @@ func (c *Client) onDisconnect(client *girc.Client, _ girc.Event) {
 }
 
 func (c *Client) onJoinError(_ *girc.Client, e girc.Event) {
+	channel := ""
+	if len(e.Params) > 1 {
+		channel = e.Params[1]
+	}
+	text := fmt.Sprintf("irc: %s", e.Last())
+	if channel != "" {
+		text = fmt.Sprintf("irc: %s: %s", channel, e.Last())
+	}
 	c.queueMessage(BufferNewMessageMsg{
 		Server:    c.serverName,
-		Buffer:    e.Params[1],
+		Buffer:    "",
 		Timestamp: time.Now(),
 		From:      "--",
-		Text:      fmt.Sprintf("irc: %s", e.Last()),
+		Text:      text,
+		Type:      MessageTypeServer,
 	})
 }
 
