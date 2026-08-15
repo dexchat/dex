@@ -76,11 +76,11 @@ type Model struct {
 
 func New(cfg *config.Config) *Model {
 	m := Model{
-		config:  cfg,
-		buffers: make(map[BufferKey]*Buffer),
-		theme:   styles.AyuDarkTheme(),
+		config:    cfg,
+		buffers:   make(map[BufferKey]*Buffer),
 		readState: &history.ReadState{},
-		now:     time.Now,
+		theme:     styles.RosePineTheme(),
+		now:       time.Now,
 	}
 	m.usernameColors = styles.NewUsernameColors(m.theme.Colors.Nicknames)
 

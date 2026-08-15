@@ -7,24 +7,6 @@
 * https://datatracker.ietf.org/doc/html/rfc2812
 * https://modern.ircdocs.horse/
 
-## config
-
-```toml
-[ui]
-unread_badges = true
-mention_badges = true
-
-[servers.libera]
-address = "irc.libera.chat"
-port = 6697
-nickname = "dexuser"
-channels = ["#go", "#random"]
-
-# optional per-server overrides
-unread_badges = false
-mention_badges = true
-```
-
 ## TODO
 * IRC:
   * support for commands, e.g., /leave, /join, etc.
@@ -44,13 +26,17 @@ mention_badges = true
   * change the timestamp format and/or hide it
   * display channel modes
   * disable mouse/scroll support
-* FIX: lag when loading channels in the channel list
 * Think what should be included in the 0.1.0 so I can open the code
 
 
 ## 0.1.0
+TODO:
 * config file with minimal options
 * support for /leave, /join, /quit, at least
+DONE:
+* notifications when mentioned
+* nickname complete on tab
+* support for /leave, /join, /list
 
 
 ## Known bugs
