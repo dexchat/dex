@@ -2,7 +2,6 @@ package ui
 
 import (
 	"log"
-	"strings"
 	"time"
 
 	"github.com/vaaleyard/dex/internal/commands"
@@ -268,26 +267,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case chat.SendMessageMsg:
 		buffer := m.getActiveBuffer()
 		if command, ok := commands.Parse(msgTyped.Text); ok {
-			switch command.Name {
-			case "join":
-				if len(command.Args) < 1 || len(command.Args) > 2 {
-					m.addCommandError(buffer, "usage: /join <channel> [key]")
-					break
-				}
-				key := ""
-				if len(command.Args) == 2 {
-					key = command.Args[1]
-				}
-				if m.ircClientManager != nil {
-					go m.ircClientManager.Join(buffer.Server, command.Args[0], key)
-				}
-			case "leave":
-				if m.ircClientManager != nil {
-					go m.ircClientManager.Part(buffer.Server, buffer.Buffer, strings.Join(command.Args, " "))
-				}
-			default:
-				m.addCommandError(buffer, "unknown command: /"+command.Name)
-			}
+			m.handleCommand(buffer, command)
 			break
 		}
 		if m.ircClientManager != nil && buffer.isValid() {
@@ -493,15 +473,6 @@ func (m *Model) getOrCreateBuffer(server, channel string) (*Buffer, tea.Cmd) {
 		}
 	}
 	return buf, newBufferCmd
-}
-
-func (m *Model) addCommandError(buffer *Buffer, text string) {
-	buffer.Chat.AddMessage(chat.Message{
-		Timestamp: time.Now(),
-		Username:  "--",
-		Text:      text,
-		Type:      irc.MessageTypeServer,
-	})
 }
 
 func (m *Model) removeChannelBuffer(server, channel string, cmds *[]tea.Cmd) {
