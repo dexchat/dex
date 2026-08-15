@@ -301,6 +301,128 @@ func TestSelectingBufferClearsActivity(t *testing.T) {
 	}
 }
 
+func TestReadPlaybackDoesNotIncrementActivity(t *testing.T) {
+	m := newActivityTestModel()
+	readAt := time.Date(2026, time.August, 15, 12, 0, 0, 0, time.UTC)
+	m.readState.MarkRead("libera", "#random", history.ReadMarker{ServerTime: readAt.UnixNano()})
+
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: readAt,
+		From:      "alice",
+		Text:      "already read",
+	})
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: readAt.Add(time.Second),
+		From:      "alice",
+		Text:      "new message",
+	})
+
+	buf := m.buffers[makeBufferKey("libera", "#random")]
+	if got, want := buf.UnreadCount, 1; got != want {
+		t.Fatalf("UnreadCount = %d, want %d", got, want)
+	}
+}
+
+func TestReadMarkerSurvivesRestartPlayback(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	messageAt := time.Date(2026, time.August, 15, 12, 0, 0, 0, time.UTC)
+
+	first := newActivityTestModel()
+	first.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: messageAt,
+		From:      "alice",
+		Text:      "read before restart",
+	})
+	key := makeBufferKey("libera", "#random")
+	first.activeBuffer = key
+	first.clearBufferActivity(key)
+	first.flushAllHistory()
+
+	second := newActivityTestModel()
+	_, _ = second.Update(second.loadConfiguredHistory()())
+	// Discovered buffers load disk history lazily, so playback can arrive before
+	// duplicate detection has their prior entries available.
+	second.buffers[key].History = history.NewLog()
+	second.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: messageAt,
+		From:      "alice",
+		Text:      "read before restart",
+	})
+	second.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: messageAt.Add(time.Second),
+		From:      "alice",
+		Text:      "new after restart",
+	})
+
+	if got, want := second.buffers[key].UnreadCount, 1; got != want {
+		t.Fatalf("UnreadCount after restart playback = %d, want %d", got, want)
+	}
+}
+
+func TestSelectingBufferPersistsReadMarker(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	m := newActivityTestModel()
+	messageAt := time.Date(2026, time.August, 15, 12, 0, 0, 0, time.UTC)
+
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: messageAt,
+		From:      "alice",
+		Text:      "hello",
+	})
+
+	key := makeBufferKey("libera", "#random")
+	m.activeBuffer = key
+	m.clearBufferActivity(key)
+	m.flushAllHistory()
+
+	state, err := history.LoadReadState()
+	if err != nil {
+		t.Fatalf("LoadReadState() error = %v", err)
+	}
+	marker, ok := state.Marker("libera", "#random")
+	if !ok || marker.ServerTime != messageAt.UnixNano() {
+		t.Fatalf("Marker() = (%+v, %v), want timestamp %d", marker, ok, messageAt.UnixNano())
+	}
+}
+
+func TestShutdownPersistsActiveBufferReadMarker(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	m := newActivityTestModel()
+	key := makeBufferKey("libera", "#random")
+	m.activeBuffer = key
+	messageAt := time.Date(2026, time.August, 15, 12, 0, 0, 0, time.UTC)
+
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: messageAt,
+		From:      "alice",
+		Text:      "hello",
+	})
+	m.flushAllHistory()
+
+	state, err := history.LoadReadState()
+	if err != nil {
+		t.Fatalf("LoadReadState() error = %v", err)
+	}
+	marker, ok := state.Marker("libera", "#random")
+	if !ok || marker.ServerTime != messageAt.UnixNano() {
+		t.Fatalf("Marker() = (%+v, %v), want timestamp %d", marker, ok, messageAt.UnixNano())
+	}
+}
+
 func TestUnreadBadgeCanBeDisabledGlobally(t *testing.T) {
 	m := newActivityTestModel()
 	m.config.UI.UnreadBadges = false

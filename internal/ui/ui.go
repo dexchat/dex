@@ -60,9 +60,10 @@ type Model struct {
 	theme          styles.Theme
 	usernameColors styles.UsernameColors
 
-	buffers      map[BufferKey]*Buffer
-	activeBuffer BufferKey
-	readState    *history.ReadState
+	buffers        map[BufferKey]*Buffer
+	activeBuffer   BufferKey
+	readState      *history.ReadState
+	readStateDirty bool
 
 	channels     channels.Model
 	palette      *palette.Model
@@ -77,6 +78,7 @@ func New(cfg *config.Config) *Model {
 		config:  cfg,
 		buffers: make(map[BufferKey]*Buffer),
 		theme:   styles.AyuDarkTheme(),
+		readState: &history.ReadState{},
 		now:     time.Now,
 	}
 	m.usernameColors = styles.NewUsernameColors(m.theme.Colors.Nicknames)
@@ -283,6 +285,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				log.Printf("Failed to flush history for %s/%s: %v", buf.Server, buf.Buffer, err)
 			}
 		}
+		m.flushReadState()
 		cmds = append(cmds, m.scheduleHistoryFlush())
 	case startConnectionMsg:
 		if m.ircClientManager != nil {
@@ -549,9 +552,22 @@ func (m *Model) scheduleHistoryFlush() tea.Cmd {
 }
 
 func (m *Model) flushAllHistory() {
+	m.markBufferRead(m.getActiveBuffer())
 	for _, buf := range m.buffers {
 		if err := buf.History.Flush(buf.Server, buf.Buffer); err != nil {
 			log.Printf("Failed to flush history for %s/%s: %v", buf.Server, buf.Buffer, err)
 		}
 	}
+	m.flushReadState()
+}
+
+func (m *Model) flushReadState() {
+	if !m.readStateDirty || m.readState == nil {
+		return
+	}
+	if err := m.readState.Flush(); err != nil {
+		log.Printf("Failed to flush read state: %v", err)
+		return
+	}
+	m.readStateDirty = false
 }

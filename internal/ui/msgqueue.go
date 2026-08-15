@@ -65,6 +65,9 @@ func (m *Model) processIncomingMessage(msg irc.BufferNewMessageMsg) tea.Cmd {
 		Text:       msg.Text,
 		Type:       int(msg.Type),
 	}
+	if msg.Type == irc.MessageTypeNormal {
+		buf.recordLatestMessage(logEntry)
+	}
 
 	if buf.History.IsDuplicate(logEntry) {
 		return createCmd
@@ -98,6 +101,9 @@ func (m *Model) updateActivityForMessage(buf *Buffer, msg irc.BufferNewMessageMs
 	if buf.Key == m.activeBuffer {
 		return
 	}
+	if m.messageIsRead(buf, msg.Timestamp) {
+		return
+	}
 
 	buf.UnreadCount++
 	if messageMentionsNick(msg.Text, buf.Chat.Nickname()) {
@@ -111,6 +117,7 @@ func (m *Model) clearBufferActivity(key BufferKey) {
 	if buf == nil {
 		return
 	}
+	m.markBufferRead(buf)
 	if buf.UnreadCount == 0 && buf.MentionCount == 0 {
 		return
 	}
@@ -118,6 +125,45 @@ func (m *Model) clearBufferActivity(key BufferKey) {
 	buf.UnreadCount = 0
 	buf.MentionCount = 0
 	m.updateChannelActivity(buf)
+}
+
+func (m *Model) messageIsRead(buf *Buffer, timestamp time.Time) bool {
+	if m.readState == nil {
+		return false
+	}
+	marker, ok := m.readState.Marker(buf.Server, buf.Buffer)
+	return ok && timestamp.UnixNano() <= marker.ServerTime
+}
+
+func (m *Model) markBufferRead(buf *Buffer) {
+	if buf.latestMessage.ServerTime == 0 {
+		return
+	}
+	if m.readState == nil {
+		m.readState = &history.ReadState{}
+	}
+
+	marker, exists := m.readState.Marker(buf.Server, buf.Buffer)
+	if exists && marker.ServerTime >= buf.latestMessage.ServerTime {
+		return
+	}
+
+	m.readState.MarkRead(buf.Server, buf.Buffer, buf.latestMessage)
+	m.readStateDirty = true
+}
+
+func (b *Buffer) recordLatestMessage(entry history.LogEntry) {
+	if entry.ServerTime < b.latestMessage.ServerTime {
+		return
+	}
+	if entry.ServerTime == b.latestMessage.ServerTime && b.latestMessage.MsgID != "" {
+		return
+	}
+
+	b.latestMessage = history.ReadMarker{ServerTime: entry.ServerTime}
+	if entry.MsgID != nil {
+		b.latestMessage.MsgID = *entry.MsgID
+	}
 }
 
 func (m *Model) updateChannelActivity(buf *Buffer) {

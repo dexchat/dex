@@ -36,6 +36,7 @@ type Buffer struct {
 	// per channel during a ZNC replay can monopolize the machine at startup.
 	historyLoaded  bool
 	historyLoading bool
+	latestMessage  history.ReadMarker
 
 	UnreadCount  int
 	MentionCount int
