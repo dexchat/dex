@@ -1,0 +1,50 @@
+package commands
+
+import (
+	"reflect"
+	"testing"
+)
+
+func TestParse(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		want      Command
+		isCommand bool
+	}{
+		{
+			name:  "regular message",
+			input: "hello /leave",
+		},
+		{
+			name:      "leave without reason",
+			input:     "/leave",
+			want:      Command{Name: "leave", Args: []string{}},
+			isCommand: true,
+		},
+		{
+			name:      "leave with reason",
+			input:     "/LEAVE see you later",
+			want:      Command{Name: "leave", Args: []string{"see", "you", "later"}},
+			isCommand: true,
+		},
+		{
+			name:      "unknown slash command",
+			input:     "/unknown value",
+			want:      Command{Name: "unknown", Args: []string{"value"}},
+			isCommand: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, isCommand := Parse(tt.input)
+			if isCommand != tt.isCommand {
+				t.Fatalf("Parse() command = %v, want %v", isCommand, tt.isCommand)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("Parse() = %#v, want %#v", got, tt.want)
+			}
+		})
+	}
+}

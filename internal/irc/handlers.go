@@ -296,16 +296,25 @@ func (c *Client) onPart(client *girc.Client, e girc.Event) {
 
 	if e.Source != nil {
 		userName := e.Source.Name
-		// do not display self-part
-		if userName != client.GetNick() {
-			c.queueMessage(BufferNewMessageMsg{
-				Server:    c.serverName,
-				Buffer:    channelName,
-				Timestamp: time.Now(),
-				From:      "<--",
-				Text:      fmt.Sprintf("%s (%s:%s) has left", userName, e.Source.Host, e.Source.Ident),
-			})
+		if userName == client.GetNick() {
+			msg := ChannelPartedMsg{
+				Server:  c.serverName,
+				Channel: channelName,
+			}
+			if c.program != nil {
+				// Bubble Tea's Send may block until the UI receives the message.
+				// Keep the IRC socket reader free while delivering this rare event.
+				go c.program.Send(msg)
+			}
+			return
 		}
+		c.queueMessage(BufferNewMessageMsg{
+			Server:    c.serverName,
+			Buffer:    channelName,
+			Timestamp: time.Now(),
+			From:      "<--",
+			Text:      fmt.Sprintf("%s (%s:%s) has left", userName, e.Source.Host, e.Source.Ident),
+		})
 	}
 }
 

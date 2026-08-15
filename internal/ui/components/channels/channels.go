@@ -40,6 +40,12 @@ type NewBufferMsg struct {
 	Buffer string
 }
 
+type RemoveBufferMsg struct {
+	Server       string
+	Buffer       string
+	SelectServer bool
+}
+
 type node struct {
 	name         string
 	isServer     bool
@@ -139,6 +145,30 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 		// insert at the correct position
 		m.nodes = append(m.nodes[:insertIdx], append([]node{newNode}, m.nodes[insertIdx:]...)...)
+	case RemoveBufferMsg:
+		removeIdx := -1
+		for i, existingNode := range m.nodes {
+			if !existingNode.isServer && strings.EqualFold(existingNode.parent, msg.Server) && strings.EqualFold(existingNode.name, msg.Buffer) {
+				removeIdx = i
+				break
+			}
+		}
+		if removeIdx >= 0 {
+			m.nodes = append(m.nodes[:removeIdx], m.nodes[removeIdx+1:]...)
+			if m.cursor > removeIdx {
+				m.cursor--
+			} else if m.cursor >= len(m.nodes) {
+				m.cursor = len(m.nodes) - 1
+			}
+		}
+		if msg.SelectServer {
+			for i, existingNode := range m.nodes {
+				if existingNode.isServer && strings.EqualFold(existingNode.name, msg.Server) {
+					m.cursor = i
+					break
+				}
+			}
+		}
 	}
 
 	if _, ok := msg.(tea.KeyMsg); ok {

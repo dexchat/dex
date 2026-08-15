@@ -97,6 +97,24 @@ func TestSelfJoinIsQueuedForAsynchronousUIDelivery(t *testing.T) {
 	}
 }
 
+func TestSelfPartDoesNotCreateAChatMessage(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+
+	client.onPart(client.Client, girc.Event{
+		Command: girc.PART,
+		Source:  girc.ParseSource("tester!tester@example.test"),
+		Params:  []string{"#go"},
+	})
+
+	if got := len(client.messageQueue); got != 0 {
+		t.Fatalf("self-PART created %d chat messages, want 0", got)
+	}
+}
+
 func TestJoinAndPartUserListChangesDoNotSendWhoRefresh(t *testing.T) {
 	for _, command := range []string{girc.JOIN, girc.PART} {
 		t.Run(command, func(t *testing.T) {

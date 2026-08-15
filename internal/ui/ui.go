@@ -2,8 +2,10 @@ package ui
 
 import (
 	"log"
+	"strings"
 	"time"
 
+	"github.com/vaaleyard/dex/internal/commands"
 	"github.com/vaaleyard/dex/internal/config"
 	"github.com/vaaleyard/dex/internal/history"
 	"github.com/vaaleyard/dex/internal/irc"
@@ -195,6 +197,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = append(cmds, createCmd)
 			}
 		}
+	case irc.ChannelPartedMsg:
+		m.removeChannelBuffer(msgTyped.Server, msgTyped.Channel, &cmds)
 
 	case irc.UserListMsg:
 		buf, createCmd := m.getOrCreateBuffer(msgTyped.Server, msgTyped.Channel)
@@ -263,6 +267,22 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case chat.SendMessageMsg:
 		buffer := m.getActiveBuffer()
+		if command, ok := commands.Parse(msgTyped.Text); ok {
+			switch command.Name {
+			case "leave":
+				if m.ircClientManager != nil {
+					go m.ircClientManager.Part(buffer.Server, buffer.Buffer, strings.Join(command.Args, " "))
+				}
+			default:
+				buffer.Chat.AddMessage(chat.Message{
+					Timestamp: time.Now(),
+					Username:  "--",
+					Text:      "unknown command: /" + command.Name,
+					Type:      irc.MessageTypeServer,
+				})
+			}
+			break
+		}
 		if m.ircClientManager != nil && buffer.isValid() {
 			now := time.Now()
 			buffer.Chat.AddMessage(chat.Message{
@@ -466,6 +486,32 @@ func (m *Model) getOrCreateBuffer(server, channel string) (*Buffer, tea.Cmd) {
 		}
 	}
 	return buf, newBufferCmd
+}
+
+func (m *Model) removeChannelBuffer(server, channel string, cmds *[]tea.Cmd) {
+	key := makeBufferKey(server, channel)
+	buf, exists := m.buffers[key]
+	if !exists {
+		return
+	}
+
+	wasActive := key == m.activeBuffer
+	if wasActive {
+		m.markBufferRead(buf)
+		m.activeBuffer = makeBufferKey(server, "")
+	}
+	if err := buf.History.Flush(buf.Server, buf.Buffer); err != nil {
+		log.Printf("Failed to flush history for %s/%s: %v", buf.Server, buf.Buffer, err)
+	}
+	delete(m.buffers, key)
+
+	var cmd tea.Cmd
+	m.channels, cmd = m.channels.Update(channels.RemoveBufferMsg{
+		Server:       server,
+		Buffer:       channel,
+		SelectServer: wasActive,
+	})
+	*cmds = append(*cmds, cmd)
 }
 
 func (m *Model) requestHistoryLoad(buf *Buffer) tea.Cmd {

@@ -10,6 +10,7 @@ import (
 	"github.com/vaaleyard/dex/internal/config"
 	"github.com/vaaleyard/dex/internal/history"
 	"github.com/vaaleyard/dex/internal/irc"
+	"github.com/vaaleyard/dex/internal/ui/components/chat"
 	"github.com/vaaleyard/dex/internal/ui/components/users"
 )
 
@@ -35,6 +36,36 @@ func TestPaneForMouseWheelUsesPaneBounds(t *testing.T) {
 				t.Fatalf("paneForMouseWheel() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestSelfPartRemovesActiveChannelAndSelectsServer(t *testing.T) {
+	m := newActivityTestModel()
+	channelKey := makeBufferKey("libera", "#go")
+	m.activeBuffer = channelKey
+
+	_, _ = m.Update(irc.ChannelPartedMsg{Server: "libera", Channel: "#go"})
+
+	if _, exists := m.buffers[channelKey]; exists {
+		t.Fatal("self-PART should remove the channel buffer")
+	}
+	if got, want := m.activeBuffer, makeBufferKey("libera", ""); got != want {
+		t.Fatalf("activeBuffer = %q, want %q", got, want)
+	}
+	if content := plainText(m.channels.View(channelsPanelMaxWidth, 20)); strings.Contains(content, "#go") {
+		t.Fatalf("self-PART should remove the channel from the sidebar:\n%s", content)
+	}
+}
+
+func TestLeaveDoesNotRemoveChannelBeforeServerConfirmation(t *testing.T) {
+	m := newActivityTestModel()
+	channelKey := makeBufferKey("libera", "#go")
+	m.activeBuffer = channelKey
+
+	_, _ = m.Update(chat.SendMessageMsg{Text: "/leave"})
+
+	if _, exists := m.buffers[channelKey]; !exists {
+		t.Fatal("/leave should keep the channel until the server confirms PART")
 	}
 }
 

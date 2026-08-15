@@ -63,6 +63,27 @@ func TestChannelPaneRendersRequestedHeight(t *testing.T) {
 	}
 }
 
+func TestRemoveBufferSelectsItsServer(t *testing.T) {
+	m := New(styles.AyuDarkTheme(), []*config.Server{{
+		Name:     "libera",
+		Channels: []string{"#go", "#random"},
+	}})
+	m = m.MoveDown()
+
+	m, _ = m.Update(RemoveBufferMsg{
+		Server:       "libera",
+		Buffer:       "#go",
+		SelectServer: true,
+	})
+
+	if got := m.Selected(); got != (ChannelSelectionMsg{Server: "libera"}) {
+		t.Fatalf("Selected() = %#v, want libera server", got)
+	}
+	if view := m.View(25, 10); strings.Contains(view, "#go") {
+		t.Fatalf("removed channel is still visible:\n%s", view)
+	}
+}
+
 func TestActivityUpdateRendersUnreadBadge(t *testing.T) {
 	m := newScrollableChannelsModel()
 
