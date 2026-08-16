@@ -12,6 +12,7 @@ import (
 const (
 	ircBold      = '\x02'
 	ircColor     = '\x03'
+	ircHexColor  = '\x04'
 	ircReset     = '\x0f'
 	ircReverse   = '\x16'
 	ircItalic    = '\x1d'
@@ -39,6 +40,7 @@ var ircColors = []color.Color{
 }
 
 var colorRegex = regexp.MustCompile(`^(\d{1,2})(?:,(\d{1,2}))?`)
+var hexColorRegex = regexp.MustCompile(`^#?([[:xdigit:]]{6})`)
 
 type formatState struct {
 	bold      bool
@@ -94,6 +96,18 @@ func parseIRCFormat(text string, baseStyle lipgloss.Style) []styledSegment {
 			flushSegment()
 			state.reverse = !state.reverse
 			i++
+		case ircHexColor:
+			flushSegment()
+			i++
+			remaining := string(runes[i:])
+			if match := hexColorRegex.FindStringSubmatch(remaining); match != nil {
+				state.fg = lipgloss.Color("#" + match[1])
+				state.hasFg = true
+				i += len(match[0])
+			} else {
+				state.hasFg = false
+				state.hasBg = false
+			}
 		case ircReset:
 			flushSegment()
 			state = formatState{}
@@ -102,13 +116,14 @@ func parseIRCFormat(text string, baseStyle lipgloss.Style) []styledSegment {
 			flushSegment()
 			i++
 			remaining := string(runes[i:])
-			match := colorRegex.FindStringSubmatch(remaining)
-			if match != nil {
-				if match[1] != "" {
-					if fg, err := strconv.Atoi(match[1]); err == nil && fg < len(ircColors) {
-						state.fg = ircColors[fg]
-						state.hasFg = true
-					}
+			if match := hexColorRegex.FindStringSubmatch(remaining); match != nil {
+				state.fg = lipgloss.Color("#" + match[1])
+				state.hasFg = true
+				i += len(match[0])
+			} else if match := colorRegex.FindStringSubmatch(remaining); match != nil {
+				if fg, err := strconv.Atoi(match[1]); err == nil && fg < len(ircColors) {
+					state.fg = ircColors[fg]
+					state.hasFg = true
 				}
 				if match[2] != "" {
 					if bg, err := strconv.Atoi(match[2]); err == nil && bg < len(ircColors) {
