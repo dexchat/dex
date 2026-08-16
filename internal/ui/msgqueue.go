@@ -51,6 +51,9 @@ func (m *Model) processIncomingMessage(msg irc.BufferNewMessageMsg) tea.Cmd {
 	if buf == nil {
 		return createCmd
 	}
+	if msg.DirectMessage && m.directMessages.Add(msg.Server, msg.Buffer) {
+		m.directMessagesDirty = true
+	}
 
 	var msgID *string
 	if msg.MsgID != "" {

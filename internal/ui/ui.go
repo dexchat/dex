@@ -61,10 +61,12 @@ type Model struct {
 	theme          styles.Theme
 	usernameColors styles.UsernameColors
 
-	buffers        map[BufferKey]*Buffer
-	activeBuffer   BufferKey
-	readState      *history.ReadState
-	readStateDirty bool
+	buffers             map[BufferKey]*Buffer
+	activeBuffer        BufferKey
+	readState           *history.ReadState
+	readStateDirty      bool
+	directMessages      *history.DirectMessages
+	directMessagesDirty bool
 
 	channels     channels.Model
 	palette      *palette.Model
@@ -75,12 +77,18 @@ type Model struct {
 }
 
 func New(cfg *config.Config) *Model {
+	directMessages, err := history.LoadDirectMessages()
+	if err != nil {
+		log.Printf("Failed to load direct messages: %v", err)
+		directMessages = &history.DirectMessages{}
+	}
 	m := Model{
-		config:    cfg,
-		buffers:   make(map[BufferKey]*Buffer),
-		readState: &history.ReadState{},
-		theme:     styles.RosePineTheme(),
-		now:       time.Now,
+		config:         cfg,
+		buffers:        make(map[BufferKey]*Buffer),
+		readState:      &history.ReadState{},
+		directMessages: directMessages,
+		theme:          styles.RosePineTheme(),
+		now:            time.Now,
 	}
 	m.usernameColors = styles.NewUsernameColors(m.theme.Colors.Nicknames)
 
@@ -127,6 +135,12 @@ func New(cfg *config.Config) *Model {
 	// Make the first server buffer active on startup
 	if len(cfg.Servers) > 0 {
 		m.activeBuffer = makeBufferKey(cfg.Servers[0].Name, "")
+	}
+	for _, directMessage := range directMessages.Users {
+		_, cmd := m.getOrCreateBuffer(directMessage.Server, directMessage.User)
+		if cmd != nil {
+			m.channels, _ = m.channels.Update(cmd())
+		}
 	}
 
 	return &m
@@ -293,6 +307,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.flushReadState()
+		m.flushDirectMessages()
 		cmds = append(cmds, m.scheduleHistoryFlush())
 	case startConnectionMsg:
 		if m.ircClientManager != nil {
@@ -592,6 +607,18 @@ func (m *Model) flushAllHistory() {
 		}
 	}
 	m.flushReadState()
+	m.flushDirectMessages()
+}
+
+func (m *Model) flushDirectMessages() {
+	if !m.directMessagesDirty || m.directMessages == nil {
+		return
+	}
+	if err := m.directMessages.Flush(); err != nil {
+		log.Printf("Failed to flush direct messages: %v", err)
+		return
+	}
+	m.directMessagesDirty = false
 }
 
 func (m *Model) flushReadState() {
