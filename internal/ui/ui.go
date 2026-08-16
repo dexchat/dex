@@ -555,38 +555,9 @@ func (m *Model) applyLoadedHistory(loadedHistory []loadedBufferHistory) {
 }
 
 func (m *Model) loadConfiguredHistory() tea.Cmd {
-	type target struct {
-		key     BufferKey
-		server  string
-		channel string
-	}
-
-	targets := make([]target, 0, len(m.buffers))
-	for _, server := range m.config.Servers {
-		targets = append(targets, target{
-			key:    makeBufferKey(server.Name, ""),
-			server: server.Name,
-		})
-		for _, channel := range server.Channels {
-			targets = append(targets, target{
-				key:     makeBufferKey(server.Name, channel),
-				server:  server.Name,
-				channel: channel,
-			})
-		}
-	}
-
 	return func() tea.Msg {
-		loaded := make([]loadedBufferHistory, 0, len(targets))
-		for _, target := range targets {
-			loaded = append(loaded, loadedBufferHistory{
-				key:     target.key,
-				history: history.Load(target.server, target.channel),
-			})
-		}
 		readState, err := history.LoadReadState()
 		return initialHistoryLoadedMsg{
-			histories: loaded,
 			readState: readState,
 			readErr:   err,
 		}

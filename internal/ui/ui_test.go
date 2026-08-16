@@ -278,7 +278,7 @@ func TestNewBuildsChannelListWithoutLoadingChannelHistory(t *testing.T) {
 	}
 }
 
-func TestConfiguredHistoryLoadPopulatesExistingBuffers(t *testing.T) {
+func TestConfiguredHistoryLoadOnlyLoadsReadState(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 
 	writeTestHistory(t, "libera", "#go", "stored message")
@@ -298,8 +298,8 @@ func TestConfiguredHistoryLoadPopulatesExistingBuffers(t *testing.T) {
 	m.Update(msg)
 
 	buf := m.buffers[makeBufferKey("libera", "#go")]
-	if got := len(buf.History.Entries()); got != 1 {
-		t.Fatalf("loaded history entries = %d, want 1", got)
+	if got := len(buf.History.Entries()); got != 0 {
+		t.Fatalf("loaded history entries = %d, want 0", got)
 	}
 	if m.readState == nil {
 		t.Fatal("read state was not loaded before startup connection")
