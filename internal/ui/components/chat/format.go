@@ -23,7 +23,7 @@ const (
 var ircColors = []color.Color{
 	lipgloss.Color("#FFFFFF"),
 	lipgloss.Color("#000000"),
-	lipgloss.Color("#00007F"),
+	lipgloss.Color("#74A9C4"),
 	lipgloss.Color("#009300"),
 	lipgloss.Color("#FF0000"),
 	lipgloss.Color("#7F0000"),

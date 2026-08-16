@@ -85,12 +85,12 @@ func RosePineTheme() Theme {
 
 	theme.Colors.Base.Background = lipgloss.Color("#191724")
 	theme.Colors.Base.Foreground = lipgloss.Color("#E0DEF4")
-	theme.Colors.Base.Surface = lipgloss.Color("#1F1D2E")
+	theme.Colors.Base.Surface = lipgloss.Color("#26233A")
 	theme.Colors.Base.Border = lipgloss.Color("#403D52")
 	theme.Colors.Base.Accent = lipgloss.Color("#C4A7E7")
 	theme.Colors.Base.Error = lipgloss.Color("#EB6F92")
 	theme.Colors.Base.Dimmed = lipgloss.Color("#6E6A86")
-	theme.Colors.Base.Subtle = lipgloss.Color("#524F67")
+	theme.Colors.Base.Subtle = lipgloss.Color("#908CAA")
 
 	theme.Colors.Sidebar.Server = lipgloss.Color("#C4A7E7")
 	theme.Colors.Sidebar.Unread = lipgloss.Color("#F6C177")
@@ -99,7 +99,7 @@ func RosePineTheme() Theme {
 
 	theme.Colors.Chat.Nickname = lipgloss.Color("#EBBCBA")
 	theme.Colors.Chat.Separator = lipgloss.Color("#403D52")
-	theme.Colors.Chat.Self = lipgloss.Color("#9CCFD8")
+	theme.Colors.Chat.Self = lipgloss.Color("#EBBCBA")
 	theme.Colors.Chat.Connected = lipgloss.Color("#9CCFD8")
 	theme.Colors.Chat.Disconnected = lipgloss.Color("#EB6F92")
 	theme.Colors.Chat.UserEvents = lipgloss.Color("#6E6A86")
@@ -114,7 +114,7 @@ func RosePineTheme() Theme {
 		lipgloss.Color("#9CCFD8"),
 		lipgloss.Color("#C4A7E7"),
 		lipgloss.Color("#EB6F92"),
-		lipgloss.Color("#31748F"),
+		lipgloss.Color("#5A9FB0"),
 		lipgloss.Color("#E0DEF4"),
 		lipgloss.Color("#908CAA"),
 	}
