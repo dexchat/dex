@@ -379,7 +379,7 @@ func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 	// Auto-join on connect
 	client.Cmd.Join(c.channels...)
 
-	c.program.Send(ChannelTopicMsg{
+	go c.program.Send(ChannelTopicMsg{
 		Server:  c.serverName,
 		Channel: "",
 		Topic:   "IRC: " + c.Server(),
@@ -388,7 +388,7 @@ func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 	// Sync the nickname from the server right after the connection.
 	// When using ZNC, the nickname from the config file might be different from the
 	// nickname configured in the ZNC, so we fetch it from there and update it
-	c.program.Send(NickUpdateMsg{
+	go c.program.Send(NickUpdateMsg{
 		Server: c.serverName,
 		Nick:   client.GetNick(),
 	})
