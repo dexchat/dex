@@ -69,6 +69,7 @@ type Server struct {
 	UnreadBadges             *bool    `toml:"unread_badges"`
 	MentionBadges            *bool    `toml:"mention_badges"`
 	IgnoreDirectMessagesFrom []string `toml:"ignore_direct_messages_from"`
+	NotifyChannels           []string `toml:"notify_channels"`
 }
 
 // IgnoresDirectMessageFrom reports whether a private message from nick should
@@ -83,6 +84,25 @@ func (c *Config) IgnoresDirectMessageFrom(serverName, nick string) bool {
 		}
 		for _, ignoredNick := range server.IgnoreDirectMessagesFrom {
 			if strings.EqualFold(ignoredNick, nick) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// NotifiesChannel reports whether every new message in the channel should
+// trigger a notification on the named server.
+func (c *Config) NotifiesChannel(serverName, channelName string) bool {
+	if c == nil {
+		return false
+	}
+	for _, server := range c.Servers {
+		if !strings.EqualFold(server.Name, serverName) {
+			continue
+		}
+		for _, channel := range server.NotifyChannels {
+			if strings.EqualFold(channel, channelName) {
 				return true
 			}
 		}

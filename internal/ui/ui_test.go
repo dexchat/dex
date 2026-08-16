@@ -633,6 +633,24 @@ func TestShouldSoundNotification(t *testing.T) {
 			},
 			want: false,
 		},
+		{
+			name: "configured notification channel",
+			configure: func(m *Model, _ *Buffer, msg *irc.BufferNewMessageMsg) {
+				m.config.Servers[0].NotifyChannels = []string{"#Alerts"}
+				msg.Buffer = "#alerts"
+				msg.Text = "ordinary message"
+			},
+			want: true,
+		},
+		{
+			name: "unconfigured notification channel",
+			configure: func(m *Model, _ *Buffer, msg *irc.BufferNewMessageMsg) {
+				m.config.Servers[0].NotifyChannels = []string{"#alerts"}
+				msg.Buffer = "#other"
+				msg.Text = "ordinary message"
+			},
+			want: false,
+		},
 	}
 
 	for _, tt := range tests {

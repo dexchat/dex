@@ -259,6 +259,10 @@ func (m *Model) shouldSoundNotification(buf *Buffer, msg irc.BufferNewMessageMsg
 		return m.config.Notifications.Events[config.NotificationDirectMessage]
 	}
 
+	if m.config.NotifiesChannel(buf.Server, msg.Buffer) {
+		return true
+	}
+
 	if m.config.Notifications.Events[config.NotificationMention] &&
 		messageMentionsNick(msg.Text, buf.Chat.Nickname()) {
 		return true

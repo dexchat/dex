@@ -19,6 +19,7 @@ nickname = "dexuser"
 channels = ["#go"]
 unread_badges = true
 ignore_direct_messages_from = ["AlertBot"]
+notify_channels = ["#Alerts"]
 `))
 	if err != nil {
 		t.Fatalf("loadFromBytes() error = %v", err)
@@ -46,6 +47,12 @@ ignore_direct_messages_from = ["AlertBot"]
 	}
 	if cfg.IgnoresDirectMessageFrom("libera", "other-user") {
 		t.Fatal("unexpectedly ignored non-configured direct message sender")
+	}
+	if !cfg.NotifiesChannel("LIBERA", "#alerts") {
+		t.Fatal("expected notify channel to match case-insensitively")
+	}
+	if cfg.NotifiesChannel("libera", "#other") {
+		t.Fatal("unexpectedly configured notification for another channel")
 	}
 }
 
