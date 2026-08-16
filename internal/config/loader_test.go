@@ -18,6 +18,7 @@ port = 6697
 nickname = "dexuser"
 channels = ["#go"]
 unread_badges = true
+ignore_direct_messages_from = ["AlertBot"]
 `))
 	if err != nil {
 		t.Fatalf("loadFromBytes() error = %v", err)
@@ -36,6 +37,15 @@ unread_badges = true
 	}
 	if server.MentionBadges != nil {
 		t.Fatalf("server mention_badges override = %v, want nil", *server.MentionBadges)
+	}
+	if len(server.IgnoreDirectMessagesFrom) != 1 || server.IgnoreDirectMessagesFrom[0] != "AlertBot" {
+		t.Fatalf("server ignore_direct_messages_from = %v, want [AlertBot]", server.IgnoreDirectMessagesFrom)
+	}
+	if !cfg.IgnoresDirectMessageFrom("LIBERA", "alertbot") {
+		t.Fatal("expected ignored direct message sender to match case-insensitively")
+	}
+	if cfg.IgnoresDirectMessageFrom("libera", "other-user") {
+		t.Fatal("unexpectedly ignored non-configured direct message sender")
 	}
 }
 

@@ -623,6 +623,16 @@ func TestShouldSoundNotification(t *testing.T) {
 			},
 			want: false,
 		},
+		{
+			name: "ignored direct message sender",
+			configure: func(m *Model, _ *Buffer, msg *irc.BufferNewMessageMsg) {
+				m.config.Servers[0].IgnoreDirectMessagesFrom = []string{"AlertBot"}
+				msg.DirectMessage = true
+				msg.From = "alertbot"
+				msg.Text = "hello dexuser"
+			},
+			want: false,
+		},
 	}
 
 	for _, tt := range tests {

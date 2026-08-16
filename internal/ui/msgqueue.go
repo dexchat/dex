@@ -252,9 +252,11 @@ func (m *Model) shouldSoundNotification(buf *Buffer, msg irc.BufferNewMessageMsg
 		return false
 	}
 
-	if msg.DirectMessage &&
-		m.config.Notifications.Events[config.NotificationDirectMessage] {
-		return true
+	if msg.DirectMessage {
+		if m.config.IgnoresDirectMessageFrom(buf.Server, msg.From) {
+			return false
+		}
+		return m.config.Notifications.Events[config.NotificationDirectMessage]
 	}
 
 	if m.config.Notifications.Events[config.NotificationMention] &&

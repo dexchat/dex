@@ -1,6 +1,9 @@
 package config
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 const (
 	NotificationMention       = "mention"
@@ -54,17 +57,37 @@ type BadgeSettings struct {
 }
 
 type Server struct {
-	Name          string
-	Address       string   `toml:"address"`
-	Port          int      `toml:"port"`
-	SSL           *bool    `toml:"ssl"`
-	Password      string   `toml:"password"`
-	Channels      []string `toml:"channels"`
-	Nickname      string   `toml:"nickname"`
-	Username      string   `toml:"username"`
-	Realname      string   `toml:"realname"`
-	UnreadBadges  *bool    `toml:"unread_badges"`
-	MentionBadges *bool    `toml:"mention_badges"`
+	Name                     string
+	Address                  string   `toml:"address"`
+	Port                     int      `toml:"port"`
+	SSL                      *bool    `toml:"ssl"`
+	Password                 string   `toml:"password"`
+	Channels                 []string `toml:"channels"`
+	Nickname                 string   `toml:"nickname"`
+	Username                 string   `toml:"username"`
+	Realname                 string   `toml:"realname"`
+	UnreadBadges             *bool    `toml:"unread_badges"`
+	MentionBadges            *bool    `toml:"mention_badges"`
+	IgnoreDirectMessagesFrom []string `toml:"ignore_direct_messages_from"`
+}
+
+// IgnoresDirectMessageFrom reports whether a private message from nick should
+// be excluded from notifications on the named server.
+func (c *Config) IgnoresDirectMessageFrom(serverName, nick string) bool {
+	if c == nil {
+		return false
+	}
+	for _, server := range c.Servers {
+		if !strings.EqualFold(server.Name, serverName) {
+			continue
+		}
+		for _, ignoredNick := range server.IgnoreDirectMessagesFrom {
+			if strings.EqualFold(ignoredNick, nick) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (c *Config) ServerBadgeSettings(server *Server) BadgeSettings {
