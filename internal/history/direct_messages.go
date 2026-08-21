@@ -43,6 +43,16 @@ func (d *DirectMessages) Add(server, user string) bool {
 	return true
 }
 
+func (d *DirectMessages) Remove(server, user string) bool {
+	for i, directMessage := range d.Users {
+		if strings.EqualFold(directMessage.Server, server) && strings.EqualFold(directMessage.User, user) {
+			d.Users = append(d.Users[:i], d.Users[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
 func (d *DirectMessages) Flush() error {
 	path := directMessagesPath()
 	dir := filepath.Dir(path)

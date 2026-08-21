@@ -99,6 +99,51 @@ func TestLeaveDoesNotRemoveChannelBeforeServerConfirmation(t *testing.T) {
 	}
 }
 
+func TestPartIsAliasForLeave(t *testing.T) {
+	m := newActivityTestModel()
+	channelKey := makeBufferKey("libera", "#go")
+	m.activeBuffer = channelKey
+
+	_, _ = m.Update(chat.SendMessageMsg{Text: "/part"})
+
+	if _, exists := m.buffers[channelKey]; !exists {
+		t.Fatal("/part should keep the channel until server confirmation")
+	}
+}
+
+func TestCloseRemovesPrivateBufferAndSelectsServer(t *testing.T) {
+	m := newActivityTestModel()
+	_, _ = m.getOrCreateBuffer("libera", "alice")
+	m.directMessages.Add("libera", "alice")
+	m.activeBuffer = makeBufferKey("libera", "alice")
+
+	_, _ = m.Update(chat.SendMessageMsg{Text: "/close"})
+
+	if _, exists := m.buffers[makeBufferKey("libera", "alice")]; exists {
+		t.Fatal("/close should remove the private buffer")
+	}
+	if got, want := m.activeBuffer, makeBufferKey("libera", ""); got != want {
+		t.Fatalf("activeBuffer = %q, want %q", got, want)
+	}
+	for _, directMessage := range m.directMessages.Users {
+		if directMessage.Server == "libera" && directMessage.User == "alice" {
+			t.Fatalf("closed direct message is still persisted: %#v", m.directMessages.Users)
+		}
+	}
+}
+
+func TestCloseDoesNotCloseChannel(t *testing.T) {
+	m := newActivityTestModel()
+	channelKey := makeBufferKey("libera", "#go")
+	m.activeBuffer = channelKey
+
+	_, _ = m.Update(chat.SendMessageMsg{Text: "/close"})
+
+	if _, exists := m.buffers[channelKey]; !exists {
+		t.Fatal("/close should not remove a channel buffer")
+	}
+}
+
 func TestJoinDoesNotCreateChannelBeforeServerConfirmation(t *testing.T) {
 	m := newActivityTestModel()
 	channelKey := makeBufferKey("libera", "#new")
