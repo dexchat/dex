@@ -351,7 +351,7 @@ func (m Model) MoveUp() Model {
 			m.selected = currentItem.parent + ":" + currentItem.name
 		}
 	}
-	return m
+	return m.ensureCursorVisible()
 }
 
 // MoveDown moves the cursor down to the next channel
@@ -372,7 +372,7 @@ func (m Model) MoveDown() Model {
 			m.selected = currentItem.parent + ":" + currentItem.name
 		}
 	}
-	return m
+	return m.ensureCursorVisible()
 }
 
 func (m Model) Selected() ChannelSelectionMsg {
@@ -396,8 +396,7 @@ func (m Model) Select(server, channel string) (Model, bool) {
 		if strings.EqualFold(item.parent, server) && strings.EqualFold(item.name, channel) {
 			m.cursor = i
 			m.selected = item.parent + ":" + item.name
-			m.viewport.EnsureVisible(m.renderedLine(i), 0, 0)
-			return m.updateContent(), true
+			return m.ensureCursorVisible().updateContent(), true
 		}
 	}
 	return m, false
@@ -416,4 +415,9 @@ func (m Model) renderedLine(nodeIndex int) int {
 		seenServer = true
 	}
 	return line
+}
+
+func (m Model) ensureCursorVisible() Model {
+	m.viewport.EnsureVisible(m.renderedLine(m.cursor), 0, 0)
+	return m
 }

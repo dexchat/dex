@@ -100,6 +100,33 @@ func TestSelectMovesCursorAndScrollsItIntoView(t *testing.T) {
 	}
 }
 
+func TestMoveUpWrapsToLastBufferAndScrollsItIntoView(t *testing.T) {
+	m := newScrollableChannelsModel()
+
+	m = m.MoveUp()
+
+	if got, want := m.Selected(), (ChannelSelectionMsg{Server: "libera", Channel: "#channel-29"}); got != want {
+		t.Fatalf("Selected() = %#v, want %#v", got, want)
+	}
+	if m.viewport.YOffset() == 0 {
+		t.Fatal("expected viewport to follow the cursor to the last channel")
+	}
+}
+
+func TestMoveDownWrapsToFirstBufferAndScrollsItIntoView(t *testing.T) {
+	m := newScrollableChannelsModel()
+	m = m.MoveUp()
+
+	m = m.MoveDown()
+
+	if got, want := m.Selected(), (ChannelSelectionMsg{Server: "libera"}); got != want {
+		t.Fatalf("Selected() = %#v, want %#v", got, want)
+	}
+	if got := m.viewport.YOffset(); got != 0 {
+		t.Fatalf("expected viewport to follow the cursor back to the first buffer, offset=%d", got)
+	}
+}
+
 func TestActivityUpdateRendersUnreadBadge(t *testing.T) {
 	m := newScrollableChannelsModel()
 
