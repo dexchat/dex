@@ -24,6 +24,8 @@ const (
 	// the user panel is better for the eyes
 	channelsPanelMaxWidth = 25
 	usersPanelMaxWidth    = 20
+	commandPaletteWidth   = 90
+	paletteScreenMargin   = 4
 	// channels right (1) + users left (1) + chat borders (2)
 	appVerticalBordersSize = 4
 )
@@ -191,8 +193,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msgTyped.Width
 		m.height = msgTyped.Height
 
-		// TODO: ideally palette width should be smaller than chat width. It might happen if the font size is too big
-		m.palette.SetSize(90, m.calculateChatHeight())
+		paletteWidth := min(commandPaletteWidth, max(1, msgTyped.Width-paletteScreenMargin))
+		m.palette.SetSize(paletteWidth, m.calculateChatHeight())
 
 		buf := m.getActiveBuffer()
 		buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())

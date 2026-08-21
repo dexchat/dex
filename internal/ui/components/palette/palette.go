@@ -23,17 +23,20 @@ const (
 	actionLinePaddingSize        = 1
 	maxVisibleActions            = 8
 	paletteVerticalFrameSize     = 6
+	scrollbarWidth               = 2
+	channelPickerWidth           = 62
 )
 
 type Model struct {
-	theme   styles.Theme
-	actions []action
-	cursor  int
-	width   int
-	height  int
-	visible bool
-	input   textinput.Model
-	keyMap  keybindings.KeyMap
+	theme         styles.Theme
+	actions       []action
+	cursor        int
+	width         int
+	height        int
+	visible       bool
+	channelPicker bool
+	input         textinput.Model
+	keyMap        keybindings.KeyMap
 }
 
 func New(theme styles.Theme) *Model {
@@ -103,8 +106,14 @@ func (m *Model) View() string {
 	}
 
 	filtered := m.filteredCommands()
+	layoutWidth := m.width
+	resultScrollbarWidth := 0
+	if m.channelPicker {
+		layoutWidth = min(layoutWidth, channelPickerWidth)
+		resultScrollbarWidth = scrollbarWidth
+	}
 
-	contentWidth := m.width - commandPaletteBoxPaddingSize*2
+	contentWidth := layoutWidth - commandPaletteBoxPaddingSize*2
 	bgStyle := lipgloss.NewStyle().
 		Background(m.theme.Colors.Base.Background).
 		Width(contentWidth)
@@ -113,34 +122,38 @@ func (m *Model) View() string {
 		MarginBottom(1).
 		Render(m.input.View())
 
-	var components []string
-	components = append(components, input)
-
 	rowCount := m.visibleRowCount()
 	start := visibleStart(m.cursor, len(filtered), rowCount)
 	end := min(start+rowCount, len(filtered))
+	rows := make([]string, 0, rowCount)
 	for i := start; i < end; i++ {
-		components = append(components, m.renderCommandLine(i, filtered[i]))
+		rows = append(rows, m.renderCommandLine(i, filtered[i], layoutWidth, resultScrollbarWidth))
 	}
 
 	if len(filtered) == 0 && m.input.Value() != "" {
-		noMatchStr := bgStyle.Align(lipgloss.Center).Render("  No matching actions")
-		components = append(components, noMatchStr)
+		noMatchStyle := bgStyle.Width(contentWidth - resultScrollbarWidth)
+		rows = append(rows, noMatchStyle.Align(lipgloss.Center).Render("  No matching actions"))
 	}
 
-	for len(components) < rowCount+1 {
-		components = append(components, bgStyle.Render(""))
+	emptyRowStyle := bgStyle.Width(contentWidth - resultScrollbarWidth)
+	for len(rows) < rowCount {
+		rows = append(rows, emptyRowStyle.Render(""))
 	}
-	components = components[:rowCount+1]
 
-	content := lipgloss.JoinVertical(lipgloss.Left, components...)
+	list := lipgloss.JoinVertical(lipgloss.Left, rows...)
+	results := list
+	if m.channelPicker {
+		scrollbar := m.renderScrollbar(start, len(filtered), rowCount)
+		results = lipgloss.JoinHorizontal(lipgloss.Top, list, scrollbar)
+	}
+	content := lipgloss.JoinVertical(lipgloss.Left, input, results)
 
 	commandPaletteBox := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder(), true).
 		BorderBackground(m.theme.Colors.Base.Background).
 		BorderForeground(m.theme.Colors.Palette.Border).
 		Background(m.theme.Colors.Base.Background).
-		Width(m.width).
+		Width(layoutWidth + resultScrollbarWidth).
 		Padding(commandPaletteBoxPaddingSize)
 
 	return commandPaletteBox.Render(content)
@@ -202,6 +215,7 @@ func (m *Model) ShowChannels(channels []Channel) {
 		})
 	}
 	m.visible = true
+	m.channelPicker = true
 	m.open()
 }
 
@@ -213,6 +227,7 @@ func (m *Model) open() {
 
 func (m *Model) close() {
 	m.visible = false
+	m.channelPicker = false
 	m.actions = defaultActions()
 	m.cursor = 0
 	m.input.Reset()
@@ -270,7 +285,7 @@ func (m *Model) filteredCommands() []action {
 	return filtered
 }
 
-func (m *Model) renderCommandLine(index int, cmd action) string {
+func (m *Model) renderCommandLine(index int, cmd action, width, resultScrollbarWidth int) string {
 	highlight := index == m.cursor
 
 	// Determine styles based on highlight state
@@ -283,7 +298,7 @@ func (m *Model) renderCommandLine(index int, cmd action) string {
 		accentColor = m.theme.Colors.Base.Background
 	}
 
-	descWidth := m.width - commandPaletteBoxPaddingSize*2 - nameMaxLen - actionLinePaddingSize*2 - keyMaxLen
+	descWidth := width - commandPaletteBoxPaddingSize*2 - nameMaxLen - actionLinePaddingSize*2 - keyMaxLen - resultScrollbarWidth
 	if descWidth < 10 {
 		descWidth = 10
 	}
@@ -304,11 +319,42 @@ func (m *Model) renderCommandLine(index int, cmd action) string {
 		Width(keyMaxLen).
 		Render(cmd.Keybinding.Help().Key)
 
-	// Join columns horizontally
 	actionLine := lipgloss.JoinHorizontal(lipgloss.Top, nameStr, descStr, keyStr)
-
 	return lipgloss.NewStyle().
 		Background(backgroundColor).
 		Padding(0, actionLinePaddingSize).
 		Render(actionLine)
+}
+
+func (m *Model) renderScrollbar(start, total, visible int) string {
+	thumbTop, thumbHeight, show := scrollbarThumb(start, total, visible)
+	rows := make([]string, visible)
+	for row := range visible {
+		rune := " "
+		color := m.theme.Colors.Base.Dimmed
+		if show {
+			rune = "│"
+			if row >= thumbTop && row < thumbTop+thumbHeight {
+				rune = "┃"
+				color = m.theme.Colors.Palette.Highlight
+			}
+		}
+		rows[row] = lipgloss.NewStyle().
+			Background(m.theme.Colors.Base.Background).
+			Foreground(color).
+			Render(" " + rune)
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, rows...)
+}
+
+func scrollbarThumb(start, total, visible int) (top, height int, show bool) {
+	if total <= visible || visible <= 0 {
+		return 0, 0, false
+	}
+
+	height = max(1, (visible*visible+total-1)/total)
+	travel := visible - height
+	maxStart := total - visible
+	top = (start*travel + maxStart/2) / maxStart
+	return top, height, true
 }
