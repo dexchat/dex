@@ -178,13 +178,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case palette.OpenChannelPickerMsg:
-		channelItems := make([]palette.Channel, 0, len(m.buffers))
-		for _, buf := range m.buffers {
-			if buf.Buffer != "" {
-				channelItems = append(channelItems, palette.Channel{Server: buf.Server, Name: buf.Buffer})
-			}
-		}
-		m.palette.ShowChannels(channelItems)
+		m.showChannelPicker()
 
 	case palette.ChannelSelectionMsg:
 		m.selectBuffer(msgTyped.Server, msgTyped.Channel, &cmds)
@@ -461,6 +455,16 @@ func (m *Model) selectBuffer(server, channel string, cmds *[]tea.Cmd) {
 	if historyCmd := m.requestHistoryLoad(buf); historyCmd != nil {
 		*cmds = append(*cmds, historyCmd)
 	}
+}
+
+func (m *Model) showChannelPicker() {
+	channelItems := make([]palette.Channel, 0, len(m.buffers))
+	for _, buf := range m.buffers {
+		if buf.Buffer != "" {
+			channelItems = append(channelItems, palette.Channel{Server: buf.Server, Name: buf.Buffer})
+		}
+	}
+	m.palette.ShowChannels(channelItems)
 }
 
 func (m *Model) calculateChatWidth() int {

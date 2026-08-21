@@ -2,6 +2,7 @@ package palette
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -61,6 +62,30 @@ func TestChannelPickerSelectsSortedChannel(t *testing.T) {
 	}
 }
 
+func TestChannelPickerUsesChannelSpecificPresentation(t *testing.T) {
+	m := New(styles.RosePineTheme())
+	m.SetSize(90, 12)
+	m.ShowChannels([]Channel{{Server: "libera", Name: "#go"}})
+
+	view := palettePlainText(m.View())
+	if !strings.Contains(view, "Search channels...") {
+		t.Fatalf("channel picker is missing its search placeholder:\n%s", view)
+	}
+
+	line := palettePlainText(m.renderChannelLine(0, action{Name: "#go", Description: "libera"}, channelPickerWidth))
+	channelPos := strings.Index(line, "#go")
+	serverPos := strings.Index(line, "libera")
+	if got, want := serverPos-channelPos, channelNameWidth+channelServerGapWidth; got != want {
+		t.Fatalf("server starts %d columns after channel, want %d: %q", got, want, line)
+	}
+
+	m.input.SetValue("missing")
+	view = palettePlainText(m.View())
+	if !strings.Contains(view, "No channels found") {
+		t.Fatalf("channel picker has the wrong empty state:\n%s", view)
+	}
+}
+
 func TestChannelPickerIsHeightBoundedAndFollowsCursor(t *testing.T) {
 	m := New(styles.RosePineTheme())
 	m.SetSize(64, 12)
@@ -75,7 +100,7 @@ func TestChannelPickerIsHeightBoundedAndFollowsCursor(t *testing.T) {
 	}
 	filtered := m.filteredCommands()
 	start := visibleStart(m.cursor, len(filtered), m.visibleRowCount())
-	line := m.renderCommandLine(start, filtered[start], channelPickerWidth, scrollbarWidth)
+	line := m.renderChannelLine(start, filtered[start], channelPickerWidth)
 	if got := lipgloss.Height(line); got != 1 {
 		t.Fatalf("command line height = %d, width = %d", got, lipgloss.Width(line))
 	}
@@ -133,4 +158,10 @@ func TestScrollbarThumbTracksVisibleWindow(t *testing.T) {
 			}
 		})
 	}
+}
+
+var paletteANSIPattern = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+func palettePlainText(s string) string {
+	return paletteANSIPattern.ReplaceAllString(s, "")
 }

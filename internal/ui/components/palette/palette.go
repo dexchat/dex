@@ -19,6 +19,8 @@ type Channel struct {
 const (
 	nameMaxLen                   = 18
 	keyMaxLen                    = 10
+	channelNameWidth             = 22
+	channelServerGapWidth        = 3
 	commandPaletteBoxPaddingSize = 1
 	actionLinePaddingSize        = 1
 	maxVisibleActions            = 8
@@ -48,6 +50,9 @@ func New(theme styles.Theme) *Model {
 	inputStyles := input.Styles()
 	inputStyles.Focused.Text = inputStyle
 	inputStyles.Blurred.Text = inputStyle
+	placeholderStyle := inputStyle.Foreground(theme.Colors.Base.Dimmed)
+	inputStyles.Focused.Placeholder = placeholderStyle
+	inputStyles.Blurred.Placeholder = placeholderStyle
 	input.SetStyles(inputStyles)
 
 	return &Model{
@@ -118,21 +123,31 @@ func (m *Model) View() string {
 		Background(m.theme.Colors.Base.Background).
 		Width(contentWidth)
 
+	inputModel := m.input
+	inputModel.SetWidth(max(1, contentWidth-lipgloss.Width(inputModel.Prompt)))
 	input := bgStyle.
 		MarginBottom(1).
-		Render(m.input.View())
+		Render(inputModel.View())
 
 	rowCount := m.visibleRowCount()
 	start := visibleStart(m.cursor, len(filtered), rowCount)
 	end := min(start+rowCount, len(filtered))
 	rows := make([]string, 0, rowCount)
 	for i := start; i < end; i++ {
-		rows = append(rows, m.renderCommandLine(i, filtered[i], layoutWidth, resultScrollbarWidth))
+		if m.channelPicker {
+			rows = append(rows, m.renderChannelLine(i, filtered[i], layoutWidth))
+		} else {
+			rows = append(rows, m.renderCommandLine(i, filtered[i], layoutWidth))
+		}
 	}
 
 	if len(filtered) == 0 && m.input.Value() != "" {
 		noMatchStyle := bgStyle.Width(contentWidth - resultScrollbarWidth)
-		rows = append(rows, noMatchStyle.Align(lipgloss.Center).Render("  No matching actions"))
+		noMatchText := "No matching actions"
+		if m.channelPicker {
+			noMatchText = "No channels found"
+		}
+		rows = append(rows, noMatchStyle.Align(lipgloss.Center).Render(noMatchText))
 	}
 
 	emptyRowStyle := bgStyle.Width(contentWidth - resultScrollbarWidth)
@@ -216,6 +231,7 @@ func (m *Model) ShowChannels(channels []Channel) {
 	}
 	m.visible = true
 	m.channelPicker = true
+	m.input.Placeholder = "Search channels..."
 	m.open()
 }
 
@@ -228,6 +244,7 @@ func (m *Model) open() {
 func (m *Model) close() {
 	m.visible = false
 	m.channelPicker = false
+	m.input.Placeholder = ""
 	m.actions = defaultActions()
 	m.cursor = 0
 	m.input.Reset()
@@ -285,7 +302,7 @@ func (m *Model) filteredCommands() []action {
 	return filtered
 }
 
-func (m *Model) renderCommandLine(index int, cmd action, width, resultScrollbarWidth int) string {
+func (m *Model) renderCommandLine(index int, cmd action, width int) string {
 	highlight := index == m.cursor
 
 	// Determine styles based on highlight state
@@ -298,7 +315,7 @@ func (m *Model) renderCommandLine(index int, cmd action, width, resultScrollbarW
 		accentColor = m.theme.Colors.Base.Background
 	}
 
-	descWidth := width - commandPaletteBoxPaddingSize*2 - nameMaxLen - actionLinePaddingSize*2 - keyMaxLen - resultScrollbarWidth
+	descWidth := width - commandPaletteBoxPaddingSize*2 - nameMaxLen - actionLinePaddingSize*2 - keyMaxLen
 	if descWidth < 10 {
 		descWidth = 10
 	}
@@ -324,6 +341,44 @@ func (m *Model) renderCommandLine(index int, cmd action, width, resultScrollbarW
 		Background(backgroundColor).
 		Padding(0, actionLinePaddingSize).
 		Render(actionLine)
+}
+
+func (m *Model) renderChannelLine(index int, channel action, width int) string {
+	highlight := index == m.cursor
+	backgroundColor := m.theme.Colors.Base.Background
+	channelColor := m.theme.Colors.Base.Accent
+	serverColor := m.theme.Colors.Base.Dimmed
+	if highlight {
+		backgroundColor = m.theme.Colors.Palette.Highlight
+		channelColor = m.theme.Colors.Base.Background
+		serverColor = m.theme.Colors.Base.Background
+	}
+
+	serverWidth := width - commandPaletteBoxPaddingSize*2 - scrollbarWidth - actionLinePaddingSize*2 - channelNameWidth - channelServerGapWidth
+	if serverWidth < 1 {
+		serverWidth = 1
+	}
+
+	channelStr := lipgloss.NewStyle().
+		Background(backgroundColor).
+		Foreground(channelColor).
+		Width(channelNameWidth).
+		Render(channel.Name)
+	gap := lipgloss.NewStyle().
+		Background(backgroundColor).
+		Width(channelServerGapWidth).
+		Render(" ")
+	serverStr := lipgloss.NewStyle().
+		Background(backgroundColor).
+		Foreground(serverColor).
+		Width(serverWidth).
+		Render(channel.Description)
+
+	line := lipgloss.JoinHorizontal(lipgloss.Top, channelStr, gap, serverStr)
+	return lipgloss.NewStyle().
+		Background(backgroundColor).
+		Padding(0, actionLinePaddingSize).
+		Render(line)
 }
 
 func (m *Model) renderScrollbar(start, total, visible int) string {

@@ -54,6 +54,21 @@ func TestPaletteChannelSelectionUpdatesActiveBufferAndSidebarCursor(t *testing.T
 	}
 }
 
+func TestGoToChannelKeybindingOpensChannelPickerDirectly(t *testing.T) {
+	m := newActivityTestModel()
+	_, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
+
+	_, _ = m.Update(tea.KeyPressMsg{Code: 'g', Mod: tea.ModCtrl})
+
+	if !m.palette.IsVisible() {
+		t.Fatal("ctrl+g should open the channel picker")
+	}
+	view := plainText(m.palette.View())
+	if !strings.Contains(view, "Search channels...") || !strings.Contains(view, "#go") {
+		t.Fatalf("ctrl+g opened the wrong palette view:\n%s", view)
+	}
+}
+
 func TestSelfPartRemovesActiveChannelAndSelectsServer(t *testing.T) {
 	m := newActivityTestModel()
 	channelKey := makeBufferKey("libera", "#go")

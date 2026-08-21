@@ -13,6 +13,10 @@ func (m *Model) handleKeybindings(msg tea.KeyPressMsg) tea.Msg {
 		m.palette.Toggle()
 		return nil
 	}
+	if key.Matches(msg, kb.GoToChannel) {
+		m.showChannelPicker()
+		return nil
+	}
 
 	// Handling palette keys here ended up needing flags to conditionally update the palette
 	// and I couldn't find a good/working way to do it
