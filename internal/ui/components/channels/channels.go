@@ -28,10 +28,11 @@ type ChannelNameUpdateMsg struct {
 }
 
 type ActivityUpdateMsg struct {
-	Server       string
-	Buffer       string
-	UnreadCount  int
-	MentionCount int
+	Server            string
+	Buffer            string
+	UnreadCount       int
+	NotificationCount int
+	MentionCount      int
 }
 
 // NewBufferMsg is a custom message type used to notify this component to add a new buffer in the tree
@@ -47,11 +48,12 @@ type RemoveBufferMsg struct {
 }
 
 type node struct {
-	name         string
-	isServer     bool
-	parent       string
-	mentionCount int
-	unreadCount  int
+	name              string
+	isServer          bool
+	parent            string
+	mentionCount      int
+	notificationCount int
+	unreadCount       int
 }
 
 type Model struct {
@@ -62,7 +64,10 @@ type Model struct {
 
 	theme styles.Theme
 
-	servers []*config.Server
+	servers            []*config.Server
+	notificationNotice string
+	notificationServer string
+	notificationBuffer string
 }
 
 func New(theme styles.Theme, servers []*config.Server) Model {
@@ -118,6 +123,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		for i, n := range m.nodes {
 			if !n.isServer && strings.EqualFold(n.parent, msg.Server) && strings.EqualFold(n.name, msg.Buffer) {
 				m.nodes[i].unreadCount = msg.UnreadCount
+				m.nodes[i].notificationCount = msg.NotificationCount
 				m.nodes[i].mentionCount = msg.MentionCount
 				break
 			}
@@ -186,7 +192,7 @@ func (m Model) SetSize(width, height int) Model {
 		contentWidth = 0
 	}
 
-	helpView := renderFooter(contentWidth, m.theme)
+	helpView := renderFooter(contentWidth, m.notificationNotice, m.theme)
 	helpHeight := lipgloss.Height(helpView)
 	listHeight := height - m.theme.Styles.Sidebar.GetVerticalFrameSize() - helpHeight
 	if listHeight < 0 {
@@ -217,6 +223,8 @@ func (m Model) updateContent() Model {
 			itemStyle = m.theme.Styles.ServerItem
 		} else if node.mentionCount > 0 {
 			itemStyle = m.theme.Styles.MentionedItem
+		} else if node.notificationCount > 0 {
+			itemStyle = m.theme.Styles.NotifiedItem
 		} else if node.unreadCount > 0 {
 			itemStyle = m.theme.Styles.UnreadItem
 		}
@@ -263,11 +271,44 @@ func (m Model) renderActivityBadge(node node) string {
 	switch {
 	case node.mentionCount > 0:
 		return m.activityBadge("@"+formatActivityCount(node.mentionCount), m.theme.Styles.MentionedItem)
+	case node.notificationCount > 0:
+		return m.notificationBadge(formatActivityCount(node.notificationCount))
 	case node.unreadCount > 0:
 		return m.activityBadge(formatActivityCount(node.unreadCount), m.theme.Styles.UnreadItem)
 	default:
 		return ""
 	}
+}
+
+func (m Model) notificationBadge(text string) string {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.Colors.Base.Background).
+		Background(m.theme.Colors.Sidebar.Notification).
+		Bold(true).
+		PaddingLeft(1).
+		PaddingRight(1).
+		Render(text)
+}
+
+func (m Model) ShowNotificationNotice(server, buffer, sender string) Model {
+	m.notificationNotice = server + "/" + buffer + " · " + sender
+	m.notificationServer = server
+	m.notificationBuffer = buffer
+	return m
+}
+
+func (m Model) ClearNotificationNotice() Model {
+	m.notificationNotice = ""
+	m.notificationServer = ""
+	m.notificationBuffer = ""
+	return m
+}
+
+func (m Model) ClearNotificationNoticeFor(server, buffer string) Model {
+	if strings.EqualFold(m.notificationServer, server) && strings.EqualFold(m.notificationBuffer, buffer) {
+		return m.ClearNotificationNotice()
+	}
+	return m
 }
 
 func (m Model) activityBadge(text string, style lipgloss.Style) string {
@@ -310,7 +351,7 @@ func (m Model) View(width, height int) string {
 		contentWidth = 0
 	}
 
-	helpView := renderFooter(contentWidth, m.theme)
+	helpView := renderFooter(contentWidth, m.notificationNotice, m.theme)
 	helpHeight := lipgloss.Height(helpView)
 	listHeight := height - m.theme.Styles.Sidebar.GetVerticalFrameSize() - helpHeight
 	if listHeight < 0 {

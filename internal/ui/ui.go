@@ -74,8 +74,9 @@ type Model struct {
 	palette      *palette.Model
 	flushPending bool
 
-	lastSoundAt time.Time
-	now         func() time.Time
+	lastSoundAt               time.Time
+	notificationNoticeVersion uint64
+	now                       func() time.Time
 }
 
 func New(cfg *config.Config) *Model {
@@ -327,6 +328,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case flushChatMsg:
 		m.flushAllChats()
+
+	case notificationNoticeExpiredMsg:
+		if msgTyped.version == m.notificationNoticeVersion {
+			m.channels = m.channels.ClearNotificationNotice()
+		}
 	}
 
 	// Write characters in the palette input bar if it's open, instead of chat input
@@ -445,6 +451,7 @@ func (m *Model) selectBuffer(server, channel string, cmds *[]tea.Cmd) {
 
 	m.activeBuffer = key
 	m.clearBufferActivity(key)
+	m.channels = m.channels.ClearNotificationNoticeFor(server, channel)
 	m.channels, _ = m.channels.Select(server, channel)
 	buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 	buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())

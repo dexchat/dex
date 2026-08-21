@@ -6,7 +6,7 @@ import (
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
-func renderFooter(width int, theme styles.Theme) string {
+func renderFooter(width int, notificationNotice string, theme styles.Theme) string {
 	var footer string
 	helpKeybinding := keybindings.DefaultKeyMap().TogglePalette
 	quitKeybinding := keybindings.DefaultKeyMap().Quit
@@ -23,6 +23,11 @@ func renderFooter(width int, theme styles.Theme) string {
 			Render(" again to exit")
 
 		footer = styledKey + styledDesc
+	} else if notificationNotice != "" {
+		footer = lipgloss.NewStyle().
+			Foreground(theme.Colors.Sidebar.Notification).
+			Bold(true).
+			Render(truncateWidth(notificationNotice, width))
 	} else {
 		styledKey := defaultStyle.
 			Foreground(theme.Colors.Base.Dimmed).

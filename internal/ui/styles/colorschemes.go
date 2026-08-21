@@ -16,6 +16,7 @@ func AyuDarkTheme() Theme {
 
 	theme.Colors.Sidebar.Server = lipgloss.Color("#59C2FF")
 	theme.Colors.Sidebar.Unread = lipgloss.Color("#73D0FF")
+	theme.Colors.Sidebar.Notification = lipgloss.Color("#FFB454")
 	theme.Colors.Sidebar.Mention = lipgloss.Color("#F07178")
 	theme.Colors.Sidebar.Selection = lipgloss.Color("#253340")
 
@@ -56,6 +57,11 @@ func AyuDarkTheme() Theme {
 		Background(theme.Colors.Base.Background).
 		Foreground(theme.Colors.Sidebar.Unread)
 
+	theme.Styles.NotifiedItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Notification).
+		Bold(true)
+
 	theme.Styles.MentionedItem = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Background).
 		Foreground(theme.Colors.Sidebar.Mention).
@@ -94,6 +100,7 @@ func RosePineTheme() Theme {
 
 	theme.Colors.Sidebar.Server = lipgloss.Color("#C4A7E7")
 	theme.Colors.Sidebar.Unread = lipgloss.Color("#F6C177")
+	theme.Colors.Sidebar.Notification = lipgloss.Color("#F6C177")
 	theme.Colors.Sidebar.Mention = lipgloss.Color("#EB6F92")
 	theme.Colors.Sidebar.Selection = lipgloss.Color("#26233A")
 
@@ -133,6 +140,11 @@ func RosePineTheme() Theme {
 	theme.Styles.UnreadItem = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Background).
 		Foreground(theme.Colors.Sidebar.Unread)
+
+	theme.Styles.NotifiedItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Notification).
+		Bold(true)
 
 	theme.Styles.MentionedItem = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Background).

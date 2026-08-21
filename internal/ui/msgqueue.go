@@ -22,6 +22,12 @@ const maxPlaybackMessagesPerUpdate = 50
 
 const maxNotificationAge = 30 * time.Second
 
+const notificationNoticeDuration = 4 * time.Second
+
+type notificationNoticeExpiredMsg struct {
+	version uint64
+}
+
 func playbackChunk(messages irc.BufferNewMessageBatchMsg) (current, remaining irc.BufferNewMessageBatchMsg) {
 	if len(messages) <= maxPlaybackMessagesPerUpdate {
 		return messages, nil
@@ -88,10 +94,12 @@ func (m *Model) processIncomingMessage(msg irc.BufferNewMessageMsg) tea.Cmd {
 			Type:      msg.Type,
 		})
 		m.updateActivityForMessage(buf, msg)
+		notificationNoticeCmd := m.showNotificationNotice(buf, msg)
 
 		if m.shouldSoundNotification(buf, msg) {
 			notificationCmd = m.soundNotificationCmd()
 		}
+		return tea.Batch(createCmd, notificationCmd, notificationNoticeCmd)
 	}
 
 	return tea.Batch(createCmd, notificationCmd)
@@ -109,6 +117,9 @@ func (m *Model) updateActivityForMessage(buf *Buffer, msg irc.BufferNewMessageMs
 	}
 
 	buf.UnreadCount++
+	if m.config.NotifiesChannel(buf.Server, msg.Buffer) {
+		buf.NotificationCount++
+	}
 	if messageMentionsNick(msg.Text, buf.Chat.Nickname()) {
 		buf.MentionCount++
 	}
@@ -126,6 +137,7 @@ func (m *Model) clearBufferActivity(key BufferKey) {
 	}
 
 	buf.UnreadCount = 0
+	buf.NotificationCount = 0
 	buf.MentionCount = 0
 	m.updateChannelActivity(buf)
 }
@@ -172,19 +184,39 @@ func (b *Buffer) recordLatestMessage(entry history.LogEntry) {
 func (m *Model) updateChannelActivity(buf *Buffer) {
 	settings := m.badgeSettingsForServer(buf.Server)
 	unreadCount := buf.UnreadCount
+	notificationCount := buf.NotificationCount
 	mentionCount := buf.MentionCount
 	if !settings.Unread {
 		unreadCount = 0
+		notificationCount = 0
 	}
 	if !settings.Mention {
 		mentionCount = 0
 	}
 
 	m.channels, _ = m.channels.Update(channels.ActivityUpdateMsg{
-		Server:       buf.Server,
-		Buffer:       buf.Buffer,
-		UnreadCount:  unreadCount,
-		MentionCount: mentionCount,
+		Server:            buf.Server,
+		Buffer:            buf.Buffer,
+		UnreadCount:       unreadCount,
+		NotificationCount: notificationCount,
+		MentionCount:      mentionCount,
+	})
+}
+
+func (m *Model) showNotificationNotice(buf *Buffer, msg irc.BufferNewMessageMsg) tea.Cmd {
+	if msg.Type != irc.MessageTypeNormal || buf.Key == m.activeBuffer ||
+		!m.config.NotifiesChannel(buf.Server, msg.Buffer) {
+		return nil
+	}
+	if !msg.Timestamp.IsZero() && m.now().Sub(msg.Timestamp) > maxNotificationAge {
+		return nil
+	}
+
+	m.notificationNoticeVersion++
+	version := m.notificationNoticeVersion
+	m.channels = m.channels.ShowNotificationNotice(buf.Server, msg.Buffer, msg.From)
+	return tea.Tick(notificationNoticeDuration, func(_ time.Time) tea.Msg {
+		return notificationNoticeExpiredMsg{version: version}
 	})
 }
 

@@ -161,6 +161,53 @@ func TestActivityUpdateRendersMentionBadgeBeforeUnread(t *testing.T) {
 	}
 }
 
+func TestActivityUpdateRendersNotificationAsNumericBadge(t *testing.T) {
+	m := newScrollableChannelsModel()
+
+	m, _ = m.Update(ActivityUpdateMsg{
+		Server:            "libera",
+		Buffer:            "#channel-00",
+		UnreadCount:       4,
+		NotificationCount: 2,
+	})
+
+	badge := m.renderActivityBadge(m.nodes[1])
+	if got := lipgloss.NewStyle().Render(badge); !strings.Contains(got, "2") {
+		t.Fatalf("expected notification count in badge, got %q", got)
+	}
+	if strings.Contains(badge, "!") || strings.Contains(badge, "@") {
+		t.Fatalf("notification badge should not use a prefix, got %q", badge)
+	}
+}
+
+func TestNotificationNoticeReplacesFooter(t *testing.T) {
+	m := newScrollableChannelsModel().ShowNotificationNotice("libera", "#channel-00", "alice")
+
+	view := m.View(25, 10)
+	if !strings.Contains(view, "libera/#channel-00") {
+		t.Fatalf("expected notification source in footer, got:\n%s", view)
+	}
+
+	m = m.ClearNotificationNotice()
+	if view := m.View(25, 10); strings.Contains(view, "libera/#channel-00") {
+		t.Fatalf("expected notification footer to clear, got:\n%s", view)
+	}
+}
+
+func TestOpeningNotificationSourceClearsItsNoticeOnly(t *testing.T) {
+	m := newScrollableChannelsModel().ShowNotificationNotice("libera", "#channel-00", "alice")
+
+	m = m.ClearNotificationNoticeFor("libera", "#channel-01")
+	if view := m.View(25, 10); !strings.Contains(view, "libera/#channel-00") {
+		t.Fatal("opening another channel cleared the notification notice")
+	}
+
+	m = m.ClearNotificationNoticeFor("LIBERA", "#CHANNEL-00")
+	if view := m.View(25, 10); strings.Contains(view, "libera/#channel-00") {
+		t.Fatal("opening the notification source did not clear its notice")
+	}
+}
+
 func TestActivityBadgeCapsLargeCounts(t *testing.T) {
 	m := newScrollableChannelsModel()
 

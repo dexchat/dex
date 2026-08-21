@@ -38,8 +38,9 @@ type Buffer struct {
 	historyLoading bool
 	latestMessage  history.ReadMarker
 
-	UnreadCount  int
-	MentionCount int
+	UnreadCount       int
+	NotificationCount int
+	MentionCount      int
 }
 
 func (b *Buffer) isValid() bool {

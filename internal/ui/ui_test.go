@@ -282,6 +282,43 @@ func TestInactiveBufferMentionIncrementsMentionActivity(t *testing.T) {
 	}
 }
 
+func TestConfiguredChannelMessageShowsPersistentAndTemporaryNotificationState(t *testing.T) {
+	m := newActivityTestModel()
+	m.config.Servers[0].NotifyChannels = []string{"#random"}
+
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "deployment finished",
+	})
+
+	buf := m.buffers[makeBufferKey("libera", "#random")]
+	if got, want := buf.NotificationCount, 1; got != want {
+		t.Fatalf("NotificationCount = %d, want %d", got, want)
+	}
+	view := plainText(m.channels.View(channelsPanelMaxWidth, 20))
+	if !strings.Contains(view, "libera/#random · alice") {
+		t.Fatalf("expected notification source in sidebar footer, got:\n%s", view)
+	}
+
+	version := m.notificationNoticeVersion
+	_, _ = m.Update(notificationNoticeExpiredMsg{version: version - 1})
+	if view := plainText(m.channels.View(channelsPanelMaxWidth, 20)); !strings.Contains(view, "libera/#random · alice") {
+		t.Fatal("an older timer cleared the current notification notice")
+	}
+	_, _ = m.Update(notificationNoticeExpiredMsg{version: version})
+	if view := plainText(m.channels.View(channelsPanelMaxWidth, 20)); strings.Contains(view, "libera/#random · alice") {
+		t.Fatal("notification notice did not clear after its current timer expired")
+	}
+
+	m.clearBufferActivity(buf.Key)
+	if got := buf.NotificationCount; got != 0 {
+		t.Fatalf("NotificationCount after clearing = %d, want 0", got)
+	}
+}
+
 func TestActiveBufferMessagesAndOwnEchoesDoNotIncrementActivity(t *testing.T) {
 	m := newActivityTestModel()
 	m.activeBuffer = makeBufferKey("libera", "#random")

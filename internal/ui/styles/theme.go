@@ -26,10 +26,11 @@ type Colors struct {
 	}
 
 	Sidebar struct {
-		Server    Color
-		Unread    Color
-		Mention   Color
-		Selection Color
+		Server       Color
+		Unread       Color
+		Notification Color
+		Mention      Color
+		Selection    Color
 	}
 
 	Chat struct {
@@ -54,6 +55,7 @@ type Styles struct {
 	App           lipgloss.Style
 	Sidebar       lipgloss.Style
 	UnreadItem    lipgloss.Style
+	NotifiedItem  lipgloss.Style
 	MentionedItem lipgloss.Style
 	ServerItem    lipgloss.Style
 	ChatArea      lipgloss.Style
