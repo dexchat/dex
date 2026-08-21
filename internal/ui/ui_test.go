@@ -319,6 +319,31 @@ func TestConfiguredChannelMessageShowsPersistentAndTemporaryNotificationState(t 
 	}
 }
 
+func TestAttentionPulseIncludesMentionsOutsideNotificationChannels(t *testing.T) {
+	m := newActivityTestModel()
+	buf := m.buffers[makeBufferKey("libera", "#random")]
+
+	cmd := m.startAttentionPulse(buf, irc.BufferNewMessageMsg{
+		Buffer:    "#random",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "dexuser: can you check this?",
+	})
+	if cmd == nil {
+		t.Fatal("expected a mention to start the attention pulse")
+	}
+
+	cmd = m.startAttentionPulse(buf, irc.BufferNewMessageMsg{
+		Buffer:    "#random",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "ordinary message",
+	})
+	if cmd != nil {
+		t.Fatal("ordinary messages outside notify_channels should not pulse")
+	}
+}
+
 func TestActiveBufferMessagesAndOwnEchoesDoNotIncrementActivity(t *testing.T) {
 	m := newActivityTestModel()
 	m.activeBuffer = makeBufferKey("libera", "#random")
@@ -916,18 +941,27 @@ func TestProcessIncomingOldMentionDoesNotReturnBell(t *testing.T) {
 
 func assertBellCommand(t *testing.T, cmd tea.Cmd) {
 	t.Helper()
+	if !commandContainsBell(cmd) {
+		t.Fatal("expected command batch to contain a terminal bell")
+	}
+}
+
+func commandContainsBell(cmd tea.Cmd) bool {
 	if cmd == nil {
-		t.Fatal("expected bell command, got nil")
+		return false
 	}
 
-	result := cmd()
-	msg, ok := result.(tea.RawMsg)
-	if !ok {
-		t.Fatalf("command returned %T, want tea.RawMsg", result)
+	switch msg := cmd().(type) {
+	case tea.RawMsg:
+		return msg.Msg == "\a"
+	case tea.BatchMsg:
+		for _, batchedCmd := range msg {
+			if commandContainsBell(batchedCmd) {
+				return true
+			}
+		}
 	}
-	if got, want := msg.Msg, "\a"; got != want {
-		t.Fatalf("RawMsg.Msg = %q, want %q", got, want)
-	}
+	return false
 }
 
 func newActivityTestModel() *Model {

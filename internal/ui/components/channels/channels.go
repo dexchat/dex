@@ -257,11 +257,11 @@ func (m Model) updateContent() Model {
 			itemStyle = m.theme.Styles.MentionedItem
 		} else if node.notificationCount > 0 {
 			itemStyle = m.theme.Styles.NotifiedItem
-			if node.notificationPulseDimmed {
-				itemStyle = itemStyle.Foreground(m.theme.Colors.Base.Dimmed)
-			}
 		} else if node.unreadCount > 0 {
 			itemStyle = m.theme.Styles.UnreadItem
+		}
+		if !node.isServer && node.notificationPulseDimmed {
+			itemStyle = itemStyle.Foreground(m.theme.Colors.Base.Dimmed)
 		}
 
 		if i == m.cursor {

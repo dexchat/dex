@@ -210,6 +210,13 @@ func TestOpeningNotificationSourceClearsItsNoticeOnly(t *testing.T) {
 
 func TestNotificationPulseIsBoundedAndIgnoresOlderGenerations(t *testing.T) {
 	m := newScrollableChannelsModel()
+	m, _ = m.Update(ActivityUpdateMsg{
+		Server:       "libera",
+		Buffer:       "#channel-00",
+		UnreadCount:  1,
+		MentionCount: 1,
+	})
+	strongView := m.viewport.GetContent()
 
 	var cmd tea.Cmd
 	m, cmd = m.StartNotificationPulse("libera", "#channel-00")
@@ -219,6 +226,9 @@ func TestNotificationPulseIsBoundedAndIgnoresOlderGenerations(t *testing.T) {
 	node := m.nodes[1]
 	if !node.notificationPulseDimmed {
 		t.Fatal("expected notification pulse to begin in its dimmed phase")
+	}
+	if dimmedView := m.viewport.GetContent(); dimmedView == strongView {
+		t.Fatal("expected a mention pulse to change the rendered channel name")
 	}
 
 	m, _ = m.Update(notificationPulseTickMsg{
@@ -242,6 +252,9 @@ func TestNotificationPulseIsBoundedAndIgnoresOlderGenerations(t *testing.T) {
 	}
 	if m.nodes[1].notificationPulseDimmed {
 		t.Fatal("expected notification pulse to finish in its persistent strong state")
+	}
+	if finalView := m.viewport.GetContent(); finalView != strongView {
+		t.Fatal("expected mention pulse to restore its persistent mention style")
 	}
 }
 

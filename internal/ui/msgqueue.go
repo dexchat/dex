@@ -95,11 +95,12 @@ func (m *Model) processIncomingMessage(msg irc.BufferNewMessageMsg) tea.Cmd {
 		})
 		m.updateActivityForMessage(buf, msg)
 		notificationNoticeCmd := m.showNotificationNotice(buf, msg)
+		attentionPulseCmd := m.startAttentionPulse(buf, msg)
 
 		if m.shouldSoundNotification(buf, msg) {
 			notificationCmd = m.soundNotificationCmd()
 		}
-		return tea.Batch(createCmd, notificationCmd, notificationNoticeCmd)
+		return tea.Batch(createCmd, notificationCmd, notificationNoticeCmd, attentionPulseCmd)
 	}
 
 	return tea.Batch(createCmd, notificationCmd)
@@ -215,12 +216,26 @@ func (m *Model) showNotificationNotice(buf *Buffer, msg irc.BufferNewMessageMsg)
 	m.notificationNoticeVersion++
 	version := m.notificationNoticeVersion
 	m.channels = m.channels.ShowNotificationNotice(buf.Server, msg.Buffer, msg.From)
-	var pulseCmd tea.Cmd
-	m.channels, pulseCmd = m.channels.StartNotificationPulse(buf.Server, msg.Buffer)
-	expiryCmd := tea.Tick(notificationNoticeDuration, func(_ time.Time) tea.Msg {
+	return tea.Tick(notificationNoticeDuration, func(_ time.Time) tea.Msg {
 		return notificationNoticeExpiredMsg{version: version}
 	})
-	return tea.Batch(expiryCmd, pulseCmd)
+}
+
+func (m *Model) startAttentionPulse(buf *Buffer, msg irc.BufferNewMessageMsg) tea.Cmd {
+	if msg.Type != irc.MessageTypeNormal || buf.Key == m.activeBuffer {
+		return nil
+	}
+	if !msg.Timestamp.IsZero() && m.now().Sub(msg.Timestamp) > maxNotificationAge {
+		return nil
+	}
+	if !m.config.NotifiesChannel(buf.Server, msg.Buffer) &&
+		!messageMentionsNick(msg.Text, buf.Chat.Nickname()) {
+		return nil
+	}
+
+	var cmd tea.Cmd
+	m.channels, cmd = m.channels.StartNotificationPulse(buf.Server, msg.Buffer)
+	return cmd
 }
 
 func (m *Model) badgeSettingsForServer(serverName string) config.BadgeSettings {
