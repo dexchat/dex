@@ -109,6 +109,37 @@ func TestListWithTooManyArgumentsShowsUsage(t *testing.T) {
 	}
 }
 
+func TestMsgCreatesAndSelectsPrivateBuffer(t *testing.T) {
+	m := newActivityTestModel()
+	serverBuffer := m.getActiveBuffer()
+
+	_, _ = m.Update(chat.SendMessageMsg{Text: "/msg Alice hello there"})
+
+	privateKey := makeBufferKey(serverBuffer.Server, "Alice")
+	privateBuffer, exists := m.buffers[privateKey]
+	if !exists {
+		t.Fatal("/msg should create a private buffer")
+	}
+	if got, want := m.activeBuffer, privateKey; got != want {
+		t.Fatalf("activeBuffer = %q, want %q", got, want)
+	}
+	if view := plainText(privateBuffer.Chat.View()); !strings.Contains(view, "hello there") {
+		t.Fatalf("private buffer should contain the outgoing message:\n%s", view)
+	}
+}
+
+func TestMsgWithoutTargetOrMessageShowsUsage(t *testing.T) {
+	m := newActivityTestModel()
+	active := m.getActiveBuffer()
+	active.Chat.SetSize(80, 10)
+
+	_, _ = m.Update(chat.SendMessageMsg{Text: "/msg Alice"})
+
+	if view := plainText(active.Chat.View()); !strings.Contains(view, "usage: /msg <user> <message>") {
+		t.Fatalf("missing /msg usage error:\n%s", view)
+	}
+}
+
 func TestPaneForMouseWheelIgnoresNonWheelMouse(t *testing.T) {
 	got := paneForMouseWheel(tea.MouseClickMsg{
 		X:      0,

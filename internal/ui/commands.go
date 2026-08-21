@@ -17,6 +17,8 @@ func (m *Model) handleCommand(buffer *Buffer, command commands.Command) {
 		m.handleLeaveCommand(buffer, command.Args)
 	case "list":
 		m.handleListCommand(buffer, command.Args)
+	case "msg":
+		m.handleMsgCommand(buffer, command.Args)
 	default:
 		m.addCommandError(buffer, "unknown command: /"+command.Name)
 	}
@@ -55,6 +57,42 @@ func (m *Model) handleListCommand(buffer *Buffer, args []string) {
 	}
 	if m.ircClientManager != nil {
 		go m.ircClientManager.List(buffer.Server, channel)
+	}
+}
+
+func (m *Model) handleMsgCommand(buffer *Buffer, args []string) {
+	if len(args) < 2 {
+		m.addCommandError(buffer, "usage: /msg <user> <message>")
+		return
+	}
+
+	target := args[0]
+	message := strings.Join(args[1:], " ")
+	privateBuffer, createCmd := m.getOrCreateBuffer(buffer.Server, target)
+	if privateBuffer == nil {
+		return
+	}
+	if createCmd != nil {
+		m.channels, _ = m.channels.Update(createCmd())
+	}
+
+	// A /msg starts a private conversation immediately. Unlike /join, no
+	// server event is needed to discover this buffer.
+	m.activeBuffer = privateBuffer.Key
+	m.clearBufferActivity(privateBuffer.Key)
+	privateBuffer.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
+	if m.directMessages.Add(buffer.Server, target) {
+		m.directMessagesDirty = true
+	}
+
+	now := time.Now()
+	privateBuffer.Chat.AddMessage(chat.Message{
+		Timestamp: now,
+		Username:  privateBuffer.Chat.Nickname(),
+		Text:      message,
+	})
+	if m.ircClientManager != nil {
+		go m.ircClientManager.Send(buffer.Server, target, message)
 	}
 }
 

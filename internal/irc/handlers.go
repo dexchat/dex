@@ -139,9 +139,10 @@ func (c *Client) onPrivmsg(client *girc.Client, e girc.Event) {
 
 	target := e.Params[0]
 	directMessage := !girc.IsValidChannel(target)
+	isSelf := e.Source.ID() == client.GetID()
 
 	// For PMs, use sender nick as the buffer identifier
-	if directMessage {
+	if directMessage && !isSelf {
 		target = e.Source.Name
 	}
 
@@ -152,7 +153,7 @@ func (c *Client) onPrivmsg(client *girc.Client, e girc.Event) {
 	}
 
 	ownEcho := false
-	if e.Source.ID() == client.GetID() {
+	if isSelf {
 		if _, pending := c.pendingMessages.LoadAndDelete(pendingMessageKey(c.serverName, target, e.Last())); pending {
 			ownEcho = true
 		}

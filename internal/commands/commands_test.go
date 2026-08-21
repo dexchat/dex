@@ -53,6 +53,12 @@ func TestParse(t *testing.T) {
 			isCommand: true,
 		},
 		{
+			name:      "private message",
+			input:     "/msg Alice hello there",
+			want:      Command{Name: "msg", Args: []string{"Alice", "hello", "there"}},
+			isCommand: true,
+		},
+		{
 			name:      "unknown slash command",
 			input:     "/unknown value",
 			want:      Command{Name: "unknown", Args: []string{"value"}},

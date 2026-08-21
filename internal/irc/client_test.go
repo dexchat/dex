@@ -324,6 +324,33 @@ func TestPrivmsgFromSelfConsumesPendingMessage(t *testing.T) {
 	}
 }
 
+func TestDirectPrivmsgFromSelfUsesRecipientBuffer(t *testing.T) {
+	client := NewClient("libera", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "johnbogle",
+	}, nil)
+	client.flushPending = true
+	client.pendingMessages.Store(pendingMessageKey("libera", "alice", "hello alice"), struct{}{})
+
+	client.onPrivmsg(client.Client, girc.Event{
+		Command: girc.PRIVMSG,
+		Source:  girc.ParseSource("johnbogle!jdex@example.test"),
+		Params:  []string{"alice", "hello alice"},
+	})
+
+	if len(client.messageQueue) != 1 {
+		t.Fatalf("expected one queued message, got %d", len(client.messageQueue))
+	}
+	msg := client.messageQueue[0]
+	if msg.Buffer != "alice" {
+		t.Fatalf("direct self-echo buffer = %q, want alice", msg.Buffer)
+	}
+	if !msg.DirectMessage || !msg.OwnEcho {
+		t.Fatalf("direct self-echo = %+v, want DirectMessage and OwnEcho", msg)
+	}
+}
+
 func TestUserChannelSnapshotTracksAndForgetsMembership(t *testing.T) {
 	client := NewClient("libera", &config.Server{
 		Address:  "irc.example.test",
