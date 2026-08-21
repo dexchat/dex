@@ -208,6 +208,43 @@ func TestOpeningNotificationSourceClearsItsNoticeOnly(t *testing.T) {
 	}
 }
 
+func TestNotificationPulseIsBoundedAndIgnoresOlderGenerations(t *testing.T) {
+	m := newScrollableChannelsModel()
+
+	var cmd tea.Cmd
+	m, cmd = m.StartNotificationPulse("libera", "#channel-00")
+	if cmd == nil {
+		t.Fatal("expected notification pulse to schedule a tick")
+	}
+	node := m.nodes[1]
+	if !node.notificationPulseDimmed {
+		t.Fatal("expected notification pulse to begin in its dimmed phase")
+	}
+
+	m, _ = m.Update(notificationPulseTickMsg{
+		server:     "libera",
+		buffer:     "#channel-00",
+		generation: node.notificationPulseGeneration - 1,
+		remaining:  1,
+	})
+	if !m.nodes[1].notificationPulseDimmed {
+		t.Fatal("an older pulse generation changed the current animation")
+	}
+
+	m, cmd = m.Update(notificationPulseTickMsg{
+		server:     "libera",
+		buffer:     "#channel-00",
+		generation: node.notificationPulseGeneration,
+		remaining:  1,
+	})
+	if cmd != nil {
+		t.Fatal("expected the last pulse tick not to schedule another tick")
+	}
+	if m.nodes[1].notificationPulseDimmed {
+		t.Fatal("expected notification pulse to finish in its persistent strong state")
+	}
+}
+
 func TestActivityBadgeCapsLargeCounts(t *testing.T) {
 	m := newScrollableChannelsModel()
 

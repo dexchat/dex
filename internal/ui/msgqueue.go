@@ -215,9 +215,12 @@ func (m *Model) showNotificationNotice(buf *Buffer, msg irc.BufferNewMessageMsg)
 	m.notificationNoticeVersion++
 	version := m.notificationNoticeVersion
 	m.channels = m.channels.ShowNotificationNotice(buf.Server, msg.Buffer, msg.From)
-	return tea.Tick(notificationNoticeDuration, func(_ time.Time) tea.Msg {
+	var pulseCmd tea.Cmd
+	m.channels, pulseCmd = m.channels.StartNotificationPulse(buf.Server, msg.Buffer)
+	expiryCmd := tea.Tick(notificationNoticeDuration, func(_ time.Time) tea.Msg {
 		return notificationNoticeExpiredMsg{version: version}
 	})
+	return tea.Batch(expiryCmd, pulseCmd)
 }
 
 func (m *Model) badgeSettingsForServer(serverName string) config.BadgeSettings {

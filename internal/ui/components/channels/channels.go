@@ -3,6 +3,7 @@ package channels
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
@@ -15,7 +16,16 @@ const (
 	// left (1) + right (1) borders
 	channelsVerticalBordersSize = 2
 	bottomPaddingHeight         = 1
+	notificationPulseInterval   = 220 * time.Millisecond
+	notificationPulseTicks      = 5
 )
+
+type notificationPulseTickMsg struct {
+	server     string
+	buffer     string
+	generation uint64
+	remaining  int
+}
 
 type ChannelSelectionMsg struct {
 	Channel string
@@ -48,12 +58,14 @@ type RemoveBufferMsg struct {
 }
 
 type node struct {
-	name              string
-	isServer          bool
-	parent            string
-	mentionCount      int
-	notificationCount int
-	unreadCount       int
+	name                        string
+	isServer                    bool
+	parent                      string
+	mentionCount                int
+	notificationCount           int
+	notificationPulseDimmed     bool
+	notificationPulseGeneration uint64
+	unreadCount                 int
 }
 
 type Model struct {
@@ -127,6 +139,26 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				m.nodes[i].mentionCount = msg.MentionCount
 				break
 			}
+		}
+	case notificationPulseTickMsg:
+		for i, n := range m.nodes {
+			if n.isServer || !strings.EqualFold(n.parent, msg.server) || !strings.EqualFold(n.name, msg.buffer) {
+				continue
+			}
+			if n.notificationPulseGeneration != msg.generation {
+				break
+			}
+			m.nodes[i].notificationPulseDimmed = !n.notificationPulseDimmed
+			if msg.remaining > 1 {
+				return m.updateContent(), notificationPulseCmd(notificationPulseTickMsg{
+					server:     msg.server,
+					buffer:     msg.buffer,
+					generation: msg.generation,
+					remaining:  msg.remaining - 1,
+				})
+			}
+			m.nodes[i].notificationPulseDimmed = false
+			break
 		}
 	case NewBufferMsg:
 		// find the position to insert: after the server and its existing channels
@@ -225,6 +257,9 @@ func (m Model) updateContent() Model {
 			itemStyle = m.theme.Styles.MentionedItem
 		} else if node.notificationCount > 0 {
 			itemStyle = m.theme.Styles.NotifiedItem
+			if node.notificationPulseDimmed {
+				itemStyle = itemStyle.Foreground(m.theme.Colors.Base.Dimmed)
+			}
 		} else if node.unreadCount > 0 {
 			itemStyle = m.theme.Styles.UnreadItem
 		}
@@ -309,6 +344,30 @@ func (m Model) ClearNotificationNoticeFor(server, buffer string) Model {
 		return m.ClearNotificationNotice()
 	}
 	return m
+}
+
+func (m Model) StartNotificationPulse(server, buffer string) (Model, tea.Cmd) {
+	for i, node := range m.nodes {
+		if node.isServer || !strings.EqualFold(node.parent, server) || !strings.EqualFold(node.name, buffer) {
+			continue
+		}
+		m.nodes[i].notificationPulseGeneration++
+		m.nodes[i].notificationPulseDimmed = true
+		generation := m.nodes[i].notificationPulseGeneration
+		return m.updateContent(), notificationPulseCmd(notificationPulseTickMsg{
+			server:     server,
+			buffer:     buffer,
+			generation: generation,
+			remaining:  notificationPulseTicks,
+		})
+	}
+	return m, nil
+}
+
+func notificationPulseCmd(msg notificationPulseTickMsg) tea.Cmd {
+	return tea.Tick(notificationPulseInterval, func(_ time.Time) tea.Msg {
+		return msg
+	})
 }
 
 func (m Model) activityBadge(text string, style lipgloss.Style) string {
