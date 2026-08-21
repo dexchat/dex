@@ -15,6 +15,13 @@ type action struct {
 	Handler     func() tea.Msg // Function to execute when command is selected
 }
 
+type OpenChannelPickerMsg struct{}
+
+type ChannelSelectionMsg struct {
+	Server  string
+	Channel string
+}
+
 // matches checks if the command matches the given input query (case-insensitive)
 func (a action) matches(query string) bool {
 	query = strings.ToLower(query)
@@ -31,7 +38,7 @@ func defaultActions() []action {
 			Name:        kb.GoToChannel.Help().Desc,
 			Description: "open a connected channel",
 			Keybinding:  kb.GoToChannel,
-			Handler:     func() tea.Msg { return nil },
+			Handler:     func() tea.Msg { return OpenChannelPickerMsg{} },
 		},
 		{
 			Name:        kb.LastBuffer.Help().Desc,

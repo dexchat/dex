@@ -376,6 +376,9 @@ func (m Model) MoveDown() Model {
 }
 
 func (m Model) Selected() ChannelSelectionMsg {
+	if len(m.nodes) == 0 {
+		return ChannelSelectionMsg{}
+	}
 	currentItem := m.nodes[m.cursor]
 	if currentItem.isServer {
 		return ChannelSelectionMsg{
@@ -386,4 +389,31 @@ func (m Model) Selected() ChannelSelectionMsg {
 		Channel: currentItem.name,
 		Server:  currentItem.parent,
 	}
+}
+
+func (m Model) Select(server, channel string) (Model, bool) {
+	for i, item := range m.nodes {
+		if strings.EqualFold(item.parent, server) && strings.EqualFold(item.name, channel) {
+			m.cursor = i
+			m.selected = item.parent + ":" + item.name
+			m.viewport.EnsureVisible(m.renderedLine(i), 0, 0)
+			return m.updateContent(), true
+		}
+	}
+	return m, false
+}
+
+func (m Model) renderedLine(nodeIndex int) int {
+	line := nodeIndex
+	seenServer := false
+	for i := 0; i <= nodeIndex && i < len(m.nodes); i++ {
+		if !m.nodes[i].isServer {
+			continue
+		}
+		if seenServer {
+			line++
+		}
+		seenServer = true
+	}
+	return line
 }

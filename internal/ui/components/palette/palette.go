@@ -1,6 +1,8 @@
 package palette
 
 import (
+	"sort"
+
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
@@ -9,11 +11,18 @@ import (
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
+type Channel struct {
+	Server string
+	Name   string
+}
+
 const (
 	nameMaxLen                   = 18
 	keyMaxLen                    = 10
 	commandPaletteBoxPaddingSize = 1
 	actionLinePaddingSize        = 1
+	maxVisibleActions            = 8
+	paletteVerticalFrameSize     = 6
 )
 
 type Model struct {
@@ -79,6 +88,12 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(msg)
+	filtered := m.filteredCommands()
+	if len(filtered) == 0 {
+		m.cursor = 0
+	} else if m.cursor >= len(filtered) {
+		m.cursor = len(filtered) - 1
+	}
 	return m, cmd
 }
 
@@ -101,8 +116,11 @@ func (m *Model) View() string {
 	var components []string
 	components = append(components, input)
 
-	for i, cmd := range filtered {
-		components = append(components, m.renderCommandLine(i, cmd))
+	rowCount := m.visibleRowCount()
+	start := visibleStart(m.cursor, len(filtered), rowCount)
+	end := min(start+rowCount, len(filtered))
+	for i := start; i < end; i++ {
+		components = append(components, m.renderCommandLine(i, filtered[i]))
 	}
 
 	if len(filtered) == 0 && m.input.Value() != "" {
@@ -110,11 +128,10 @@ func (m *Model) View() string {
 		components = append(components, noMatchStr)
 	}
 
-	// TODO: set a maximum number of actions to show
-	for len(components) < len(m.Commands())+1 {
+	for len(components) < rowCount+1 {
 		components = append(components, bgStyle.Render(""))
 	}
-	components = components[:len(m.Commands())+1]
+	components = components[:rowCount+1]
 
 	content := lipgloss.JoinVertical(lipgloss.Left, components...)
 
@@ -134,6 +151,19 @@ func (m *Model) SetSize(width, height int) {
 	m.height = height
 }
 
+func (m *Model) visibleRowCount() int {
+	available := max(1, m.height-paletteVerticalFrameSize)
+	rows := min(maxVisibleActions, available)
+	return min(rows, max(1, len(m.actions)))
+}
+
+func visibleStart(cursor, itemCount, rowCount int) int {
+	if itemCount <= rowCount || cursor < rowCount {
+		return 0
+	}
+	return min(cursor-rowCount+1, itemCount-rowCount)
+}
+
 func (m *Model) Toggle() {
 	m.visible = !m.visible
 	if m.visible {
@@ -151,6 +181,30 @@ func (m *Model) Commands() []action {
 	return m.actions
 }
 
+func (m *Model) ShowChannels(channels []Channel) {
+	sort.Slice(channels, func(i, j int) bool {
+		if channels[i].Server == channels[j].Server {
+			return channels[i].Name < channels[j].Name
+		}
+		return channels[i].Server < channels[j].Server
+	})
+
+	m.actions = make([]action, 0, len(channels))
+	for _, channel := range channels {
+		channel := channel
+		m.actions = append(m.actions, action{
+			Name:        channel.Name,
+			Description: channel.Server,
+			Keybinding:  key.NewBinding(),
+			Handler: func() tea.Msg {
+				return ChannelSelectionMsg{Server: channel.Server, Channel: channel.Name}
+			},
+		})
+	}
+	m.visible = true
+	m.open()
+}
+
 func (m *Model) open() {
 	m.cursor = 0
 	m.input.Reset()
@@ -159,6 +213,7 @@ func (m *Model) open() {
 
 func (m *Model) close() {
 	m.visible = false
+	m.actions = defaultActions()
 	m.cursor = 0
 	m.input.Reset()
 }

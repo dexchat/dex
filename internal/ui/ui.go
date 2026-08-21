@@ -171,27 +171,28 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		msg = m.handleKeybindings(msgTyped)
-		if sel, ok := msg.(channels.ChannelSelectionMsg); ok && sel.Server != "" {
-			key := makeBufferKey(sel.Server, sel.Channel)
-			m.activeBuffer = key
-			m.clearBufferActivity(key)
-			buf := m.getActiveBuffer()
-			buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
-			buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
-			buf.Users, cmd = buf.Users.Update(users.UserListMsg{Users: buf.members, Prefixes: buf.memberPrefixes})
-			cmds = append(cmds, cmd)
-			buf.Chat.FlushQueue()
-			if historyCmd := m.requestHistoryLoad(buf); historyCmd != nil {
-				cmds = append(cmds, historyCmd)
+		if sel, ok := msg.(channels.ChannelSelectionMsg); ok {
+			m.selectBuffer(sel.Server, sel.Channel, &cmds)
+		}
+
+	case palette.OpenChannelPickerMsg:
+		channelItems := make([]palette.Channel, 0, len(m.buffers))
+		for _, buf := range m.buffers {
+			if buf.Buffer != "" {
+				channelItems = append(channelItems, palette.Channel{Server: buf.Server, Name: buf.Buffer})
 			}
 		}
+		m.palette.ShowChannels(channelItems)
+
+	case palette.ChannelSelectionMsg:
+		m.selectBuffer(msgTyped.Server, msgTyped.Channel, &cmds)
 
 	case tea.WindowSizeMsg:
 		m.width = msgTyped.Width
 		m.height = msgTyped.Height
 
 		// TODO: ideally palette width should be smaller than chat width. It might happen if the font size is too big
-		m.palette.SetSize(90, len(m.palette.Commands())+5)
+		m.palette.SetSize(90, m.calculateChatHeight())
 
 		buf := m.getActiveBuffer()
 		buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
@@ -434,6 +435,30 @@ func (m *Model) getActiveBuffer() *Buffer {
 		log.Fatalf("Buffer %s not found", m.activeBuffer)
 	}
 	return buf
+}
+
+func (m *Model) selectBuffer(server, channel string, cmds *[]tea.Cmd) {
+	if server == "" {
+		return
+	}
+	key := makeBufferKey(server, channel)
+	buf := m.buffers[key]
+	if buf == nil {
+		return
+	}
+
+	m.activeBuffer = key
+	m.clearBufferActivity(key)
+	m.channels, _ = m.channels.Select(server, channel)
+	buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
+	buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
+	var cmd tea.Cmd
+	buf.Users, cmd = buf.Users.Update(users.UserListMsg{Users: buf.members, Prefixes: buf.memberPrefixes})
+	*cmds = append(*cmds, cmd)
+	buf.Chat.FlushQueue()
+	if historyCmd := m.requestHistoryLoad(buf); historyCmd != nil {
+		*cmds = append(*cmds, historyCmd)
+	}
 }
 
 func (m *Model) calculateChatWidth() int {

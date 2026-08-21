@@ -84,6 +84,22 @@ func TestRemoveBufferSelectsItsServer(t *testing.T) {
 	}
 }
 
+func TestSelectMovesCursorAndScrollsItIntoView(t *testing.T) {
+	m := newScrollableChannelsModel()
+
+	var found bool
+	m, found = m.Select("libera", "#channel-29")
+	if !found {
+		t.Fatal("expected channel to be found")
+	}
+	if got, want := m.Selected(), (ChannelSelectionMsg{Server: "libera", Channel: "#channel-29"}); got != want {
+		t.Fatalf("Selected() = %#v, want %#v", got, want)
+	}
+	if m.viewport.YOffset() == 0 {
+		t.Fatal("expected viewport to follow the selected channel")
+	}
+}
+
 func TestActivityUpdateRendersUnreadBadge(t *testing.T) {
 	m := newScrollableChannelsModel()
 

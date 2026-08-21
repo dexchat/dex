@@ -11,6 +11,7 @@ import (
 	"github.com/vaaleyard/dex/internal/history"
 	"github.com/vaaleyard/dex/internal/irc"
 	"github.com/vaaleyard/dex/internal/ui/components/chat"
+	"github.com/vaaleyard/dex/internal/ui/components/palette"
 	"github.com/vaaleyard/dex/internal/ui/components/users"
 )
 
@@ -36,6 +37,20 @@ func TestPaneForMouseWheelUsesPaneBounds(t *testing.T) {
 				t.Fatalf("paneForMouseWheel() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestPaletteChannelSelectionUpdatesActiveBufferAndSidebarCursor(t *testing.T) {
+	m := newActivityTestModel()
+
+	_, _ = m.Update(palette.ChannelSelectionMsg{Server: "libera", Channel: "#go"})
+
+	if got, want := m.activeBuffer, makeBufferKey("libera", "#go"); got != want {
+		t.Fatalf("activeBuffer = %q, want %q", got, want)
+	}
+	selected := m.channels.Selected()
+	if selected.Server != "libera" || selected.Channel != "#go" {
+		t.Fatalf("sidebar selection = %#v, want libera/#go", selected)
 	}
 }
 
