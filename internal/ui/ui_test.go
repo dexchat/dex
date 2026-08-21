@@ -342,6 +342,17 @@ func TestAttentionPulseIncludesMentionsOutsideNotificationChannels(t *testing.T)
 	if cmd != nil {
 		t.Fatal("ordinary messages outside notify_channels should not pulse")
 	}
+
+	buf.MentionCount = 1
+	cmd = m.startAttentionPulse(buf, irc.BufferNewMessageMsg{
+		Buffer:    "#random",
+		Timestamp: time.Now(),
+		From:      "bob",
+		Text:      "follow-up without another mention",
+	})
+	if cmd == nil {
+		t.Fatal("expected new activity to pulse while the buffer has an unread mention")
+	}
 }
 
 func TestActiveBufferMessagesAndOwnEchoesDoNotIncrementActivity(t *testing.T) {

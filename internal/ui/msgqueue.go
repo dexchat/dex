@@ -228,7 +228,8 @@ func (m *Model) startAttentionPulse(buf *Buffer, msg irc.BufferNewMessageMsg) te
 	if !msg.Timestamp.IsZero() && m.now().Sub(msg.Timestamp) > maxNotificationAge {
 		return nil
 	}
-	if !m.config.NotifiesChannel(buf.Server, msg.Buffer) &&
+	if buf.MentionCount == 0 &&
+		!m.config.NotifiesChannel(buf.Server, msg.Buffer) &&
 		!messageMentionsNick(msg.Text, buf.Chat.Nickname()) {
 		return nil
 	}
