@@ -77,6 +77,7 @@ type Model struct {
 	help         *help.Model
 	flushPending bool
 
+	terminalFocused           bool
 	lastSoundAt               time.Time
 	notificationNoticeVersion uint64
 	now                       func() time.Time
@@ -89,12 +90,13 @@ func New(cfg *config.Config) *Model {
 		directMessages = &history.DirectMessages{}
 	}
 	m := Model{
-		config:         cfg,
-		buffers:        make(map[BufferKey]*Buffer),
-		readState:      &history.ReadState{},
-		directMessages: directMessages,
-		theme:          styles.RosePineTheme(),
-		now:            time.Now,
+		config:          cfg,
+		buffers:         make(map[BufferKey]*Buffer),
+		readState:       &history.ReadState{},
+		directMessages:  directMessages,
+		theme:           styles.RosePineTheme(),
+		terminalFocused: true,
+		now:             time.Now,
 	}
 	m.usernameColors = styles.NewUsernameColors(m.theme.Colors.Nicknames)
 
@@ -196,6 +198,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case palette.ChannelSelectionMsg:
 		m.selectBuffer(msgTyped.Server, msgTyped.Channel, &cmds)
+
+	case tea.FocusMsg:
+		m.terminalFocused = true
+		m.clearBufferActivity(m.activeBuffer)
+
+	case tea.BlurMsg:
+		m.terminalFocused = false
 
 	case tea.WindowSizeMsg:
 		m.width = msgTyped.Width
@@ -443,6 +452,7 @@ func (m *Model) View() tea.View {
 
 	view := tea.NewView(content)
 	view.AltScreen = true
+	view.ReportFocus = true
 	view.MouseMode = tea.MouseModeCellMotion
 	view.BackgroundColor = m.theme.Colors.Base.Background
 	return view

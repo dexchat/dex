@@ -784,11 +784,20 @@ func TestShouldSoundNotification(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "active buffer mention",
+			name: "active buffer mention when focused",
 			configure: func(m *Model, buf *Buffer, _ *irc.BufferNewMessageMsg) {
 				m.activeBuffer = buf.Key
+				m.terminalFocused = true
 			},
 			want: false,
+		},
+		{
+			name: "active buffer mention when blurred",
+			configure: func(m *Model, buf *Buffer, _ *irc.BufferNewMessageMsg) {
+				m.activeBuffer = buf.Key
+				m.terminalFocused = false
+			},
+			want: true,
 		},
 		{
 			name: "own echo",
@@ -1068,6 +1077,71 @@ func TestHelpModalKeyHandlingAndClosing(t *testing.T) {
 	chatView := plainText(buf.Chat.View())
 	if strings.Contains(chatView, "q") && !strings.Contains(chatView, "Send message...") {
 		t.Fatalf("chat input should not contain 'q' after closing help with q:\n%s", chatView)
+	}
+}
+
+func TestViewReportsFocus(t *testing.T) {
+	m := newActivityTestModel()
+	view := m.View()
+	if !view.ReportFocus {
+		t.Fatal("expected View.ReportFocus to be true")
+	}
+}
+
+func TestFocusAndBlurUpdatesTerminalFocusState(t *testing.T) {
+	m := newActivityTestModel()
+	if !m.terminalFocused {
+		t.Fatal("expected terminalFocused to default to true")
+	}
+
+	_, _ = m.Update(tea.BlurMsg{})
+	if m.terminalFocused {
+		t.Fatal("expected terminalFocused to be false after BlurMsg")
+	}
+
+	_, _ = m.Update(tea.FocusMsg{})
+	if !m.terminalFocused {
+		t.Fatal("expected terminalFocused to be true after FocusMsg")
+	}
+}
+
+func TestActiveBufferMessageWhenBlurredTriggersNotificationAndActivity(t *testing.T) {
+	m := newActivityTestModel()
+	key := makeBufferKey("libera", "#random")
+	m.activeBuffer = key
+
+	// Blur the terminal window
+	_, _ = m.Update(tea.BlurMsg{})
+
+	now := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)
+	m.now = func() time.Time { return now }
+
+	cmd := m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: now,
+		From:      "alice",
+		Text:      "dexuser: ping",
+		Type:      irc.MessageTypeNormal,
+	})
+
+	assertBellCommand(t, cmd)
+
+	buf := m.buffers[key]
+	if got := buf.UnreadCount; got != 1 {
+		t.Fatalf("UnreadCount = %d, want 1 when terminal is blurred", got)
+	}
+	if got := buf.MentionCount; got != 1 {
+		t.Fatalf("MentionCount = %d, want 1 when terminal is blurred", got)
+	}
+
+	// Refocusing terminal clears active buffer unread & mention counts
+	_, _ = m.Update(tea.FocusMsg{})
+	if got := buf.UnreadCount; got != 0 {
+		t.Fatalf("UnreadCount after FocusMsg = %d, want 0", got)
+	}
+	if got := buf.MentionCount; got != 0 {
+		t.Fatalf("MentionCount after FocusMsg = %d, want 0", got)
 	}
 }
 

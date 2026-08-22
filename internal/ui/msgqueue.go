@@ -109,7 +109,7 @@ func (m *Model) updateActivityForMessage(buf *Buffer, msg irc.BufferNewMessageMs
 	if msg.Type != irc.MessageTypeNormal {
 		return
 	}
-	if buf.Key == m.activeBuffer {
+	if buf.Key == m.activeBuffer && m.terminalFocused {
 		return
 	}
 	if m.messageIsRead(buf, msg.Timestamp) {
@@ -204,7 +204,7 @@ func (m *Model) updateChannelActivity(buf *Buffer) {
 }
 
 func (m *Model) showNotificationNotice(buf *Buffer, msg irc.BufferNewMessageMsg) tea.Cmd {
-	if msg.Type != irc.MessageTypeNormal || buf.Key == m.activeBuffer ||
+	if msg.Type != irc.MessageTypeNormal || (buf.Key == m.activeBuffer && m.terminalFocused) ||
 		!m.config.NotifiesChannel(buf.Server, msg.Buffer) {
 		return nil
 	}
@@ -221,7 +221,7 @@ func (m *Model) showNotificationNotice(buf *Buffer, msg irc.BufferNewMessageMsg)
 }
 
 func (m *Model) startAttentionPulse(buf *Buffer, msg irc.BufferNewMessageMsg) tea.Cmd {
-	if msg.Type != irc.MessageTypeNormal || buf.Key == m.activeBuffer {
+	if msg.Type != irc.MessageTypeNormal || (buf.Key == m.activeBuffer && m.terminalFocused) {
 		return nil
 	}
 	if !msg.Timestamp.IsZero() && m.now().Sub(msg.Timestamp) > maxNotificationAge {
@@ -271,8 +271,8 @@ func (m *Model) shouldSoundNotification(buf *Buffer, msg irc.BufferNewMessageMsg
 		return false
 	}
 
-	// No need for notification in the current open buffer
-	if buf.Key == m.activeBuffer {
+	// No need for notification in the current open buffer when the terminal is focused.
+	if buf.Key == m.activeBuffer && m.terminalFocused {
 		return false
 	}
 

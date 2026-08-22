@@ -37,6 +37,7 @@ DONE:
 * notifications when mentioned
 * nickname complete on tab
 * support for /leave, /join, /list
+* notifications for the active buffer when the terminal is unfocused
 
 
 ## Known bugs
@@ -54,3 +55,16 @@ DONE:
 * multiple lines paste confirmation -> option to upload it to pastebin and then send the link
 * sound notification support
 * vim mode
+
+### Terminal focus notifications
+
+Dex uses terminal focus events to decide whether notifications for the active
+buffer should be suppressed. When running Dex inside tmux, enable event
+forwarding in `~/.tmux.conf`:
+
+```tmux
+set -g focus-events on
+```
+
+Apply it to the current tmux server with `tmux set-option -g focus-events on`,
+or restart tmux after updating the configuration.
