@@ -35,6 +35,7 @@ type Colors struct {
 
 	Chat struct {
 		Nickname      Color
+		Mention       Color
 		Separator     Color
 		Self          Color
 		Connected     Color

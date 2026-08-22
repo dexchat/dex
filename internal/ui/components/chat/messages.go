@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"strings"
 	"time"
 
 	"charm.land/lipgloss/v2"
@@ -27,7 +28,6 @@ func (m *Model) renderMessage(msg Message, width int) string {
 
 	timeStyle := baseStyle.
 		Foreground(m.theme.Colors.Base.Dimmed)
-
 	styledTime := timeStyle.Render(msg.Timestamp.Format("15:04"))
 
 	switch {
@@ -48,6 +48,11 @@ func (m *Model) renderMessage(msg Message, width int) string {
 		return baseStyle.Width(width).Render(styledTime + serverStyle.Render(" "+msg.Username+" ") + renderIRCFormattedMessage(msg.Text, serverStyle))
 
 	default:
+		mentionStyle := baseStyle.Foreground(m.theme.Colors.Chat.Mention).Bold(true)
+		styledText := renderIRCFormattedMessage(msg.Text, baseStyle)
+		if !strings.EqualFold(msg.Username, m.nickname) {
+			styledText, _ = renderIRCFormattedMessageWithMentions(msg.Text, m.nickname, baseStyle, mentionStyle)
+		}
 		nickColor := m.usernameColors.GetColor(msg.Username)
 		prefix := ""
 		if m.channelMembers != nil {
@@ -59,6 +64,6 @@ func (m *Model) renderMessage(msg Message, width int) string {
 		}
 		nickStyle := baseStyle.Foreground(nickColor)
 		styledNick := nickStyle.Render(" " + prefix + msg.Username + " ")
-		return baseStyle.Width(width).Render(styledTime + styledNick + renderIRCFormattedMessage(msg.Text, baseStyle))
+		return baseStyle.Width(width).Render(styledTime + styledNick + styledText)
 	}
 }

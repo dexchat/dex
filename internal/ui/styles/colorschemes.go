@@ -21,6 +21,7 @@ func AyuDarkTheme() Theme {
 	theme.Colors.Sidebar.Selection = lipgloss.Color("#253340")
 
 	theme.Colors.Chat.Nickname = lipgloss.Color("#59C2FF")
+	theme.Colors.Chat.Mention = lipgloss.Color("#F07178")
 	theme.Colors.Chat.Separator = lipgloss.Color("#253340")
 	theme.Colors.Chat.Self = lipgloss.Color("#BAE67E")
 	theme.Colors.Chat.Connected = lipgloss.Color("#95E6CB")
@@ -105,6 +106,7 @@ func RosePineTheme() Theme {
 	theme.Colors.Sidebar.Selection = lipgloss.Color("#26233A")
 
 	theme.Colors.Chat.Nickname = lipgloss.Color("#EBBCBA")
+	theme.Colors.Chat.Mention = lipgloss.Color("#EB6F92")
 	theme.Colors.Chat.Separator = lipgloss.Color("#403D52")
 	theme.Colors.Chat.Self = lipgloss.Color("#EBBCBA")
 	theme.Colors.Chat.Connected = lipgloss.Color("#9CCFD8")

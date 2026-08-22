@@ -3,7 +3,6 @@ package ui
 import (
 	"strings"
 	"time"
-	"unicode"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/vaaleyard/dex/internal/config"
@@ -251,36 +250,7 @@ func (m *Model) badgeSettingsForServer(serverName string) config.BadgeSettings {
 // messageMentionsNick matches the a given nick in a text message, so "nick" counts in
 // "hey nick:" but not inside larger nick-like strings such as "supernick"
 func messageMentionsNick(message, nick string) bool {
-	if nick == "" {
-		return false
-	}
-
-	message = strings.ToLower(message)
-	nick = strings.ToLower(nick)
-
-	for start := 0; start < len(message); {
-		idx := strings.Index(message[start:], nick)
-		if idx == -1 {
-			return false
-		}
-
-		idx += start
-		before := idx - 1
-		after := idx + len(nick)
-		if (before < 0 || !isNickChar(rune(message[before]))) && (after >= len(message) || !isNickChar(rune(message[after]))) {
-			return true
-		}
-		start = idx + len(nick)
-	}
-
-	return false
-}
-
-func isNickChar(r rune) bool {
-	if unicode.IsLetter(r) || unicode.IsDigit(r) {
-		return true
-	}
-	return strings.ContainsRune("_-[]\\`^{}|", r)
+	return chat.MessageMentionsNick(message, nick)
 }
 
 func (m *Model) shouldSoundNotification(buf *Buffer, msg irc.BufferNewMessageMsg) bool {

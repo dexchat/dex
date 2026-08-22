@@ -2,10 +2,12 @@ package chat
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
@@ -100,6 +102,80 @@ func TestUpdateContentFollowsBottomWhenAlreadyAtBottom(t *testing.T) {
 
 	if !m.viewport.AtBottom() {
 		t.Fatalf("expected adding content to keep viewport at bottom, offset=%d", m.viewport.YOffset())
+	}
+}
+
+func TestMentionedMessageHighlightsOnlyExactNickname(t *testing.T) {
+	theme := styles.RosePineTheme()
+	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
+	m.SetNickname("dexuser")
+	timestamp := time.Date(2026, time.August, 22, 14, 32, 0, 0, time.UTC)
+
+	view := m.renderMessage(Message{
+		Timestamp: timestamp,
+		Username:  "alice",
+		Text:      "DEXUSER: see superdexuser and dexuser too",
+	}, 80)
+
+	mentionStyle := lipgloss.NewStyle().
+		Foreground(theme.Colors.Chat.Mention).
+		Background(theme.Colors.Base.Background).
+		Bold(true)
+	timeStyle := lipgloss.NewStyle().
+		Foreground(theme.Colors.Base.Dimmed).
+		Background(theme.Colors.Base.Background)
+	if !strings.Contains(view, timeStyle.Render("14:32")) {
+		t.Fatalf("expected mentioned message timestamp to remain dimmed, got %q", view)
+	}
+	if strings.Contains(view, mentionStyle.Render("14:32")) {
+		t.Fatalf("mentioned message timestamp should not use mention style, got %q", view)
+	}
+	if !strings.Contains(view, mentionStyle.Render("DEXUSER")) || !strings.Contains(view, mentionStyle.Render("dexuser")) {
+		t.Fatalf("expected exact nickname occurrences to use mention style, got %q", view)
+	}
+	if got, want := len(findNickMentions("DEXUSER: see superdexuser and dexuser too", "dexuser")), 2; got != want {
+		t.Fatalf("findNickMentions() returned %d ranges, want %d", got, want)
+	}
+}
+
+func TestMentionHighlightPreservesIRCBackground(t *testing.T) {
+	theme := styles.RosePineTheme()
+	baseStyle := lipgloss.NewStyle().
+		Foreground(theme.Colors.Base.Foreground).
+		Background(theme.Colors.Base.Background)
+	mentionStyle := baseStyle.Foreground(theme.Colors.Chat.Mention).Bold(true)
+
+	rendered, mentioned := renderIRCFormattedMessageWithMentions("\x0304,02dexuser", "dexuser", baseStyle, mentionStyle)
+	if !mentioned {
+		t.Fatal("expected formatted nickname to be recognized as a mention")
+	}
+	want := baseStyle.
+		Foreground(theme.Colors.Chat.Mention).
+		Background(ircColors[2]).
+		Bold(true).
+		Render("dexuser")
+	if rendered != want {
+		t.Fatalf("formatted mention = %q, want %q", rendered, want)
+	}
+}
+
+func TestOwnMessageDoesNotHighlightNicknameAsMention(t *testing.T) {
+	theme := styles.RosePineTheme()
+	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
+	m.SetNickname("dexuser")
+
+	view := m.renderMessage(Message{
+		Timestamp: time.Date(2026, time.August, 22, 14, 32, 0, 0, time.UTC),
+		Username:  "DEXUSER",
+		Text:      "testing dexuser highlighting",
+	}, 80)
+
+	mentionStyle := lipgloss.NewStyle().
+		Foreground(theme.Colors.Chat.Mention).
+		Background(theme.Colors.Base.Background).
+		Bold(true)
+	if strings.Contains(view, mentionStyle.Render("14:32")) || strings.Contains(view, mentionStyle.Render("dexuser")) {
+		t.Fatalf("own message should not be highlighted as a mention, got %q", view)
 	}
 }
 

@@ -731,6 +731,9 @@ func TestMentionDetectionRequiresWholeNickToken(t *testing.T) {
 	if !messageMentionsNick("DEXUSER, ping", "dexuser") {
 		t.Fatal("expected mention matching to be case-insensitive")
 	}
+	if !messageMentionsNick("de\x02xuser: formatted ping", "dexuser") {
+		t.Fatal("expected IRC formatting inside nickname not to hide mention")
+	}
 }
 
 func TestShouldSoundNotification(t *testing.T) {
