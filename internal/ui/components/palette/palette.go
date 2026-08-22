@@ -82,6 +82,12 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			return m, nil
 		case tea.KeyEnter:
 			return m, m.executeSelected()
+		case tea.KeyUp:
+			m.moveUp()
+			return m, nil
+		case tea.KeyDown:
+			m.moveDown()
+			return m, nil
 		}
 
 		switch {

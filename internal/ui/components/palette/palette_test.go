@@ -39,6 +39,34 @@ func TestLastBufferActionRequestsLastBuffer(t *testing.T) {
 	}
 }
 
+func TestPaletteNavigationWithArrowKeys(t *testing.T) {
+	m := New(styles.RosePineTheme())
+	m.Toggle()
+
+	if m.cursor != 0 {
+		t.Fatalf("initial cursor = %d, want 0", m.cursor)
+	}
+
+	// Arrow down moves cursor to next item
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
+	if m.cursor != 1 {
+		t.Fatalf("cursor after KeyDown = %d, want 1", m.cursor)
+	}
+
+	// Arrow up moves cursor back to previous item
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
+	if m.cursor != 0 {
+		t.Fatalf("cursor after KeyUp = %d, want 0", m.cursor)
+	}
+
+	// Arrow up wraps around to last item
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
+	wantLast := len(m.filteredCommands()) - 1
+	if m.cursor != wantLast {
+		t.Fatalf("cursor after KeyUp wrap = %d, want %d", m.cursor, wantLast)
+	}
+}
+
 func TestPaletteWidthsDependOnMode(t *testing.T) {
 	m := New(styles.RosePineTheme())
 	m.SetSize(90, 12)
