@@ -7,6 +7,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/vaaleyard/dex/internal/commands"
 	"github.com/vaaleyard/dex/internal/config"
 	"github.com/vaaleyard/dex/internal/history"
 	"github.com/vaaleyard/dex/internal/irc"
@@ -997,6 +998,77 @@ func commandContainsBell(cmd tea.Cmd) bool {
 		}
 	}
 	return false
+}
+
+func TestOpenHelpFromPalette(t *testing.T) {
+	m := newActivityTestModel()
+	_, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
+
+	// Open palette
+	_, _ = m.Update(tea.KeyPressMsg{Code: 'o', Mod: tea.ModCtrl})
+	if !m.palette.IsVisible() {
+		t.Fatal("palette should be open after ctrl+o")
+	}
+
+	// Trigger OpenHelpMsg
+	_, _ = m.Update(palette.OpenHelpMsg{})
+	if m.palette.IsVisible() {
+		t.Fatal("palette should be closed after opening help")
+	}
+	if !m.help.IsVisible() {
+		t.Fatal("help modal should be visible")
+	}
+}
+
+func TestOpenHelpFromSlashCommand(t *testing.T) {
+	m := newActivityTestModel()
+	_, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
+
+	buf := m.getActiveBuffer()
+	m.handleCommand(buf, commands.Command{Name: "help"})
+
+	if !m.help.IsVisible() {
+		t.Fatal("help modal should be visible after /help command")
+	}
+}
+
+func TestHelpModalKeyHandlingAndClosing(t *testing.T) {
+	m := newActivityTestModel()
+	_, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
+
+	m.showHelp()
+	if !m.help.IsVisible() {
+		t.Fatal("help modal should be visible after showHelp()")
+	}
+
+	// While help is visible, view contains help content
+	view := plainText(m.View().Content)
+	if !strings.Contains(view, "Dex Keybindings") {
+		t.Fatalf("UI view should contain Help modal overlay:\n%s", view)
+	}
+
+	// Esc closes help modal
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.help.IsVisible() {
+		t.Fatal("help modal should be closed after pressing Esc")
+	}
+
+	// Reopen help and test 'q' key closing without leaking into chat input
+	m.showHelp()
+	if !m.help.IsVisible() {
+		t.Fatal("help modal should be visible after second showHelp()")
+	}
+
+	_, _ = m.Update(tea.KeyPressMsg{Text: "q"})
+	if m.help.IsVisible() {
+		t.Fatal("help modal should be closed after pressing q")
+	}
+
+	buf := m.getActiveBuffer()
+	chatView := plainText(buf.Chat.View())
+	if strings.Contains(chatView, "q") && !strings.Contains(chatView, "Send message...") {
+		t.Fatalf("chat input should not contain 'q' after closing help with q:\n%s", chatView)
+	}
 }
 
 func newActivityTestModel() *Model {

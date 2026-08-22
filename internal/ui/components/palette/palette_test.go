@@ -39,6 +39,23 @@ func TestLastBufferActionRequestsLastBuffer(t *testing.T) {
 	}
 }
 
+func TestHelpActionReturnsOpenHelpMsg(t *testing.T) {
+	m := New(styles.RosePineTheme())
+	m.Toggle()
+	// Help is the 4th item (index 3)
+	m.moveDown() // 1: LastBuffer
+	m.moveDown() // 2: EditInEditor
+	m.moveDown() // 3: help
+
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("help action did not return a command")
+	}
+	if msg := cmd(); msg != (OpenHelpMsg{}) {
+		t.Fatalf("help action returned %T, want OpenHelpMsg", msg)
+	}
+}
+
 func TestPaletteNavigationWithArrowKeys(t *testing.T) {
 	m := New(styles.RosePineTheme())
 	m.Toggle()

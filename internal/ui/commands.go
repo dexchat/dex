@@ -13,6 +13,8 @@ import (
 
 func (m *Model) handleCommand(buffer *Buffer, command commands.Command) {
 	switch command.Name {
+	case "help":
+		m.showHelp()
 	case "join":
 		m.handleJoinCommand(buffer, command.Args)
 	case "leave":

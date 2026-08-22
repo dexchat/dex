@@ -13,6 +13,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/vaaleyard/dex/internal/ui/components/channels"
 	"github.com/vaaleyard/dex/internal/ui/components/chat"
+	"github.com/vaaleyard/dex/internal/ui/components/help"
 	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
 	"github.com/vaaleyard/dex/internal/ui/components/palette"
 	"github.com/vaaleyard/dex/internal/ui/components/users"
@@ -73,6 +74,7 @@ type Model struct {
 
 	channels     channels.Model
 	palette      *palette.Model
+	help         *help.Model
 	flushPending bool
 
 	lastSoundAt               time.Time
@@ -98,6 +100,7 @@ func New(cfg *config.Config) *Model {
 
 	m.channels = channels.New(m.theme, m.config.Servers)
 	m.palette = palette.New(m.theme)
+	m.help = help.New(m.theme)
 
 	for _, server := range cfg.Servers {
 		serverKey := makeBufferKey(server.Name, "")
@@ -185,6 +188,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case palette.OpenChannelPickerMsg:
 		m.showChannelPicker()
 
+	case palette.OpenHelpMsg:
+		m.showHelp()
+
 	case palette.LastBufferMsg:
 		m.selectLastBuffer(&cmds)
 
@@ -197,6 +203,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		paletteWidth := min(commandPaletteWidth, max(1, msgTyped.Width-paletteScreenMargin))
 		m.palette.SetSize(paletteWidth, m.calculateChatHeight())
+		m.help.SetSize(paletteWidth, m.calculateChatHeight())
 
 		buf := m.getActiveBuffer()
 		buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
@@ -342,10 +349,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	paletteWasVisible := m.palette.IsVisible()
+	helpWasVisible := m.help.IsVisible()
+
 	// Write characters in the palette input bar if it's open, instead of chat input
-	if m.palette.IsVisible() {
+	if paletteWasVisible {
 		palModel, cmd := m.palette.Update(msg)
 		m.palette = palModel
+		cmds = append(cmds, cmd)
+		if _, ok := msg.(tea.MouseWheelMsg); ok {
+			return m, tea.Batch(cmds...)
+		}
+	} else if helpWasVisible {
+		helpModel, cmd := m.help.Update(msg)
+		m.help = helpModel
 		cmds = append(cmds, cmd)
 		if _, ok := msg.(tea.MouseWheelMsg); ok {
 			return m, tea.Batch(cmds...)
@@ -357,7 +374,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmds...)
 	}
 
-	// Update layout components, blocking keyboard input when the palette is open
+	// If palette or help was open, consume keyboard input so it doesn't leak into chat/channels
+	if paletteWasVisible || helpWasVisible {
+		if _, isKeyMsg := msg.(tea.KeyPressMsg); isKeyMsg {
+			return m, tea.Batch(cmds...)
+		}
+	}
+
+	// Update layout components, blocking keyboard input when the palette or help is open
 	msg = m.filterOutKeyMsgs(msg)
 	buf := m.getActiveBuffer()
 	buf.Chat, cmd = buf.Chat.Update(msg)
@@ -413,6 +437,8 @@ func (m *Model) View() tea.View {
 	content := (&layout{m}).View()
 	if m.palette.IsVisible() {
 		content = overlayCenter(m.palette.View(), content)
+	} else if m.help.IsVisible() {
+		content = overlayCenter(m.help.View(), content)
 	}
 
 	view := tea.NewView(content)
@@ -422,14 +448,14 @@ func (m *Model) View() tea.View {
 	return view
 }
 
-// filterOutKeyMsgs filters out keyboard messages from layout components when palette is open
+// filterOutKeyMsgs filters out keyboard messages from layout components when palette or help is open
 func (m *Model) filterOutKeyMsgs(msg tea.Msg) tea.Msg {
-	// If palette is not visible, pass all messages through
-	if !m.palette.IsVisible() {
+	// If palette and help are not visible, pass all messages through
+	if !m.palette.IsVisible() && !m.help.IsVisible() {
 		return msg
 	}
 
-	// If palette is visible, block keyboard input to layout components
+	// If palette or help is visible, block keyboard input to layout components
 	if _, isKeyMsg := msg.(tea.KeyPressMsg); isKeyMsg {
 		return nil
 	}
@@ -490,6 +516,12 @@ func (m *Model) showChannelPicker() {
 		}
 	}
 	m.palette.ShowChannels(channelItems)
+}
+
+func (m *Model) showHelp() {
+	m.palette.Close()
+	m.help.SetSize(m.width, m.calculateChatHeight())
+	m.help.Show()
 }
 
 func (m *Model) calculateChatWidth() int {

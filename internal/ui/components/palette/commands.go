@@ -19,6 +19,8 @@ type OpenChannelPickerMsg struct{}
 
 type LastBufferMsg struct{}
 
+type OpenHelpMsg struct{}
+
 type ChannelSelectionMsg struct {
 	Server  string
 	Channel string
@@ -56,9 +58,9 @@ func defaultActions() []action {
 		},
 		{
 			Name:        "help",
-			Description: "show help",
+			Description: "show help and keybindings",
 			Keybinding:  key.NewBinding(),
-			Handler:     func() tea.Msg { return nil },
+			Handler:     func() tea.Msg { return OpenHelpMsg{} },
 		},
 		{
 			Name:        kb.Quit.Help().Desc,

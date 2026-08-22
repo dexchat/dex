@@ -8,6 +8,10 @@ import (
 )
 
 func (m *Model) handleKeybindings(msg tea.KeyPressMsg) tea.Msg {
+	if m.help.IsVisible() {
+		return msg
+	}
+
 	kb := keybindings.DefaultKeyMap()
 
 	if key.Matches(msg, kb.TogglePalette) {

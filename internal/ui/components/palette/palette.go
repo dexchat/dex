@@ -247,6 +247,10 @@ func (m *Model) open() {
 	m.input.Focus()
 }
 
+func (m *Model) Close() {
+	m.close()
+}
+
 func (m *Model) close() {
 	m.visible = false
 	m.channelPicker = false
