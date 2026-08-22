@@ -318,11 +318,13 @@ func (m *Model) renderCommandLine(index int, cmd action, width int) string {
 	// Determine styles based on highlight state
 	backgroundColor := m.theme.Colors.Base.Background
 	textColor := m.theme.Colors.Base.Foreground
-	accentColor := m.theme.Colors.Base.Accent
+	nameColor := m.theme.Colors.Base.Foreground
+	keyColor := m.theme.Colors.Base.Dimmed
 	if highlight {
 		backgroundColor = m.theme.Colors.Palette.Highlight
 		textColor = m.theme.Colors.Base.Background
-		accentColor = m.theme.Colors.Base.Background
+		nameColor = m.theme.Colors.Base.Background
+		keyColor = m.theme.Colors.Base.Background
 	}
 
 	descWidth := width - commandPaletteBoxPaddingSize*2 - nameMaxLen - actionLinePaddingSize*2 - keyMaxLen
@@ -332,7 +334,7 @@ func (m *Model) renderCommandLine(index int, cmd action, width int) string {
 
 	nameStr := lipgloss.NewStyle().
 		Background(backgroundColor).
-		Foreground(accentColor).
+		Foreground(nameColor).
 		Width(nameMaxLen).
 		Render(cmd.Name)
 	descStr := lipgloss.NewStyle().
@@ -342,7 +344,7 @@ func (m *Model) renderCommandLine(index int, cmd action, width int) string {
 		Render(cmd.Description)
 	keyStr := lipgloss.NewStyle().
 		Background(backgroundColor).
-		Foreground(m.theme.Colors.Base.Dimmed).
+		Foreground(keyColor).
 		Width(keyMaxLen).
 		Render(cmd.Keybinding.Help().Key)
 
@@ -356,7 +358,7 @@ func (m *Model) renderCommandLine(index int, cmd action, width int) string {
 func (m *Model) renderChannelLine(index int, channel action, width int) string {
 	highlight := index == m.cursor
 	backgroundColor := m.theme.Colors.Base.Background
-	channelColor := m.theme.Colors.Base.Accent
+	channelColor := m.theme.Colors.Base.Foreground
 	serverColor := m.theme.Colors.Base.Dimmed
 	if highlight {
 		backgroundColor = m.theme.Colors.Palette.Highlight
