@@ -69,6 +69,27 @@ func TestGoToChannelKeybindingOpensChannelPickerDirectly(t *testing.T) {
 	}
 }
 
+func TestLastBufferKeybindingTogglesBetweenRecentBuffers(t *testing.T) {
+	m := newActivityTestModel()
+	var cmds []tea.Cmd
+	m.selectBuffer("libera", "#go", &cmds)
+
+	lastBufferKey := tea.KeyPressMsg{Code: '6', Mod: tea.ModCtrl}
+	_, _ = m.Update(lastBufferKey)
+	if got, want := m.activeBuffer, makeBufferKey("libera", ""); got != want {
+		t.Fatalf("first %q activeBuffer = %q, want %q", lastBufferKey.String(), got, want)
+	}
+
+	_, _ = m.Update(tea.KeyPressMsg{Code: '^', Mod: tea.ModCtrl})
+	if got, want := m.activeBuffer, makeBufferKey("libera", "#go"); got != want {
+		t.Fatalf("second last-buffer shortcut activeBuffer = %q, want %q", got, want)
+	}
+	selected := m.channels.Selected()
+	if selected.Server != "libera" || selected.Channel != "#go" {
+		t.Fatalf("sidebar selection = %#v, want libera/#go", selected)
+	}
+}
+
 func TestSelfPartRemovesActiveChannelAndSelectsServer(t *testing.T) {
 	m := newActivityTestModel()
 	channelKey := makeBufferKey("libera", "#go")

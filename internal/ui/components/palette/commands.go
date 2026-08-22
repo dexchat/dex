@@ -17,6 +17,8 @@ type action struct {
 
 type OpenChannelPickerMsg struct{}
 
+type LastBufferMsg struct{}
+
 type ChannelSelectionMsg struct {
 	Server  string
 	Channel string
@@ -44,7 +46,7 @@ func defaultActions() []action {
 			Name:        kb.LastBuffer.Help().Desc,
 			Description: "switch to the last selected channel",
 			Keybinding:  kb.LastBuffer,
-			Handler:     func() tea.Msg { return nil },
+			Handler:     func() tea.Msg { return LastBufferMsg{} },
 		},
 		{
 			Name:        kb.EditInEditor.Help().Desc,

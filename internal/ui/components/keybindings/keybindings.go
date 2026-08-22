@@ -33,8 +33,8 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("ctrl+o", "toggle the command palette"),
 		),
 		LastBuffer: key.NewBinding(
-			key.WithKeys("ctrl+tab"),
-			key.WithHelp("ctrl+tab", "last channel"),
+			key.WithKeys("ctrl+6", "ctrl+^"),
+			key.WithHelp("ctrl+6", "last channel"),
 		),
 		EditInEditor: key.NewBinding(
 			key.WithKeys("", ""),

@@ -25,6 +25,20 @@ func TestGoToChannelActionOpensChannelPicker(t *testing.T) {
 	}
 }
 
+func TestLastBufferActionRequestsLastBuffer(t *testing.T) {
+	m := New(styles.RosePineTheme())
+	m.Toggle()
+	m.moveDown()
+
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("last channel action did not return a command")
+	}
+	if msg := cmd(); msg != (LastBufferMsg{}) {
+		t.Fatalf("last channel action returned %T, want LastBufferMsg", msg)
+	}
+}
+
 func TestPaletteWidthsDependOnMode(t *testing.T) {
 	m := New(styles.RosePineTheme())
 	m.SetSize(90, 12)

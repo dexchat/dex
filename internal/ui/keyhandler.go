@@ -4,6 +4,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
+	"github.com/vaaleyard/dex/internal/ui/components/palette"
 )
 
 func (m *Model) handleKeybindings(msg tea.KeyPressMsg) tea.Msg {
@@ -16,6 +17,9 @@ func (m *Model) handleKeybindings(msg tea.KeyPressMsg) tea.Msg {
 	if key.Matches(msg, kb.GoToChannel) {
 		m.showChannelPicker()
 		return nil
+	}
+	if key.Matches(msg, kb.LastBuffer) {
+		return palette.LastBufferMsg{}
 	}
 
 	// Handling palette keys here ended up needing flags to conditionally update the palette

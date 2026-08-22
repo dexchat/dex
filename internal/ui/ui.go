@@ -65,6 +65,7 @@ type Model struct {
 
 	buffers             map[BufferKey]*Buffer
 	activeBuffer        BufferKey
+	lastBuffer          BufferKey
 	readState           *history.ReadState
 	readStateDirty      bool
 	directMessages      *history.DirectMessages
@@ -177,9 +178,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if sel, ok := msg.(channels.ChannelSelectionMsg); ok {
 			m.selectBuffer(sel.Server, sel.Channel, &cmds)
 		}
+		if _, ok := msg.(palette.LastBufferMsg); ok {
+			m.selectLastBuffer(&cmds)
+		}
 
 	case palette.OpenChannelPickerMsg:
 		m.showChannelPicker()
+
+	case palette.LastBufferMsg:
+		m.selectLastBuffer(&cmds)
 
 	case palette.ChannelSelectionMsg:
 		m.selectBuffer(msgTyped.Server, msgTyped.Channel, &cmds)
@@ -449,7 +456,10 @@ func (m *Model) selectBuffer(server, channel string, cmds *[]tea.Cmd) {
 		return
 	}
 
-	m.activeBuffer = key
+	if key != m.activeBuffer {
+		m.lastBuffer = m.activeBuffer
+		m.activeBuffer = key
+	}
 	m.clearBufferActivity(key)
 	m.channels = m.channels.ClearNotificationNoticeFor(server, channel)
 	m.channels, _ = m.channels.Select(server, channel)
@@ -462,6 +472,14 @@ func (m *Model) selectBuffer(server, channel string, cmds *[]tea.Cmd) {
 	if historyCmd := m.requestHistoryLoad(buf); historyCmd != nil {
 		*cmds = append(*cmds, historyCmd)
 	}
+}
+
+func (m *Model) selectLastBuffer(cmds *[]tea.Cmd) {
+	buf := m.buffers[m.lastBuffer]
+	if buf == nil {
+		return
+	}
+	m.selectBuffer(buf.Server, buf.Buffer, cmds)
 }
 
 func (m *Model) showChannelPicker() {
