@@ -21,6 +21,8 @@ type LastBufferMsg struct{}
 
 type OpenHelpMsg struct{}
 
+type EditInEditorMsg struct{}
+
 type ChannelSelectionMsg struct {
 	Server  string
 	Channel string
@@ -54,7 +56,7 @@ func defaultActions() []action {
 			Name:        kb.EditInEditor.Help().Desc,
 			Description: "edit the message in your default editor",
 			Keybinding:  kb.EditInEditor,
-			Handler:     func() tea.Msg { return nil },
+			Handler:     func() tea.Msg { return EditInEditorMsg{} },
 		},
 		{
 			Name:        "help",

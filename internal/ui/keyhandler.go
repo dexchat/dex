@@ -14,6 +14,17 @@ func (m *Model) handleKeybindings(msg tea.KeyPressMsg) tea.Msg {
 
 	kb := keybindings.DefaultKeyMap()
 
+	if m.editKeyPending {
+		m.editKeyPending = false
+		if msg.Code == 'e' && (msg.Mod == 0 || msg.Mod == tea.ModCtrl) {
+			return palette.EditInEditorMsg{}
+		}
+	}
+	if msg.Code == 'x' && msg.Mod == tea.ModCtrl && !m.palette.IsVisible() {
+		m.editKeyPending = true
+		return nil
+	}
+
 	if key.Matches(msg, kb.TogglePalette) {
 		m.palette.Toggle()
 		return nil

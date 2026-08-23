@@ -39,6 +39,21 @@ func TestLastBufferActionRequestsLastBuffer(t *testing.T) {
 	}
 }
 
+func TestEditInEditorActionRequestsEditor(t *testing.T) {
+	m := New(styles.RosePineTheme())
+	m.Toggle()
+	m.moveDown()
+	m.moveDown()
+
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("edit in editor action did not return a command")
+	}
+	if msg := cmd(); msg != (EditInEditorMsg{}) {
+		t.Fatalf("edit in editor action returned %T, want EditInEditorMsg", msg)
+	}
+}
+
 func TestHelpActionReturnsOpenHelpMsg(t *testing.T) {
 	m := New(styles.RosePineTheme())
 	m.Toggle()

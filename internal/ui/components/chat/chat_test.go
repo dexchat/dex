@@ -11,6 +11,19 @@ import (
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
+func TestSetInputValueMovesCursorToEndAndHonorsLimit(t *testing.T) {
+	theme := styles.RosePineTheme()
+	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
+	m.SetInputValue(strings.Repeat("a", 300))
+
+	if got := len([]rune(m.InputValue())); got != 256 {
+		t.Fatalf("input length = %d, want 256", got)
+	}
+	if got, want := m.input.Position(), len([]rune(m.InputValue())); got != want {
+		t.Fatalf("cursor position = %d, want %d", got, want)
+	}
+}
+
 type stubChannelMembers struct {
 	nicks []string
 }

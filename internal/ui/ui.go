@@ -81,6 +81,7 @@ type Model struct {
 	terminalFocused           bool
 	lastSoundAt               time.Time
 	notificationNoticeVersion uint64
+	editKeyPending            bool
 	now                       func() time.Time
 }
 
@@ -180,12 +181,21 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if _, ok := msg.(palette.LastBufferMsg); ok {
 			m.selectLastBuffer(&cmds)
 		}
+		if _, ok := msg.(palette.EditInEditorMsg); ok {
+			cmds = append(cmds, m.editActiveInput())
+		}
 
 	case palette.OpenChannelPickerMsg:
 		m.showChannelPicker()
 
 	case palette.OpenHelpMsg:
 		m.showHelp()
+
+	case palette.EditInEditorMsg:
+		cmds = append(cmds, m.editActiveInput())
+
+	case editorFinishedMsg:
+		m.finishEditingInput(msgTyped)
 
 	case palette.LastBufferMsg:
 		m.selectLastBuffer(&cmds)

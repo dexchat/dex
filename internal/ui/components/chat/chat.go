@@ -61,6 +61,15 @@ func (m *Model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
+func (m *Model) InputValue() string {
+	return m.input.Value()
+}
+
+func (m *Model) SetInputValue(value string) {
+	m.input.SetValue(value)
+	m.input.CursorEnd()
+}
+
 func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var (
 		cmd  tea.Cmd
