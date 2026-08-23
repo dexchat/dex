@@ -1,0 +1,42 @@
+# Copy this file to $XDG_CONFIG_HOME/dex/config.toml
+# (or ~/.config/dex/config.toml) and fill in your server details.
+#
+# When no config file exists, Dex connects to Libera by default with a
+# generated nickname and the values documented in this file.
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+ssl = true
+password = ""
+channels = []
+nickname = "dex_user"
+username = ""
+realname = ""
+unread_badges = true
+mention_badges = true
+ignore_direct_messages_from = []
+notify_channels = []
+
+# ZNC example:
+# The nickname uses the ZNC format "username/network". Dex then sends
+# "username:password" as the connection password automatically.
+# There is no need to add channels as it automatically gets from
+# the server.
+#
+# [servers.libera_znc]
+# address = "znc.example.com"
+# port = 6697
+# ssl = true
+# nickname = "your-znc-username/znc-server-name"
+# password = "your-znc-password"
+
+[notifications]
+sound = true
+events = ["mention", "direct_message"]
+cooldown = "2s"
+
+[ui]
+unread_badges = true
+mention_badges = true
+unread_on_user_events = true
