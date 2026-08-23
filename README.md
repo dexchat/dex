@@ -1,10 +1,13 @@
-<h1>
-<p align="center">
-  <img src="./images/dexchat-icon.png" alt="Logo" width="128">
-  <br>dexchat
+<h1 align="center">
+  <img src="./images/dexchat-icon.png" alt="Dex logo" width="128">
+  <br>
+  dexchat
 </h1>
 
-<p align="center">A modern and fast TUI IRC client. Supports quick channel jumping, command palettes and more.</p>
+<p align="center">
+  A modern and fast TUI IRC client for the terminal, with quick channel
+  jumping, command palettes, and more.
+</p>
 
 ![preview](./images/preview.png)
 
