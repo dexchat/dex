@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/rand"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,6 +19,9 @@ func Load() (*Config, error) {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return defaultConfig()
+		}
 		return nil, fmt.Errorf("failed to read %s: %w", path, err)
 	}
 
@@ -27,6 +31,31 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func defaultConfig() (*Config, error) {
+	nickname, err := randomNickname()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate default nickname: %w", err)
+	}
+
+	cfg := defaultValues()
+	cfg.Servers = []*Server{{
+		Name:     "libera",
+		Address:  "irc.libera.chat",
+		Port:     6697,
+		Nickname: nickname,
+		Channels: []string{"#dexchat"},
+	}}
+	return cfg, nil
+}
+
+func randomNickname() (string, error) {
+	var suffix [3]byte
+	if _, err := rand.Read(suffix[:]); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("dex_%02x%02x%02x", suffix[0], suffix[1], suffix[2]), nil
 }
 
 func filePath() (string, error) {
@@ -56,21 +85,7 @@ func loadFromBytes(data []byte) (*Config, error) {
 		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
 
-	cfg := &Config{
-		UI: UI{
-			UnreadBadges:       true,
-			MentionBadges:      true,
-			UnreadOnUserEvents: true,
-		},
-		Notifications: Notifications{
-			Sound: true,
-			Events: map[string]bool{
-				NotificationMention:       true,
-				NotificationDirectMessage: true,
-			},
-			Cooldown: 2 * time.Second,
-		},
-	}
+	cfg := defaultValues()
 	if raw.UI.UnreadBadges != nil {
 		cfg.UI.UnreadBadges = *raw.UI.UnreadBadges
 	}
@@ -80,7 +95,6 @@ func loadFromBytes(data []byte) (*Config, error) {
 	if raw.UI.UnreadOnUserEvents != nil {
 		cfg.UI.UnreadOnUserEvents = *raw.UI.UnreadOnUserEvents
 	}
-
 	if raw.Notifications.Sound != nil {
 		cfg.Notifications.Sound = *raw.Notifications.Sound
 	}
@@ -91,30 +105,20 @@ func loadFromBytes(data []byte) (*Config, error) {
 			case NotificationMention, NotificationDirectMessage:
 				cfg.Notifications.Events[event] = true
 			default:
-				return nil, fmt.Errorf(
-					"config validation failed: unknown notification event %q",
-					event)
+				return nil, fmt.Errorf("config validation failed: unknown notification event %q", event)
 			}
 		}
 	}
 	if raw.Notifications.Cooldown != "" {
 		cooldown, err := time.ParseDuration(raw.Notifications.Cooldown)
 		if err != nil {
-			return nil, fmt.Errorf(
-				"invalid notifications cooldown %q: %w",
-				raw.Notifications.Cooldown,
-				err,
-			)
+			return nil, fmt.Errorf("invalid notifications cooldown %q: %w", raw.Notifications.Cooldown, err)
 		}
-
 		if cooldown < 0 {
-			return nil, fmt.Errorf(
-				"config validation failed: notifications cooldown must not be negative",
-			)
+			return nil, fmt.Errorf("config validation failed: notifications cooldown must not be negative")
 		}
 		cfg.Notifications.Cooldown = cooldown
 	}
-
 	for name, server := range raw.Servers {
 		server.Name = name
 		sort.Strings(server.Channels)
@@ -125,6 +129,13 @@ func loadFromBytes(data []byte) (*Config, error) {
 	})
 
 	return cfg, nil
+}
+
+func defaultValues() *Config {
+	return &Config{
+		UI:            UI{UnreadBadges: true, MentionBadges: true, UnreadOnUserEvents: true},
+		Notifications: Notifications{Sound: true, Events: map[string]bool{NotificationMention: true, NotificationDirectMessage: true}, Cooldown: 2 * time.Second},
+	}
 }
 
 func validate(servers map[string]*Server) error {

@@ -42,6 +42,28 @@ func TestFilePathDefaultsToUserConfigDirectory(t *testing.T) {
 	}
 }
 
+func TestLoadUsesDefaultConfigWhenFileIsMissing(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if len(cfg.Servers) != 1 {
+		t.Fatalf("len(cfg.Servers) = %d, want 1", len(cfg.Servers))
+	}
+	server := cfg.Servers[0]
+	if server.Name != "libera" || server.Address != "irc.libera.chat" || server.Port != 6697 {
+		t.Fatalf("default server = %+v", server)
+	}
+	if server.Nickname == "" || !strings.HasPrefix(server.Nickname, "dex_") {
+		t.Fatalf("default nickname = %q, want dex_ prefix", server.Nickname)
+	}
+	if len(server.Channels) != 1 || server.Channels[0] != "#dexchat" {
+		t.Fatalf("default channels = %v, want [#dexchat]", server.Channels)
+	}
+}
+
 func TestLoadParsesUIDefaultsAndServerOverrides(t *testing.T) {
 	cfg, err := loadFromBytes([]byte(`
 [ui]
