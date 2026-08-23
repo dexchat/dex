@@ -3,9 +3,11 @@ package help
 import (
 	"strings"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
@@ -29,19 +31,35 @@ type item struct {
 }
 
 func defaultShortcuts() []item {
+	kb := keybindings.DefaultKeyMap()
+	editInEditor := kb.EditInEditor.Help()
+
 	return []item{
-		{key: "ctrl+o", desc: "toggle command palette"},
-		{key: "ctrl+g", desc: "channel picker"},
-		{key: "ctrl+6, ctrl+^", desc: "switch to last channel"},
-		{key: "ctrl+p / ctrl+n", desc: "navigate channels"},
-		{key: "pgup / pgdn", desc: "scroll chat history"},
-		{key: "tab", desc: "autocomplete nickname"},
-		{key: "ctrl+c", desc: "quit dex (press twice)"},
+		{key: bindingKeys(kb.TogglePalette), desc: "toggle command palette"},
+		{key: bindingKeys(kb.GoToChannel), desc: "channel picker"},
+		{key: bindingKeys(kb.LastBuffer), desc: "switch to last channel"},
+		{key: bindingHelpGroups(kb.MoveUp, kb.MoveDown), desc: "navigate channels"},
+		{key: bindingHelpGroups(kb.ScrollUp, kb.ScrollDown), desc: "scroll chat history"},
+		{key: bindingKeys(kb.Autocomplete), desc: "autocomplete nickname"},
+		{key: editInEditor.Key, desc: editInEditor.Desc},
+		{key: bindingKeys(kb.Quit), desc: "quit dex (press twice)"},
 	}
 }
 
+func bindingKeys(binding key.Binding) string {
+	return strings.Join(binding.Keys(), ", ")
+}
+
+func bindingHelpGroups(bindings ...key.Binding) string {
+	groups := make([]string, 0, len(bindings))
+	for _, binding := range bindings {
+		groups = append(groups, binding.Help().Key)
+	}
+	return strings.Join(groups, " / ")
+}
+
 func New(theme styles.Theme) *Model {
-	vp := viewport.New(viewport.WithWidth(helpModalWidth - boxPadding*2), viewport.WithHeight(0))
+	vp := viewport.New(viewport.WithWidth(helpModalWidth-boxPadding*2), viewport.WithHeight(0))
 	m := &Model{
 		theme:    theme,
 		viewport: vp,

@@ -11,6 +11,9 @@ type KeyMap struct {
 	TogglePalette key.Binding
 	LastBuffer    key.Binding
 	EditInEditor  key.Binding
+	ScrollUp      key.Binding
+	ScrollDown    key.Binding
+	Autocomplete  key.Binding
 	Quit          key.Binding
 }
 
@@ -39,6 +42,18 @@ func DefaultKeyMap() KeyMap {
 		EditInEditor: key.NewBinding(
 			key.WithKeys("", ""),
 			key.WithHelp("ctrl+x+e", "edit in editor"),
+		),
+		ScrollUp: key.NewBinding(
+			key.WithKeys("pgup", "ctrl+u"),
+			key.WithHelp("pgup", "scroll chat up"),
+		),
+		ScrollDown: key.NewBinding(
+			key.WithKeys("pgdown", "ctrl+d"),
+			key.WithHelp("pgdn", "scroll chat down"),
+		),
+		Autocomplete: key.NewBinding(
+			key.WithKeys("tab"),
+			key.WithHelp("tab", "autocomplete nickname"),
 		),
 		Quit: key.NewBinding(
 			key.WithKeys("ctrl+c"),

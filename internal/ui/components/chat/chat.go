@@ -4,10 +4,12 @@ import (
 	"strings"
 	"time"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
 	"github.com/vaaleyard/dex/internal/ui/styles"
 )
 
@@ -79,7 +81,8 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		if m.input.Focused() {
-			if msg.Code == tea.KeyTab {
+			keyMap := keybindings.DefaultKeyMap()
+			if key.Matches(msg, keyMap.Autocomplete) {
 				m.completeNickname()
 				return *m, nil
 			}
@@ -94,8 +97,7 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				return *m, tea.Batch(cmds...)
 			}
 
-			switch msg.String() {
-			case "pgup", "pgdown", "ctrl+u", "ctrl+d":
+			if key.Matches(msg, keyMap.ScrollUp, keyMap.ScrollDown) {
 				m.viewport, cmd = m.viewport.Update(msg)
 				cmds = append(cmds, cmd)
 				return *m, tea.Batch(cmds...)

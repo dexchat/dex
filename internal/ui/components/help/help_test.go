@@ -83,6 +83,12 @@ func TestHelpViewContainsShortcuts(t *testing.T) {
 	if !strings.Contains(view, "ctrl+6") {
 		t.Fatal("help view should contain ctrl+6 shortcut")
 	}
+	if !strings.Contains(view, "pgup / pgdn") {
+		t.Fatal("help view should contain chat scrolling shortcuts")
+	}
+	if !strings.Contains(view, "ctrl+x+e") || !strings.Contains(view, "edit in editor") {
+		t.Fatal("help view should contain edit-in-editor shortcut")
+	}
 	if !strings.Contains(view, "ctrl+c") {
 		t.Fatal("help view should contain ctrl+c shortcut")
 	}
