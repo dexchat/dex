@@ -1,18 +1,20 @@
-## dex
+<h1>
+<p align="center">
+  <img src="./images/dexchat-icon.png" alt="Logo" width="128">
+  <br>dexchat
+</h1>
 
-![preview](./preview.png)
+<p align="center">A modern and fast TUI IRC client. Supports quick channel jumping, command palettes and more.</p>
 
+![preview](./images/preview.png)
 
 ## reference
-* https://datatracker.ietf.org/doc/html/rfc2812
-* https://modern.ircdocs.horse/
 
-## configuration
-
-Dex reads its configuration from `$XDG_CONFIG_HOME/dex/config.toml`. If
-`XDG_CONFIG_HOME` is not set, it uses `~/.config/dex/config.toml`.
+* <https://datatracker.ietf.org/doc/html/rfc2812>
+* <https://modern.ircdocs.horse/>
 
 ## TODO
+
 * IRC:
   * support for commands, e.g., /leave, /join, etc.
   * autocompletion for commands
@@ -33,24 +35,22 @@ Dex reads its configuration from `$XDG_CONFIG_HOME/dex/config.toml`. If
   * disable mouse/scroll support
 * Think what should be included in the 0.1.0 so I can open the code
 
-
 ## 0.1.0
+
 TODO:
-* config file with minimal options
-* support for /leave, /join, /quit, at least
+
+* Usar features novas do charm v2? Composite? Trees?
 DONE:
 * notifications when mentioned
 * nickname complete on tab
-* support for /leave, /join, /list
+* palette and channel picker
+* support for /leave, /join, /list, /msg, /part, /close
 * notifications for the active buffer when the terminal is unfocused
 
-
-## Known bugs
-* Users with non-standard channel prefixes (e.g., `!` for channel admin/creator) may not appear in the user list. This is a [girc](https://github.com/lrstanley/girc) limitation — its NAMES reply parser only recognizes `~ & @ % +` as prefixes, ignoring any additional ones the server advertises via `ISUPPORT`. Users with unrecognized prefixes are silently dropped from the channel state.
-
 ## Features to implement
+
 * command palette with: quick jump, fuzzy channel search, join, leave, etc.
-* ability to open vim in input to edit the message being sent
+* ability to open $EDITOR in input to edit the message being sent
 * spell checking in input
 * option to show only channels with unread messages
 * a new pane on top of the channel list with: buffer for all your DMs and tagged messages
@@ -61,7 +61,8 @@ DONE:
 * sound notification support
 * vim mode
 * choose notification type
-* notify using https://github.com/DaltonSW/BubbleUp
+* notify using <https://github.com/DaltonSW/BubbleUp>
+
 ### Terminal focus notifications
 
 Dex uses terminal focus events to decide whether notifications for the active
