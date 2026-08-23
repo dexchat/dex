@@ -2,6 +2,7 @@ package ui
 
 import (
 	"log"
+	"strings"
 	"time"
 
 	"github.com/vaaleyard/dex/internal/commands"
@@ -145,13 +146,6 @@ func New(cfg *config.Config) *Model {
 	if len(cfg.Servers) > 0 {
 		m.activeBuffer = makeBufferKey(cfg.Servers[0].Name, "")
 	}
-	for _, directMessage := range directMessages.Users {
-		_, cmd := m.getOrCreateBuffer(directMessage.Server, directMessage.User)
-		if cmd != nil {
-			m.channels, _ = m.channels.Update(cmd())
-		}
-	}
-
 	return &m
 }
 
@@ -257,6 +251,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if newBufCmd := m.processIncomingMessage(msg); newBufCmd != nil {
 				cmds = append(cmds, newBufCmd)
 			}
+			if msg.Type == irc.MessageTypeConnected && msg.Buffer == "" {
+				cmds = append(cmds, m.restoreDirectMessages(msg.Server)...)
+			}
 		}
 		if len(remaining) > 0 {
 			cmds = append(cmds, func() tea.Msg { return remaining })
@@ -268,6 +265,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case irc.BufferNewMessageMsg:
 		if newBufCmd := m.processIncomingMessage(msgTyped); newBufCmd != nil {
 			cmds = append(cmds, newBufCmd)
+		}
+		if msgTyped.Type == irc.MessageTypeConnected && msgTyped.Buffer == "" {
+			cmds = append(cmds, m.restoreDirectMessages(msgTyped.Server)...)
 		}
 		if cmd := m.scheduleFlush(); cmd != nil {
 			cmds = append(cmds, cmd)
@@ -586,6 +586,20 @@ func (m *Model) getOrCreateBuffer(server, channel string) (*Buffer, tea.Cmd) {
 		}
 	}
 	return buf, newBufferCmd
+}
+
+func (m *Model) restoreDirectMessages(server string) []tea.Cmd {
+	var cmds []tea.Cmd
+	for _, directMessage := range m.directMessages.Users {
+		if !strings.EqualFold(directMessage.Server, server) {
+			continue
+		}
+		_, cmd := m.getOrCreateBuffer(directMessage.Server, directMessage.User)
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+	}
+	return cmds
 }
 
 func (m *Model) removeChannelBuffer(server, channel string, cmds *[]tea.Cmd) {

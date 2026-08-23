@@ -531,6 +531,52 @@ func TestConfiguredHistoryLoadOnlyLoadsReadState(t *testing.T) {
 	}
 }
 
+func TestPersistedDirectMessagesRestoreAfterServerConnects(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+
+	directMessages := &history.DirectMessages{}
+	directMessages.Add("libera", "alice")
+	directMessages.Add("oftc", "bob")
+	if err := directMessages.Flush(); err != nil {
+		t.Fatalf("failed to persist direct messages: %v", err)
+	}
+
+	m := New(&config.Config{Servers: []*config.Server{
+		{Name: "libera", Nickname: "dexuser"},
+		{Name: "oftc", Nickname: "dexuser"},
+	}})
+
+	if _, ok := m.buffers[makeBufferKey("libera", "alice")]; ok {
+		t.Fatal("persisted direct message restored before the server connected")
+	}
+
+	_, cmd := m.Update(irc.BufferNewMessageBatchMsg{{
+		Server: "libera",
+		Type:   irc.MessageTypeConnected,
+	}})
+	if cmd != nil {
+		cmd()
+	}
+
+	if _, ok := m.buffers[makeBufferKey("libera", "alice")]; !ok {
+		t.Fatal("persisted direct message was not restored after the server connected")
+	}
+	if _, ok := m.buffers[makeBufferKey("oftc", "bob")]; ok {
+		t.Fatal("connecting one server restored another server's direct message")
+	}
+
+	_, cmd = m.Update(irc.BufferNewMessageBatchMsg{{
+		Server: "libera",
+		Type:   irc.MessageTypeConnected,
+	}})
+	if cmd != nil {
+		cmd()
+	}
+	if got := len(m.buffers); got != 3 {
+		t.Fatalf("buffer count after reconnect = %d, want 3", got)
+	}
+}
+
 func TestDiscoveredChannelHistoryLoadsOnlyWhenRequested(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	writeTestHistory(t, "libera", "#go", "stored message")
