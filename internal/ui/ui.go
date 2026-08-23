@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"log"
 	"strings"
 	"time"
 
@@ -88,7 +87,6 @@ type Model struct {
 func New(cfg *config.Config) *Model {
 	directMessages, err := history.LoadDirectMessages()
 	if err != nil {
-		log.Printf("Failed to load direct messages: %v", err)
 		directMessages = &history.DirectMessages{}
 	}
 	m := Model{
@@ -333,9 +331,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case historyFlushMsg:
 		for _, buf := range m.buffers {
-			if err := buf.History.Flush(buf.Server, buf.Buffer); err != nil {
-				log.Printf("Failed to flush history for %s/%s: %v", buf.Server, buf.Buffer, err)
-			}
+			_ = buf.History.Flush(buf.Server, buf.Buffer)
 		}
 		m.flushReadState()
 		m.flushDirectMessages()
@@ -350,9 +346,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case initialHistoryLoadedMsg:
 		m.applyLoadedHistory(msgTyped.histories)
-		if msgTyped.readErr != nil {
-			log.Printf("Failed to load read state: %v", msgTyped.readErr)
-		}
 		m.readState = msgTyped.readState
 		if m.readState == nil {
 			m.readState = &history.ReadState{}
@@ -487,7 +480,7 @@ func (m *Model) filterOutKeyMsgs(msg tea.Msg) tea.Msg {
 func (m *Model) getActiveBuffer() *Buffer {
 	buf := m.buffers[m.activeBuffer]
 	if buf == nil {
-		log.Fatalf("Buffer %s not found", m.activeBuffer)
+		panic("active buffer not found: " + string(m.activeBuffer))
 	}
 	return buf
 }
@@ -624,9 +617,7 @@ func (m *Model) removeChannelBuffer(server, channel string, cmds *[]tea.Cmd) {
 		m.markBufferRead(buf)
 		m.activeBuffer = makeBufferKey(server, "")
 	}
-	if err := buf.History.Flush(buf.Server, buf.Buffer); err != nil {
-		log.Printf("Failed to flush history for %s/%s: %v", buf.Server, buf.Buffer, err)
-	}
+	_ = buf.History.Flush(buf.Server, buf.Buffer)
 	delete(m.buffers, key)
 
 	var cmd tea.Cmd
@@ -695,9 +686,7 @@ func (m *Model) scheduleHistoryFlush() tea.Cmd {
 func (m *Model) flushAllHistory() {
 	m.markBufferRead(m.getActiveBuffer())
 	for _, buf := range m.buffers {
-		if err := buf.History.Flush(buf.Server, buf.Buffer); err != nil {
-			log.Printf("Failed to flush history for %s/%s: %v", buf.Server, buf.Buffer, err)
-		}
+		_ = buf.History.Flush(buf.Server, buf.Buffer)
 	}
 	m.flushReadState()
 	m.flushDirectMessages()
@@ -708,7 +697,6 @@ func (m *Model) flushDirectMessages() {
 		return
 	}
 	if err := m.directMessages.Flush(); err != nil {
-		log.Printf("Failed to flush direct messages: %v", err)
 		return
 	}
 	m.directMessagesDirty = false
@@ -719,7 +707,6 @@ func (m *Model) flushReadState() {
 		return
 	}
 	if err := m.readState.Flush(); err != nil {
-		log.Printf("Failed to flush read state: %v", err)
 		return
 	}
 	m.readStateDirty = false
