@@ -1,10 +1,46 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestFilePathUsesXDGConfigHome(t *testing.T) {
+	configHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+
+	got, err := filePath()
+	if err != nil {
+		t.Fatalf("filePath() error = %v", err)
+	}
+
+	want := filepath.Join(configHome, "dex", "config.toml")
+	if got != want {
+		t.Fatalf("filePath() = %q, want %q", got, want)
+	}
+}
+
+func TestFilePathDefaultsToUserConfigDirectory(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("os.UserHomeDir() error = %v", err)
+	}
+
+	got, err := filePath()
+	if err != nil {
+		t.Fatalf("filePath() error = %v", err)
+	}
+
+	want := filepath.Join(home, ".config", "dex", "config.toml")
+	if got != want {
+		t.Fatalf("filePath() = %q, want %q", got, want)
+	}
+}
 
 func TestLoadParsesUIDefaultsAndServerOverrides(t *testing.T) {
 	cfg, err := loadFromBytes([]byte(`

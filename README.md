@@ -7,6 +7,11 @@
 * https://datatracker.ietf.org/doc/html/rfc2812
 * https://modern.ircdocs.horse/
 
+## configuration
+
+Dex reads its configuration from `$XDG_CONFIG_HOME/dex/config.toml`. If
+`XDG_CONFIG_HOME` is not set, it uses `~/.config/dex/config.toml`.
+
 ## TODO
 * IRC:
   * support for commands, e.g., /leave, /join, etc.
@@ -55,7 +60,8 @@ DONE:
 * multiple lines paste confirmation -> option to upload it to pastebin and then send the link
 * sound notification support
 * vim mode
-
+* choose notification type
+* notify using https://github.com/DaltonSW/BubbleUp
 ### Terminal focus notifications
 
 Dex uses terminal focus events to decide whether notifications for the active

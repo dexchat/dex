@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -10,9 +11,14 @@ import (
 )
 
 func Load() (*Config, error) {
-	data, err := os.ReadFile("config.toml")
+	path, err := filePath()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read config.toml: %w", err)
+		return nil, err
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %s: %w", path, err)
 	}
 
 	cfg, err := loadFromBytes(data)
@@ -21,6 +27,19 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func filePath() (string, error) {
+	configDir := os.Getenv("XDG_CONFIG_HOME")
+	if configDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("failed to determine config directory: %w", err)
+		}
+		configDir = filepath.Join(home, ".config")
+	}
+
+	return filepath.Join(configDir, "dex", "config.toml"), nil
 }
 
 func loadFromBytes(data []byte) (*Config, error) {
