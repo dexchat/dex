@@ -42,13 +42,15 @@ type Notifications struct {
 }
 
 type rawUI struct {
-	UnreadBadges  *bool `toml:"unread_badges"`
-	MentionBadges *bool `toml:"mention_badges"`
+	UnreadBadges       *bool `toml:"unread_badges"`
+	MentionBadges      *bool `toml:"mention_badges"`
+	UnreadOnUserEvents *bool `toml:"unread_on_user_events"`
 }
 
 type UI struct {
-	UnreadBadges  bool
-	MentionBadges bool
+	UnreadBadges       bool
+	MentionBadges      bool
+	UnreadOnUserEvents bool
 }
 
 type BadgeSettings struct {

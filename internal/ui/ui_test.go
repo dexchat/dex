@@ -281,6 +281,30 @@ func TestInactiveBufferMessageIncrementsUnreadActivity(t *testing.T) {
 	}
 }
 
+func TestUserEventsCanSkipUnreadActivity(t *testing.T) {
+	m := newActivityTestModel()
+	m.config.UI.UnreadOnUserEvents = false
+
+	for _, text := range []string{"alice has joined", "alice has left", "alice has quit"} {
+		m.processIncomingMessage(irc.BufferNewMessageMsg{
+			Server:    "libera",
+			Buffer:    "#random",
+			Timestamp: time.Now(),
+			From:      "<--",
+			Text:      text,
+			UserEvent: true,
+		})
+	}
+
+	buf := m.buffers[makeBufferKey("libera", "#random")]
+	if got := buf.UnreadCount; got != 0 {
+		t.Fatalf("UnreadCount = %d, want 0", got)
+	}
+	if got := len(buf.History.Entries()); got != 3 {
+		t.Fatalf("history messages = %d, want 3", got)
+	}
+}
+
 func TestInactiveBufferMentionIncrementsMentionActivity(t *testing.T) {
 	m := newActivityTestModel()
 

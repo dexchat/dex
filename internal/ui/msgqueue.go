@@ -109,6 +109,9 @@ func (m *Model) updateActivityForMessage(buf *Buffer, msg irc.BufferNewMessageMs
 	if msg.Type != irc.MessageTypeNormal {
 		return
 	}
+	if msg.UserEvent && !m.config.UI.UnreadOnUserEvents {
+		return
+	}
 	if buf.Key == m.activeBuffer && m.terminalFocused {
 		return
 	}

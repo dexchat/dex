@@ -258,6 +258,7 @@ func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 			Timestamp: time.Now(),
 			From:      "<--",
 			Text:      message,
+			UserEvent: true,
 		})
 	}
 	c.scheduleUserListRefresh(client, channels...)
@@ -284,6 +285,7 @@ func (c *Client) onJoin(client *girc.Client, e girc.Event) {
 				Timestamp: time.Now(),
 				From:      "-->",
 				Text:      fmt.Sprintf("%s (%s:%s) has joined", userName, e.Source.Host, e.Source.Ident),
+				UserEvent: true,
 			})
 		}
 	}
@@ -315,6 +317,7 @@ func (c *Client) onPart(client *girc.Client, e girc.Event) {
 			Timestamp: time.Now(),
 			From:      "<--",
 			Text:      fmt.Sprintf("%s (%s:%s) has left", userName, e.Source.Host, e.Source.Ident),
+			UserEvent: true,
 		})
 	}
 }

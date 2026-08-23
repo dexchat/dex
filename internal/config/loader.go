@@ -39,8 +39,9 @@ func loadFromBytes(data []byte) (*Config, error) {
 
 	cfg := &Config{
 		UI: UI{
-			UnreadBadges:  true,
-			MentionBadges: true,
+			UnreadBadges:       true,
+			MentionBadges:      true,
+			UnreadOnUserEvents: true,
 		},
 		Notifications: Notifications{
 			Sound: true,
@@ -56,6 +57,9 @@ func loadFromBytes(data []byte) (*Config, error) {
 	}
 	if raw.UI.MentionBadges != nil {
 		cfg.UI.MentionBadges = *raw.UI.MentionBadges
+	}
+	if raw.UI.UnreadOnUserEvents != nil {
+		cfg.UI.UnreadOnUserEvents = *raw.UI.UnreadOnUserEvents
 	}
 
 	if raw.Notifications.Sound != nil {

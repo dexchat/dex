@@ -11,6 +11,7 @@ func TestLoadParsesUIDefaultsAndServerOverrides(t *testing.T) {
 [ui]
 unread_badges = false
 mention_badges = true
+unread_on_user_events = false
 
 [servers.libera]
 address = "irc.libera.chat"
@@ -30,6 +31,9 @@ notify_channels = ["#Alerts"]
 	}
 	if got := cfg.UI.MentionBadges; got != true {
 		t.Fatalf("global mention_badges = %v, want true", got)
+	}
+	if got := cfg.UI.UnreadOnUserEvents; got != false {
+		t.Fatalf("global unread_on_user_events = %v, want false", got)
 	}
 
 	server := cfg.Servers[0]
@@ -73,6 +77,9 @@ channels = ["#go"]
 	}
 	if got := cfg.UI.MentionBadges; got != true {
 		t.Fatalf("global mention_badges default = %v, want true", got)
+	}
+	if got := cfg.UI.UnreadOnUserEvents; got != true {
+		t.Fatalf("global unread_on_user_events default = %v, want true", got)
 	}
 }
 

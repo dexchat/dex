@@ -394,6 +394,9 @@ func TestQuitUsesMembershipSnapshotWhenGircStateIsAlreadyDeleted(t *testing.T) {
 	if client.messageQueue[0].Buffer != "#brasil" {
 		t.Fatalf("quit message buffer = %q, want #brasil", client.messageQueue[0].Buffer)
 	}
+	if !client.messageQueue[0].UserEvent {
+		t.Fatal("quit message should be marked as a user event")
+	}
 	if channels := client.channelsForUser("Guest22"); len(channels) != 0 {
 		t.Fatalf("expected quit user to be removed from snapshot, still in %v", channels)
 	}
