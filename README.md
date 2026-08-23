@@ -3,10 +3,20 @@
   <br>
   dexchat
 </h1>
-
 <p align="center">
-  A modern and fast TUI IRC client for the terminal, with quick channel
-  jumping, command palettes, and more.
+  A modern and fast TUI IRC client for the terminal, with quick channel jumping, command palettes, and more.
+  <br />
+  <a href="#features">Features</a>
+  ·
+  <a href="#downlad">Download</a>
+  ·
+  <a href="#configuration">Configuration</a>
+  ·
+  <a href="#contributing">Contributing</a>
+</p>
+<p align="center">
+  <a href="https://github.com/vaaleyard/dex/releases"><img src="https://img.shields.io/github/v/release/vaaleyard/dex.svg" alt="Latest Release"></a>
+  <a href="https://github.com/vaaleyard/dex/actions"><img src="https://github.com/charmbracelet/crush/actions/workflows/build.yml/badge.svg" alt="Build Status"></a>
 </p>
 
 ![preview](./images/preview.png)
