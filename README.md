@@ -4,7 +4,7 @@
   dexchat
 </h1>
 <p align="center">
-  A modern and fast TUI IRC client for the terminal, with quick channel jumping, command palettes, and more.
+  A modern and fast TUI IRC client with quick channel jumping, command palettes, and more.
   <br />
   <a href="#features">Features</a>
   ·
@@ -52,6 +52,9 @@
 
 TODO:
 
+* registrar o canal no irc
+* comprar dominio
+* arrumar repositorio todo - issues, pr, kanban, etc.
 * Usar features novas do charm v2? Composite? Trees?
 DONE:
 * notifications when mentioned
