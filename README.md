@@ -19,7 +19,14 @@
   <a href="https://github.com/vaaleyard/dex/actions"><img src="https://github.com/charmbracelet/crush/actions/workflows/build.yml/badge.svg" alt="Build Status"></a>
 </p>
 
-![preview](./images/preview.png)
+![preview](./images/demo.gif)
+
+## Features
+- **Quick channel jumping:** move between channels quickly
+- **Command palette:** access common actions from a searchable command menu
+- **Fuzzy channel search:** Find channels without iteracting through all of them
+- **Persistent history:** Preserve your conversations between sessions locally
+- **Notifications:** Get notified about mentions and direct messages
 
 ## reference
 
@@ -40,6 +47,7 @@
 * tagged messages indicator
 * improve channel list UI and user list member count, it's kinda ugly – ask for suggestions to someone
 * options that should be possible to set in the config file:
+  * hide part/quits
   * global nickname
   * display user join/part/quit messages
   * do not connect to the channels on startup
@@ -51,7 +59,6 @@
 ## 0.1.0
 
 TODO:
-
 * registrar o canal no irc
 * comprar dominio
 * arrumar repositorio todo - issues, pr, kanban, etc.
