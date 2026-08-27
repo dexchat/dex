@@ -43,7 +43,7 @@ changelog:
   sort: asc
   use: github
   abbrev: 7
-  format: "{{ .SHA }}: {{ .Message }}{{ if .Logins }} ({{ .Logins | englishJoin }}){{ end }}"
+  format: "[`{{ .SHA }}`](https://github.com/vaaleyard/dex/commit/{{ .SHA }}): {{ .Message }}{{ if .Logins }} ({{ .Logins | englishJoin }}){{ end }}"
 
   filters:
     exclude:
@@ -56,21 +56,27 @@ changelog:
       - "^go mod tidy"
 
   groups:
-    - title: "New"
+    - title: "New Features"
       regexp: "^.*feat(\\([[:word:]-]+\\))?:.*$"
       order: 100
 
-    - title: "Fixed"
+    - title: "Bug fixes"
       regexp: "^.*fix(\\([[:word:]-]+\\))?:.*$"
       order: 200
 
-    - title: "Refactored"
+    - title: "Refactoring"
       regexp: "^.*refactor(\\([[:word:]-]+\\))?:.*$"
       order: 300
 
-    - title: "Documentation"
+    - title: "Documentation updates"
       regexp: "^.*docs(\\([[:word:]-]+\\))?:.*$"
       order: 400
 
-    - title: "Other changes"
+    - title: "Other work"
       order: 9999
+
+release:
+  footer: |
+    ## Full Changelog
+
+    [`{{ .PreviousTag }}...{{ .Tag }}`](https://github.com/vaaleyard/dex/compare/{{ .PreviousTag }}...{{ .Tag }})
