@@ -41,10 +41,34 @@ snapshot:
 
 changelog:
   sort: asc
+  use: github
+
   filters:
     exclude:
+      - "^build:"
+      - "^ci:"
+      - "^chore:"
       - "^docs:"
       - "^test:"
-      - "^chore:"
-      - "^Merge pull request"
-      - "^Merge branch"
+      - "^Merge"
+      - "^go mod tidy"
+
+  groups:
+    - title: "New"
+      regexp: "^.*feat(\\([[:word:]-]+\\))?:.*$"
+      order: 100
+
+    - title: "Fixed"
+      regexp: "^.*fix(\\([[:word:]-]+\\))?:.*$"
+      order: 200
+
+    - title: "Refactored"
+      regexp: "^.*refactor(\\([[:word:]-]+\\))?:.*$"
+      order: 300
+
+    - title: "Documentation"
+      regexp: "^.*docs(\\([[:word:]-]+\\))?:.*$"
+      order: 400
+
+    - title: "Other changes"
+      order: 9999
