@@ -56,23 +56,23 @@ changelog:
       - "^go mod tidy"
 
   groups:
-    - title: "New Features"
+    - title: "New"
       regexp: "^.*feat(\\([[:word:]-]+\\))?:.*$"
       order: 100
 
-    - title: "Bug fixes"
+    - title: "Fixed"
       regexp: "^.*fix(\\([[:word:]-]+\\))?:.*$"
       order: 200
 
-    - title: "Refactoring"
+    - title: "Refactored"
       regexp: "^.*refactor(\\([[:word:]-]+\\))?:.*$"
       order: 300
 
-    - title: "Documentation updates"
+    - title: "Documentation"
       regexp: "^.*docs(\\([[:word:]-]+\\))?:.*$"
       order: 400
 
-    - title: "Other work"
+    - title: "Other changes"
       order: 9999
 
 release:
