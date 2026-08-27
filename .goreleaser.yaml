@@ -43,7 +43,7 @@ changelog:
   sort: asc
   use: github
   abbrev: 7
-  format: "[{{ .SHA }}](https://github.com/vaaleyard/dex/commit/{{ .SHA }}): {{ .Message }}"
+  format: "{{ .SHA }}: {{ .Message }}{{ if .Logins }} ({{ .Logins | englishJoin }}){{ end }}"
 
   filters:
     exclude:
