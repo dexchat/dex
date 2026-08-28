@@ -1,0 +1,8 @@
+.git
+.github
+images
+*.gif
+*.png
+Dockerfile
+README.md
+config.example.toml
