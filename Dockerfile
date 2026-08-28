@@ -21,7 +21,8 @@ RUN apk add --no-cache ca-certificates \
 COPY --from=build /out/dex /usr/local/bin/dex
 
 ENV XDG_CONFIG_HOME=/data/config \
-    XDG_DATA_HOME=/data/state
+    XDG_DATA_HOME=/data/state \
+    TERM=xterm-256color
 
 VOLUME ["/data"]
 USER dex
