@@ -22,7 +22,8 @@ COPY --from=build /out/dex /usr/local/bin/dex
 
 ENV XDG_CONFIG_HOME=/data/config \
     XDG_DATA_HOME=/data/state \
-    TERM=xterm-256color
+    TERM=xterm-256color \
+    COLORTERM=truecolor
 
 VOLUME ["/data"]
 USER dex
