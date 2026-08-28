@@ -38,8 +38,6 @@ checksum:
 
 homebrew_casks:
   - name: dex
-    ids:
-      - dex
     repository:
       owner: dexchat
       name: homebrew-tap
