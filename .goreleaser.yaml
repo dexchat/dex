@@ -42,7 +42,7 @@ homebrew_casks:
       owner: dexchat
       name: homebrew-tap
       branch: main
-      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Casks
     homepage: https://github.com/dexchat/dex
     description: IRC/TUI client for DexChat
