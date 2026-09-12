@@ -33,6 +33,25 @@ archives:
       - README.md
       - LICENSE
 
+nfpms:
+  - id: dexchat-deb
+    package_name: dexchat
+    ids:
+      - dex
+    formats:
+      - deb
+    file_name_template: "{{ .ConventionalFileName }}"
+    vendor: DexChat
+    homepage: https://dexchat.org
+    maintainer: Leonardo Essia <leonardo@essia.dev>
+    description: A modern and fast terminal IRC client
+    license: MIT
+    bindir: /usr/bin
+    section: net
+    priority: optional
+    conflicts:
+      - dex
+
 checksum:
   name_template: checksums.txt
 

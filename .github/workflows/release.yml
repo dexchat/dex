@@ -34,6 +34,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
+      - name: Upload Debian packages for APT publication
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian-packages
+          path: dist/*.deb
+          if-no-files-found: error
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -65,3 +72,49 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  apt:
+    name: Publish APT repository
+    needs: goreleaser
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Debian packages
+        uses: actions/download-artifact@v4
+        with:
+          name: debian-packages
+          path: packages
+
+      - name: Check out APT repository
+        uses: actions/checkout@v4
+        with:
+          repository: dexchat/apt
+          token: ${{ secrets.APT_REPOSITORY_TOKEN }}
+          path: apt
+
+      - name: Install repository tools
+        run: sudo apt-get update && sudo apt-get install --yes reprepro
+
+      - name: Import APT signing key
+        env:
+          APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+        run: printf '%s' "$APT_GPG_PRIVATE_KEY" | gpg --batch --import
+
+      - name: Add packages to the repository
+        run: |
+          for package in packages/*.deb; do
+            reprepro --basedir apt includedeb stable "$package"
+          done
+          gpg --batch --yes --export-options export-minimal --export > apt/dexchat-keyring.gpg
+
+      - name: Publish repository update
+        working-directory: apt
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dists pool dexchat-keyring.gpg
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: publish DexChat ${RELEASE_TAG}"
+          git push
