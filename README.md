@@ -64,4 +64,4 @@ docker run --rm -it ghcr.io/dexchat/dex:latest
 ```
 
 ## Contributing
-If you have any ideas, sugestions, issues or would like to contribute to dex, see the [contributing guide](./CONTRIBUTING.md).
+If you have any ideas, sugestions, issues or would like to contribute to dex, see the [contributing guide](https://github.com/dexchat/dex?tab=contributing-ov-file#contributing).
