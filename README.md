@@ -15,7 +15,7 @@
   <a href="#contributing">Contributing</a>
 </p>
 <p align="center">
-  <a href="https://github.com/vaaleyard/dex/releases"><img src="https://img.shields.io/github/v/release/vaaleyard/dex.svg" alt="Latest Release"></a>
+  <a href="https://github.com/dexchat/dex/releases"><img src="https://img.shields.io/github/v/release/dexchat/dex.svg" alt="Latest Release"></a>
   <a href="https://github.com/dexchat/dex/actions/workflows/release.yml"><img src="https://github.com/dexchat/dex/actions/workflows/release.yml/badge.svg" alt="Release Status"></a>
 </p>
 
@@ -31,32 +31,25 @@
 
 ## Installation
 Use a package manager:
-```
+```bash
 # Homebrew
 brew install --cask dexchat/tap/dex
+
+# Nix
+nix profile install github:dexchat/dex
 ```
 
-<details>
-<summary><strong>Debian/Ubuntu</strong></summary>
-
-```bash
-curl -fsSL https://dexchat.org/apt/dexchat-keyring.gpg | sudo tee /usr/share/keyrings/dexchat-keyring.gpg >/dev/null
-echo 'deb [signed-by=/usr/share/keyrings/dexchat-keyring.gpg] https://dexchat.org/apt stable main' | sudo tee /etc/apt/sources.list.d/dexchat.list >/dev/null
-sudo apt update && sudo apt install dexchat
-```
-</details>
-
-Until we don't add it to other package managers:
+Until we add support for more package managers:
 - [Packages](https://github.com/dexchat/dex/releases/latest) are available in Debian and RPM formats
 - [Binaries](https://github.com/dexchat/dex/releases/latest) are available for Linux, macOS and Windows
 
 You can also install it with Go:
-```
-go install github.com/dexchat/dex@latest
+```bash
+go install github.com/dexchat/dex/cmd/tui@latest
 ```
 
 Or, if you want test it before actually downloading dex, you can run its docker image and take a look at it:
-```
+```bash
 docker run --rm -it ghcr.io/dexchat/dex:latest
 ```
 
