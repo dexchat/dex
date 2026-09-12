@@ -28,6 +28,40 @@
 - **Persistent history:** Preserve your conversations between sessions locally
 - **Notifications:** Get notified about mentions and direct messages
 
+## Installation
+Use a package manager:
+```
+# Homebrew
+brew install --cask dexchat/tap/dex
+```
+
+<details>
+<summary><strong>Debian/Ubuntu</strong></summary>
+
+```bash
+curl -fsSL https://dexchat.org/apt/dexchat-keyring.gpg | sudo tee /usr/share/keyrings/dexchat-keyring.gpg >/dev/null
+echo 'deb [signed-by=/usr/share/keyrings/dexchat-keyring.gpg] https://dexchat.org/apt stable main' | sudo tee /etc/apt/sources.list.d/dexchat.list >/dev/null
+sudo apt update && sudo apt install dexchat
+```
+</details>
+
+Until we don't add it to other package managers:
+- [Packages](https://github.com/dexchat/dex/releases/latest) are available in Debian and RPM formats
+- [Binaries](https://github.com/dexchat/dex/releases/latest) are available for Linux, macOS and Windows
+
+You can also install it with Go:
+```
+go install github.com/dexchat/dex@latest
+```
+
+Or, if you want test it before actually downloading dex, you can run its docker image and take a look at it:
+```
+docker run --rm -it ghcr.io/dexchat/dex:latest
+```
+
+## Contributing
+If you have any ideas, sugestions, issues or would like to contribute to dex, see the [contributing guide](./CONTRIBUTING.md).
+
 ## reference
 
 * <https://datatracker.ietf.org/doc/html/rfc2812>
