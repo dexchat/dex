@@ -39,6 +39,16 @@ brew install --cask dexchat/tap/dex
 nix profile install github:dexchat/dex
 ```
 
+<details>
+<summary><strong>Debian/Ubuntu</strong></summary>
+
+```bash
+curl -fsSL https://dexchat.org/apt/dexchat-keyring.gpg | sudo tee /usr/share/keyrings/dexchat-keyring.gpg >/dev/null
+echo 'deb [signed-by=/usr/share/keyrings/dexchat-keyring.gpg] https://dexchat.org/apt stable main' | sudo tee /etc/apt/sources.list.d/dexchat.list >/dev/null
+sudo apt update && sudo apt install dexchat
+```
+</details>
+
 Until we add support for more package managers:
 - [Packages](https://github.com/dexchat/dex/releases/latest) are available in Debian and RPM formats
 - [Binaries](https://github.com/dexchat/dex/releases/latest) are available for Linux, macOS and Windows
