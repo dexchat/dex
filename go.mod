@@ -7,10 +7,8 @@ require (
 	charm.land/bubbletea/v2 v2.0.8
 	charm.land/lipgloss/v2 v2.0.5
 	github.com/BurntSushi/toml v1.6.0
-	github.com/lrstanley/girc v1.1.1
+	github.com/lrstanley/girc v1.1.2
 )
-
-replace github.com/lrstanley/girc => github.com/vaaleyard/girc v0.0.0-20260806034234-7b7c3cb6d868
 
 require (
 	github.com/atotto/clipboard v0.1.4 // indirect

@@ -280,10 +280,10 @@ func TestClientDisablesGircAutoJoinQueries(t *testing.T) {
 		Nickname: "tester",
 	}, nil)
 
-	if !client.Config.DisableAutoWhoOnJoin {
+	if !client.Config.DisableAutoWHOOnJoin {
 		t.Fatal("expected dex to disable girc automatic WHO on self-JOIN")
 	}
-	if !client.Config.DisableAutoModeOnJoin {
+	if !client.Config.DisableAutoMODEOnJoin {
 		t.Fatal("expected dex to disable girc automatic MODE on self-JOIN")
 	}
 }

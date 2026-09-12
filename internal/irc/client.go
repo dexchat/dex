@@ -64,8 +64,8 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 		// On channels with a lot of users, that burst can fill ZNC's queue
 		// and delay PRIVMSG traffic. We disable those extra sync requests
 		// and build the displayed user list from girc's tracked state
-		DisableAutoWhoOnJoin:  true,
-		DisableAutoModeOnJoin: true,
+		DisableAutoWHOOnJoin:  true,
+		DisableAutoMODEOnJoin: true,
 		SupportedCaps: map[string][]string{
 			// echo-message is enabled to support ZNC users;
 			// ZNC, by default, only records messages it receives from the IRC server.
