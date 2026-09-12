@@ -16,7 +16,7 @@
 </p>
 <p align="center">
   <a href="https://github.com/vaaleyard/dex/releases"><img src="https://img.shields.io/github/v/release/vaaleyard/dex.svg" alt="Latest Release"></a>
-  <a href="https://github.com/vaaleyard/dex/actions"><img src="https://github.com/dexchat/dex/actions/workflows/build.yml/badge.svg" alt="Build Status"></a>
+  <a href="https://github.com/dexchat/dex/actions/workflows/release.yml"><img src="https://github.com/dexchat/dex/actions/workflows/release.yml/badge.svg" alt="Release Status"></a>
 </p>
 
 ![preview](./images/demo.gif)
