@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/lrstanley/girc"
-	"github.com/vaaleyard/dex/internal/config"
+	"github.com/dexchat/dex/internal/config"
 )
 
 func TestMessageHandlersAreSynchronous(t *testing.T) {

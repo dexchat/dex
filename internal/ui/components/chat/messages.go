@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"charm.land/lipgloss/v2"
-	"github.com/vaaleyard/dex/internal/irc"
+	"github.com/dexchat/dex/internal/irc"
 )
 
 type ChannelMembers interface {

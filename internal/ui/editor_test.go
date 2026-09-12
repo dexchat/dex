@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/vaaleyard/dex/internal/ui/components/palette"
+	"github.com/dexchat/dex/internal/ui/components/palette"
 )
 
 func TestNormalizeEditorText(t *testing.T) {

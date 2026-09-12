@@ -5,11 +5,11 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/vaaleyard/dex/internal/config"
-	"github.com/vaaleyard/dex/internal/history"
-	"github.com/vaaleyard/dex/internal/irc"
-	"github.com/vaaleyard/dex/internal/ui/components/channels"
-	"github.com/vaaleyard/dex/internal/ui/components/chat"
+	"github.com/dexchat/dex/internal/config"
+	"github.com/dexchat/dex/internal/history"
+	"github.com/dexchat/dex/internal/irc"
+	"github.com/dexchat/dex/internal/ui/components/channels"
+	"github.com/dexchat/dex/internal/ui/components/chat"
 )
 
 type flushChatMsg struct{}

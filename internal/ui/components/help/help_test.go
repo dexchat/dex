@@ -6,7 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/vaaleyard/dex/internal/ui/styles"
+	"github.com/dexchat/dex/internal/ui/styles"
 )
 
 func TestHelpVisibility(t *testing.T) {

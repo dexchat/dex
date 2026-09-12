@@ -4,10 +4,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaaleyard/dex/internal/history"
-	"github.com/vaaleyard/dex/internal/irc"
-	"github.com/vaaleyard/dex/internal/ui/components/chat"
-	"github.com/vaaleyard/dex/internal/ui/components/users"
+	"github.com/dexchat/dex/internal/history"
+	"github.com/dexchat/dex/internal/irc"
+	"github.com/dexchat/dex/internal/ui/components/chat"
+	"github.com/dexchat/dex/internal/ui/components/users"
 )
 
 // BufferKey is the identifier for any buffer (servers or channels) in the app

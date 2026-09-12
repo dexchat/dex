@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/vaaleyard/dex/internal/ui/styles"
+	"github.com/dexchat/dex/internal/ui/styles"
 )
 
 func TestMouseWheelScrollsUserList(t *testing.T) {

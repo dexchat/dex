@@ -3,8 +3,8 @@ package ui
 import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
-	"github.com/vaaleyard/dex/internal/ui/components/palette"
+	"github.com/dexchat/dex/internal/ui/components/keybindings"
+	"github.com/dexchat/dex/internal/ui/components/palette"
 )
 
 func (m *Model) handleKeybindings(msg tea.KeyPressMsg) tea.Msg {

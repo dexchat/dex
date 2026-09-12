@@ -77,7 +77,7 @@ changelog:
   sort: asc
   use: github
   abbrev: 7
-  format: "[`{{ .SHA }}`](https://github.com/vaaleyard/dex/commit/{{ .SHA }}): {{ .Message }}{{ if .Logins }} ({{ .Logins | englishJoin }}){{ end }}"
+  format: "[`{{ .SHA }}`](https://github.com/dexchat/dex/commit/{{ .SHA }}): {{ .Message }}{{ if .Logins }} ({{ .Logins | englishJoin }}){{ end }}"
 
   filters:
     exclude:
@@ -113,4 +113,4 @@ release:
   footer: |
     ## Full Changelog
 
-    [`{{ .PreviousTag }}...{{ .Tag }}`](https://github.com/vaaleyard/dex/compare/{{ .PreviousTag }}...{{ .Tag }})
+    [`{{ .PreviousTag }}...{{ .Tag }}`](https://github.com/dexchat/dex/compare/{{ .PreviousTag }}...{{ .Tag }})

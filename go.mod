@@ -1,4 +1,4 @@
-module github.com/vaaleyard/dex
+module github.com/dexchat/dex
 
 go 1.25.4
 

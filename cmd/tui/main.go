@@ -5,9 +5,9 @@ import (
 	"os"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/vaaleyard/dex/internal/config"
-	"github.com/vaaleyard/dex/internal/irc"
-	"github.com/vaaleyard/dex/internal/ui"
+	"github.com/dexchat/dex/internal/config"
+	"github.com/dexchat/dex/internal/irc"
+	"github.com/dexchat/dex/internal/ui"
 )
 
 func main() {

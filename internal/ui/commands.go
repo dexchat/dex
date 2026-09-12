@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/lrstanley/girc"
-	"github.com/vaaleyard/dex/internal/commands"
-	"github.com/vaaleyard/dex/internal/irc"
-	"github.com/vaaleyard/dex/internal/ui/components/channels"
-	"github.com/vaaleyard/dex/internal/ui/components/chat"
+	"github.com/dexchat/dex/internal/commands"
+	"github.com/dexchat/dex/internal/irc"
+	"github.com/dexchat/dex/internal/ui/components/channels"
+	"github.com/dexchat/dex/internal/ui/components/chat"
 )
 
 func (m *Model) handleCommand(buffer *Buffer, command commands.Command) {

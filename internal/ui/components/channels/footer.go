@@ -2,8 +2,8 @@ package channels
 
 import (
 	"charm.land/lipgloss/v2"
-	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
-	"github.com/vaaleyard/dex/internal/ui/styles"
+	"github.com/dexchat/dex/internal/ui/components/keybindings"
+	"github.com/dexchat/dex/internal/ui/styles"
 )
 
 func renderFooter(width int, notificationNotice string, theme styles.Theme) string {

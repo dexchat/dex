@@ -4,19 +4,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaaleyard/dex/internal/commands"
-	"github.com/vaaleyard/dex/internal/config"
-	"github.com/vaaleyard/dex/internal/history"
-	"github.com/vaaleyard/dex/internal/irc"
-	"github.com/vaaleyard/dex/internal/ui/styles"
+	"github.com/dexchat/dex/internal/commands"
+	"github.com/dexchat/dex/internal/config"
+	"github.com/dexchat/dex/internal/history"
+	"github.com/dexchat/dex/internal/irc"
+	"github.com/dexchat/dex/internal/ui/styles"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/vaaleyard/dex/internal/ui/components/channels"
-	"github.com/vaaleyard/dex/internal/ui/components/chat"
-	"github.com/vaaleyard/dex/internal/ui/components/help"
-	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
-	"github.com/vaaleyard/dex/internal/ui/components/palette"
-	"github.com/vaaleyard/dex/internal/ui/components/users"
+	"github.com/dexchat/dex/internal/ui/components/channels"
+	"github.com/dexchat/dex/internal/ui/components/chat"
+	"github.com/dexchat/dex/internal/ui/components/help"
+	"github.com/dexchat/dex/internal/ui/components/keybindings"
+	"github.com/dexchat/dex/internal/ui/components/palette"
+	"github.com/dexchat/dex/internal/ui/components/users"
 )
 
 const (

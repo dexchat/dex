@@ -8,7 +8,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/lrstanley/girc"
-	"github.com/vaaleyard/dex/internal/config"
+	"github.com/dexchat/dex/internal/config"
 )
 
 // Client is for a single server connection

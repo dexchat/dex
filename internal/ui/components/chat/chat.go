@@ -9,8 +9,8 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/vaaleyard/dex/internal/ui/components/keybindings"
-	"github.com/vaaleyard/dex/internal/ui/styles"
+	"github.com/dexchat/dex/internal/ui/components/keybindings"
+	"github.com/dexchat/dex/internal/ui/styles"
 )
 
 type SendMessageMsg struct {
