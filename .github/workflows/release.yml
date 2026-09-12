@@ -116,5 +116,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add dists pool dexchat-keyring.gpg
           git diff --cached --quiet && exit 0
-          git commit -m "chore: publish DexChat ${RELEASE_TAG}"
+          git commit -m "chore: publish dexchat ${RELEASE_TAG}"
           git push

@@ -1,5 +1,5 @@
 {
-  description = "DexChat IRC client";
+  description = "dexchat IRC client";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
