@@ -5,6 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/dexchat/dex/internal/history"
+	"github.com/dexchat/dex/internal/ui/components/channels"
 )
 
 type (
@@ -18,6 +19,10 @@ type (
 	loadedBufferHistory struct {
 		key     BufferKey
 		history *history.Log
+	}
+	closeBufferFinishedMsg struct {
+		key BufferKey
+		err error
 	}
 )
 
@@ -127,6 +132,42 @@ func flushHistoryCmd(snapshot persistenceSnapshot) tea.Cmd {
 		}
 		return result
 	}
+}
+
+func flushSingleHistoryCmd(key BufferKey, server, buffer string, snapshot history.LogSnapshot) tea.Cmd {
+	return func() tea.Msg {
+		return closeBufferFinishedMsg{
+			key: key,
+			err: history.FlushSnapshot(server, buffer, snapshot.Entries),
+		}
+	}
+}
+
+func (m *Model) finishCloseBuffer(msg closeBufferFinishedMsg) {
+	if m.pendingClose != msg.key {
+		return
+	}
+	m.pendingClose = ""
+
+	buffer, ok := m.buffers[msg.key]
+	if !ok {
+		return
+	}
+	if msg.err != nil {
+		m.addCommandError(buffer, "error: could not close private message: "+msg.err.Error())
+		return
+	}
+
+	delete(m.buffers, buffer.Key)
+	if m.directMessages.Remove(buffer.Server, buffer.Buffer) {
+		m.directMessagesDirty = true
+	}
+	m.activeBuffer = makeBufferKey(buffer.Server, "")
+	m.channels, _ = m.channels.Update(channels.RemoveBufferMsg{
+		Server:       buffer.Server,
+		Buffer:       buffer.Buffer,
+		SelectServer: true,
+	})
 }
 
 func (m *Model) applyPersistenceResult(msg historyFlushFinishedMsg) {

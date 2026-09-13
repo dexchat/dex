@@ -4,14 +4,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lrstanley/girc"
+	tea "charm.land/bubbletea/v2"
 	"github.com/dexchat/dex/internal/commands"
 	"github.com/dexchat/dex/internal/irc"
-	"github.com/dexchat/dex/internal/ui/components/channels"
 	"github.com/dexchat/dex/internal/ui/components/chat"
+	"github.com/lrstanley/girc"
 )
 
-func (m *Model) handleCommand(buffer *Buffer, command commands.Command) {
+func (m *Model) handleCommand(buffer *Buffer, command commands.Command) tea.Cmd {
 	switch command.Name {
 	case "help":
 		m.showHelp()
@@ -22,7 +22,7 @@ func (m *Model) handleCommand(buffer *Buffer, command commands.Command) {
 	case "part":
 		m.handleLeaveCommand(buffer, command.Args)
 	case "close":
-		m.handleCloseCommand(buffer, command.Args)
+		return m.handleCloseCommand(buffer, command.Args)
 	case "list":
 		m.handleListCommand(buffer, command.Args)
 	case "msg":
@@ -30,6 +30,7 @@ func (m *Model) handleCommand(buffer *Buffer, command commands.Command) {
 	default:
 		m.addCommandError(buffer, "unknown command: /"+command.Name)
 	}
+	return nil
 }
 
 func (m *Model) handleJoinCommand(buffer *Buffer, args []string) {
@@ -53,31 +54,28 @@ func (m *Model) handleLeaveCommand(buffer *Buffer, args []string) {
 	}
 }
 
-func (m *Model) handleCloseCommand(buffer *Buffer, args []string) {
+func (m *Model) handleCloseCommand(buffer *Buffer, args []string) tea.Cmd {
 	if len(args) != 0 {
 		m.addCommandError(buffer, "usage: /close")
-		return
+		return nil
 	}
 	if buffer.Buffer == "" || girc.IsValidChannel(buffer.Buffer) {
 		m.addCommandError(buffer, "error: /close is only available in a private message")
-		return
+		return nil
 	}
 
-	if err := buffer.History.Flush(buffer.Server, buffer.Buffer); err != nil {
-		m.addCommandError(buffer, "error: could not close private message")
-		return
-	}
-	delete(m.buffers, buffer.Key)
-	if m.directMessages.Remove(buffer.Server, buffer.Buffer) {
-		m.directMessagesDirty = true
+	if m.pendingClose != "" {
+		m.addCommandError(buffer, "error: another private message is being closed")
+		return nil
 	}
 
-	m.activeBuffer = makeBufferKey(buffer.Server, "")
-	m.channels, _ = m.channels.Update(channels.RemoveBufferMsg{
-		Server:       buffer.Server,
-		Buffer:       buffer.Buffer,
-		SelectServer: true,
-	})
+	snapshot, dirty := buffer.History.Snapshot()
+	m.pendingClose = buffer.Key
+	if !dirty {
+		m.finishCloseBuffer(closeBufferFinishedMsg{key: buffer.Key})
+		return nil
+	}
+	return flushSingleHistoryCmd(buffer.Key, buffer.Server, buffer.Buffer, snapshot)
 }
 
 func (m *Model) handleListCommand(buffer *Buffer, args []string) {

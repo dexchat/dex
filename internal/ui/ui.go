@@ -75,6 +75,8 @@ type Model struct {
 	historyFlushInFlight bool
 	// shutdownRequested delays quitting until the final persistence command completes.
 	shutdownRequested bool
+	// pendingClose keeps a private buffer alive until its history is persisted.
+	pendingClose BufferKey
 }
 
 func New(cfg *config.Config) *Model {
@@ -307,7 +309,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case chat.SendMessageMsg:
 		buffer := m.getActiveBuffer()
 		if command, ok := commands.Parse(msgTyped.Text); ok {
-			m.handleCommand(buffer, command)
+			cmds = append(cmds, m.handleCommand(buffer, command))
 			break
 		}
 		if m.ircClientManager != nil && buffer.isValid() {
@@ -336,6 +338,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.shutdownRequested {
 			return m, tea.Quit
 		}
+	case closeBufferFinishedMsg:
+		m.finishCloseBuffer(msgTyped)
 
 	case startConnectionMsg:
 		if m.ircClientManager != nil {
