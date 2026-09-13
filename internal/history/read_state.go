@@ -57,6 +57,14 @@ func (state *ReadState) MarkRead(server, buffer string, marker ReadMarker) {
 }
 
 func (state *ReadState) Flush() error {
+	snapshot := ReadState{Markers: make(map[string]ReadMarker, len(state.Markers))}
+	for key, marker := range state.Markers {
+		snapshot.Markers[key] = marker
+	}
+	return FlushReadStateSnapshot(snapshot)
+}
+
+func FlushReadStateSnapshot(state ReadState) error {
 	path := readStatePath()
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
