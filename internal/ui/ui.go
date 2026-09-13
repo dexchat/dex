@@ -71,7 +71,10 @@ type Model struct {
 	notificationNoticeVersion uint64
 	editKeyPending            bool
 	now                       func() time.Time
-	historyFlushInFlight      bool
+	// historyFlushInFlight prevents overlapping persistence commands.
+	historyFlushInFlight bool
+	// shutdownRequested delays quitting until the final persistence command completes.
+	shutdownRequested bool
 }
 
 func New(cfg *config.Config) *Model {
@@ -157,7 +160,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		if msgTyped.String() == "ctrl+c" {
 			if keybindings.QuitHandler() {
-				m.flushAllHistory()
+				m.shutdownRequested = true
+				m.markBufferRead(m.getActiveBuffer())
+				if cmd := m.startPersistence(); cmd != nil {
+					return m, cmd
+				}
 				return m, tea.Quit
 			}
 			return m, nil
@@ -320,15 +327,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case historyFlushMsg:
-		if !m.historyFlushInFlight {
-			if snapshot := m.snapshotPersistence(); snapshot.hasWork() {
-				m.historyFlushInFlight = true
-				cmds = append(cmds, flushHistoryCmd(snapshot))
-			}
+		if cmd := m.startPersistence(); cmd != nil {
+			cmds = append(cmds, cmd)
 		}
 		cmds = append(cmds, m.scheduleHistoryFlush())
 	case historyFlushFinishedMsg:
 		m.applyPersistenceResult(msgTyped)
+		if m.shutdownRequested {
+			return m, tea.Quit
+		}
 
 	case startConnectionMsg:
 		if m.ircClientManager != nil {
@@ -677,6 +684,8 @@ func (m *Model) scheduleHistoryFlush() tea.Cmd {
 	})
 }
 
+// flushAllHistory is retained for synchronous cleanup in tests and legacy
+// callers. Interactive shutdown uses startPersistence instead.
 func (m *Model) flushAllHistory() {
 	m.markBufferRead(m.getActiveBuffer())
 	for _, buf := range m.buffers {

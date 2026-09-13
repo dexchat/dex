@@ -87,6 +87,18 @@ func (m *Model) snapshotPersistence() persistenceSnapshot {
 	return snapshot
 }
 
+func (m *Model) startPersistence() tea.Cmd {
+	if m.historyFlushInFlight {
+		return nil
+	}
+	snapshot := m.snapshotPersistence()
+	if !snapshot.hasWork() {
+		return nil
+	}
+	m.historyFlushInFlight = true
+	return flushHistoryCmd(snapshot)
+}
+
 func flushHistoryCmd(snapshot persistenceSnapshot) tea.Cmd {
 	// The command only uses copied data, so it can perform disk I/O without
 	// reading or mutating the live Bubble Tea model.
