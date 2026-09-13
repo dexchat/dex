@@ -17,6 +17,7 @@ type Log struct {
 	persisted     uint64
 }
 
+// LogSnapshot is an immutable copy of a log at a specific revision.
 type LogSnapshot struct {
 	Entries  []LogEntry
 	Revision uint64
@@ -50,6 +51,8 @@ func (log *Log) Snapshot() (LogSnapshot, bool) {
 	return LogSnapshot{Entries: entries, Revision: log.revision}, true
 }
 
+// MarkPersisted records which revision was successfully written to disk.
+// A newer revision remains dirty and will be included in a later snapshot.
 func (log *Log) MarkPersisted(revision uint64) {
 	if revision > log.persisted && revision <= log.revision {
 		log.persisted = revision
