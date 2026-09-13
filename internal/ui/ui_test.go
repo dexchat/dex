@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 	"testing"
@@ -15,6 +16,8 @@ import (
 	"github.com/dexchat/dex/internal/ui/components/palette"
 	"github.com/dexchat/dex/internal/ui/components/users"
 )
+
+var errTestPersistence = errors.New("test persistence failure")
 
 func TestPaneForMouseWheelUsesPaneBounds(t *testing.T) {
 	tests := []struct {
@@ -136,6 +139,27 @@ func TestSelfPartPersistsDirtyChannelBeforeRemovingBuffer(t *testing.T) {
 	}
 }
 
+func TestSelfPartKeepsBufferWhenPersistenceFails(t *testing.T) {
+	m := newActivityTestModel()
+	key := makeBufferKey("libera", "#go")
+	m.activeBuffer = key
+	m.persistence.channelRemovals[key] = true
+
+	m.finishChannelRemoval(channelRemovalFinishedMsg{
+		key:     key,
+		server:  "libera",
+		channel: "#go",
+		err:     errTestPersistence,
+	})
+
+	if _, exists := m.buffers[key]; !exists {
+		t.Fatal("channel should remain when persistence fails")
+	}
+	if _, pending := m.persistence.channelRemovals[key]; pending {
+		t.Fatal("failed channel removal should clear its pending state")
+	}
+}
+
 func TestLeaveDoesNotRemoveChannelBeforeServerConfirmation(t *testing.T) {
 	m := newActivityTestModel()
 	channelKey := makeBufferKey("libera", "#go")
@@ -206,6 +230,52 @@ func TestClosePersistsDirtyPrivateBufferBeforeRemovingIt(t *testing.T) {
 	_, _ = m.Update(cmd())
 	if _, exists := m.buffers[key]; exists {
 		t.Fatal("private buffer should be removed after persistence completes")
+	}
+}
+
+func TestCloseKeepsBufferWhenPersistenceFails(t *testing.T) {
+	m := newActivityTestModel()
+	key := makeBufferKey("libera", "alice")
+	_, _ = m.getOrCreateBuffer("libera", "alice")
+	m.persistence.pendingClose = key
+
+	m.finishCloseBuffer(closeBufferFinishedMsg{key: key, err: errTestPersistence})
+
+	if _, exists := m.buffers[key]; !exists {
+		t.Fatal("private buffer should remain when persistence fails")
+	}
+	if m.persistence.pendingClose != "" {
+		t.Fatal("failed close should clear its pending state")
+	}
+}
+
+func TestCtrlCQuitsAfterPersistenceCompletes(t *testing.T) {
+	defer func() { time.Sleep(1600 * time.Millisecond) }()
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	m := newActivityTestModel()
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#go",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "hello",
+	})
+
+	_, _ = m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
+	_, cmd := m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
+	if cmd == nil {
+		t.Fatal("second Ctrl+C should schedule the final persistence")
+	}
+	if m.persistence.shutdownRequested == false {
+		t.Fatal("second Ctrl+C should request shutdown")
+	}
+
+	model, quitCmd := m.Update(cmd())
+	if model != m {
+		t.Fatal("persistence completion should keep the same model")
+	}
+	if quitCmd == nil {
+		t.Fatal("persistence completion should return tea.Quit")
 	}
 }
 
