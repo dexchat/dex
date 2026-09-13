@@ -71,12 +71,9 @@ type Model struct {
 	notificationNoticeVersion uint64
 	editKeyPending            bool
 	now                       func() time.Time
-	// historyFlushInFlight prevents overlapping persistence commands.
-	historyFlushInFlight bool
-	// shutdownRequested delays quitting until the final persistence command completes.
-	shutdownRequested bool
-	// pendingClose keeps a private buffer alive until its history is persisted.
-	pendingClose BufferKey
+
+	// persistence coordinates asynchronous history saves and shutdown state.
+	persistence persistenceState
 }
 
 func New(cfg *config.Config) *Model {
@@ -92,6 +89,9 @@ func New(cfg *config.Config) *Model {
 		theme:           styles.RosePineTheme(),
 		terminalFocused: true,
 		now:             time.Now,
+		persistence: persistenceState{
+			channelRemovals: make(map[BufferKey]bool),
+		},
 	}
 	m.usernameColors = styles.NewUsernameColors(m.theme.Colors.Nicknames)
 
@@ -162,7 +162,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		if msgTyped.String() == "ctrl+c" {
 			if keybindings.QuitHandler() {
-				m.shutdownRequested = true
+				m.persistence.shutdownRequested = true
 				m.markBufferRead(m.getActiveBuffer())
 				if cmd := m.startPersistence(); cmd != nil {
 					return m, cmd
@@ -233,7 +233,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case irc.ChannelPartedMsg:
-		m.removeChannelBuffer(msgTyped.Server, msgTyped.Channel, &cmds)
+		if cmd := m.removeChannelBuffer(msgTyped.Server, msgTyped.Channel); cmd != nil {
+			cmds = append(cmds, cmd)
+		}
 
 	case irc.UserListMsg:
 		buf, createCmd := m.getOrCreateBuffer(msgTyped.Server, msgTyped.Channel)
@@ -335,11 +337,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, m.scheduleHistoryFlush())
 	case historyFlushFinishedMsg:
 		m.applyPersistenceResult(msgTyped)
-		if m.shutdownRequested {
+		if m.persistence.shutdownRequested {
 			return m, tea.Quit
 		}
 	case closeBufferFinishedMsg:
 		m.finishCloseBuffer(msgTyped)
+	case channelRemovalFinishedMsg:
+		m.finishChannelRemoval(msgTyped)
 
 	case startConnectionMsg:
 		if m.ircClientManager != nil {
@@ -610,28 +614,35 @@ func (m *Model) restoreDirectMessages(server string) []tea.Cmd {
 	return cmds
 }
 
-func (m *Model) removeChannelBuffer(server, channel string, cmds *[]tea.Cmd) {
+func (m *Model) removeChannelBuffer(server, channel string) tea.Cmd {
 	key := makeBufferKey(server, channel)
 	buf, exists := m.buffers[key]
 	if !exists {
-		return
+		return nil
+	}
+	if m.persistence.channelRemovals[key] {
+		return nil
+	}
+	if m.persistence.channelRemovals == nil {
+		m.persistence.channelRemovals = make(map[BufferKey]bool)
 	}
 
 	wasActive := key == m.activeBuffer
 	if wasActive {
 		m.markBufferRead(buf)
-		m.activeBuffer = makeBufferKey(server, "")
 	}
-	_ = buf.History.Flush(buf.Server, buf.Buffer)
-	delete(m.buffers, key)
-
-	var cmd tea.Cmd
-	m.channels, cmd = m.channels.Update(channels.RemoveBufferMsg{
-		Server:       server,
-		Buffer:       channel,
-		SelectServer: wasActive,
-	})
-	*cmds = append(*cmds, cmd)
+	m.persistence.channelRemovals[key] = true
+	snapshot, dirty := buf.History.Snapshot()
+	if !dirty {
+		m.finishChannelRemoval(channelRemovalFinishedMsg{
+			key:       key,
+			server:    server,
+			channel:   channel,
+			wasActive: wasActive,
+		})
+		return nil
+	}
+	return flushChannelHistoryCmd(key, server, channel, wasActive, snapshot)
 }
 
 func (m *Model) requestHistoryLoad(buf *Buffer) tea.Cmd {

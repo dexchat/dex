@@ -8,6 +8,17 @@ import (
 	"github.com/dexchat/dex/internal/ui/components/channels"
 )
 
+type persistenceState struct {
+	// flushInFlight prevents overlapping persistence commands.
+	flushInFlight bool
+	// shutdownRequested delays quitting until the final persistence command completes.
+	shutdownRequested bool
+	// pendingClose keeps a private buffer alive until its history is persisted.
+	pendingClose BufferKey
+	// channelRemovals prevents duplicate persistence commands for a parted channel.
+	channelRemovals map[BufferKey]bool
+}
+
 type (
 	historyFlushMsg         struct{}
 	historyLoadedMsg        []loadedBufferHistory
@@ -23,6 +34,13 @@ type (
 	closeBufferFinishedMsg struct {
 		key BufferKey
 		err error
+	}
+	channelRemovalFinishedMsg struct {
+		key       BufferKey
+		server    string
+		channel   string
+		wasActive bool
+		err       error
 	}
 )
 
@@ -93,14 +111,14 @@ func (m *Model) snapshotPersistence() persistenceSnapshot {
 }
 
 func (m *Model) startPersistence() tea.Cmd {
-	if m.historyFlushInFlight {
+	if m.persistence.flushInFlight {
 		return nil
 	}
 	snapshot := m.snapshotPersistence()
 	if !snapshot.hasWork() {
 		return nil
 	}
-	m.historyFlushInFlight = true
+	m.persistence.flushInFlight = true
 	return flushHistoryCmd(snapshot)
 }
 
@@ -143,11 +161,23 @@ func flushSingleHistoryCmd(key BufferKey, server, buffer string, snapshot histor
 	}
 }
 
+func flushChannelHistoryCmd(key BufferKey, server, channel string, wasActive bool, snapshot history.LogSnapshot) tea.Cmd {
+	return func() tea.Msg {
+		return channelRemovalFinishedMsg{
+			key:       key,
+			server:    server,
+			channel:   channel,
+			wasActive: wasActive,
+			err:       history.FlushSnapshot(server, channel, snapshot.Entries),
+		}
+	}
+}
+
 func (m *Model) finishCloseBuffer(msg closeBufferFinishedMsg) {
-	if m.pendingClose != msg.key {
+	if m.persistence.pendingClose != msg.key {
 		return
 	}
-	m.pendingClose = ""
+	m.persistence.pendingClose = ""
 
 	buffer, ok := m.buffers[msg.key]
 	if !ok {
@@ -170,8 +200,31 @@ func (m *Model) finishCloseBuffer(msg closeBufferFinishedMsg) {
 	})
 }
 
+func (m *Model) finishChannelRemoval(msg channelRemovalFinishedMsg) {
+	delete(m.persistence.channelRemovals, msg.key)
+
+	buffer, ok := m.buffers[msg.key]
+	if !ok {
+		return
+	}
+	if msg.err != nil {
+		m.addCommandError(buffer, "error: could not save channel history: "+msg.err.Error())
+		return
+	}
+
+	if msg.wasActive {
+		m.activeBuffer = makeBufferKey(msg.server, "")
+	}
+	delete(m.buffers, msg.key)
+	m.channels, _ = m.channels.Update(channels.RemoveBufferMsg{
+		Server:       msg.server,
+		Buffer:       msg.channel,
+		SelectServer: msg.wasActive,
+	})
+}
+
 func (m *Model) applyPersistenceResult(msg historyFlushFinishedMsg) {
-	m.historyFlushInFlight = false
+	m.persistence.flushInFlight = false
 	for _, result := range msg.results {
 		if result.err != nil {
 			continue
