@@ -109,6 +109,33 @@ func TestSelfPartRemovesActiveChannelAndSelectsServer(t *testing.T) {
 	}
 }
 
+func TestSelfPartPersistsDirtyChannelBeforeRemovingBuffer(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	m := newActivityTestModel()
+	key := makeBufferKey("libera", "#go")
+	m.activeBuffer = key
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#go",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "hello",
+	})
+
+	_, cmd := m.Update(irc.ChannelPartedMsg{Server: "libera", Channel: "#go"})
+	if cmd == nil {
+		t.Fatal("dirty self-PART should schedule persistence")
+	}
+	if _, exists := m.buffers[key]; !exists {
+		t.Fatal("channel should remain until persistence completes")
+	}
+
+	_, _ = m.Update(cmd())
+	if _, exists := m.buffers[key]; exists {
+		t.Fatal("channel should be removed after persistence completes")
+	}
+}
+
 func TestLeaveDoesNotRemoveChannelBeforeServerConfirmation(t *testing.T) {
 	m := newActivityTestModel()
 	channelKey := makeBufferKey("libera", "#go")
@@ -151,6 +178,34 @@ func TestCloseRemovesPrivateBufferAndSelectsServer(t *testing.T) {
 		if directMessage.Server == "libera" && directMessage.User == "alice" {
 			t.Fatalf("closed direct message is still persisted: %#v", m.directMessages.Users)
 		}
+	}
+}
+
+func TestClosePersistsDirtyPrivateBufferBeforeRemovingIt(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	m := newActivityTestModel()
+	key := makeBufferKey("libera", "alice")
+	_, _ = m.getOrCreateBuffer("libera", "alice")
+	m.activeBuffer = key
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "alice",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "hello",
+	})
+
+	_, cmd := m.Update(chat.SendMessageMsg{Text: "/close"})
+	if cmd == nil {
+		t.Fatal("dirty /close should schedule persistence")
+	}
+	if _, exists := m.buffers[key]; !exists {
+		t.Fatal("private buffer should remain until persistence completes")
+	}
+
+	_, _ = m.Update(cmd())
+	if _, exists := m.buffers[key]; exists {
+		t.Fatal("private buffer should be removed after persistence completes")
 	}
 }
 
