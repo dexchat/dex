@@ -1395,6 +1395,67 @@ func TestFocusAndBlurUpdatesTerminalFocusState(t *testing.T) {
 	}
 }
 
+func TestNickUpdateChangesOnlyMatchingServerWithoutRenderingInactiveBuffers(t *testing.T) {
+	cfg := &config.Config{
+		Servers: []*config.Server{
+			{Name: "libera", Nickname: "old-libera", Channels: []string{"#go"}},
+			{Name: "oftc", Nickname: "old-oftc", Channels: []string{"#rust"}},
+		},
+	}
+	m := New(cfg)
+	m.width = 100
+	m.height = 20
+
+	liberaChannel := m.buffers[makeBufferKey("libera", "#go")]
+	liberaChannel.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
+	liberaChannel.Chat.QueueMessage(chat.Message{Text: "deferred message"})
+
+	_, _ = m.Update(irc.NickUpdateMsg{Server: "libera", Nick: "new-libera"})
+
+	if got, want := m.buffers[makeBufferKey("libera", "")].Chat.Nickname(), "new-libera"; got != want {
+		t.Fatalf("libera server nickname = %q, want %q", got, want)
+	}
+	if got, want := liberaChannel.Chat.Nickname(), "new-libera"; got != want {
+		t.Fatalf("libera channel nickname = %q, want %q", got, want)
+	}
+	if got, want := m.buffers[makeBufferKey("oftc", "")].Chat.Nickname(), "old-oftc"; got != want {
+		t.Fatalf("oftc server nickname = %q, want %q", got, want)
+	}
+	if got, want := m.buffers[makeBufferKey("oftc", "#rust")].Chat.Nickname(), "old-oftc"; got != want {
+		t.Fatalf("oftc channel nickname = %q, want %q", got, want)
+	}
+	if view := plainText(liberaChannel.Chat.View()); strings.Contains(view, "deferred message") {
+		t.Fatalf("NickUpdateMsg rendered an inactive buffer prematurely:\n%s", view)
+	}
+}
+
+func TestTopicUpdateDefersInactiveBufferRenderingUntilSelection(t *testing.T) {
+	m := newActivityTestModel()
+	channelKey := makeBufferKey("libera", "#go")
+	channel := m.buffers[channelKey]
+	channel.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
+	channel.Chat.QueueMessage(chat.Message{Text: "deferred message"})
+
+	_, _ = m.Update(irc.ChannelTopicMsg{
+		Server:  "libera",
+		Channel: "#go",
+		Topic:   "A deferred topic",
+	})
+
+	if view := plainText(channel.Chat.View()); strings.Contains(view, "deferred message") {
+		t.Fatalf("ChannelTopicMsg rendered an inactive buffer prematurely:\n%s", view)
+	}
+
+	_, _ = m.Update(palette.ChannelSelectionMsg{Server: "libera", Channel: "#go"})
+	view := plainText(channel.Chat.View())
+	if !strings.Contains(view, "A deferred topic") {
+		t.Fatalf("selected buffer is missing its updated topic:\n%s", view)
+	}
+	if !strings.Contains(view, "deferred message") {
+		t.Fatalf("selected buffer is missing its queued message:\n%s", view)
+	}
+}
+
 func TestActiveBufferMessageWhenBlurredTriggersNotificationAndActivity(t *testing.T) {
 	m := newActivityTestModel()
 	key := makeBufferKey("libera", "#random")

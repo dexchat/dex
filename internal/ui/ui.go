@@ -292,8 +292,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if buf != nil {
 			buf.Chat.SetTopic(msgTyped.Topic)
-			// In case the channel topic is more than one line
-			buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
+			// In case the channel topic is more than one line, resize only the
+			// visible buffer. Inactive buffers are resized when selected.
+			if buf.Key == m.activeBuffer {
+				buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
+			}
 		}
 
 	case irc.NickUpdateMsg:
@@ -301,7 +304,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if buf.Server == msgTyped.Server {
 				buf.Chat.SetNickname(msgTyped.Nick)
 			}
-			buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 		}
 
 	case irc.ChannelNameUpdateMsg:

@@ -230,6 +230,7 @@ func (m *Model) SetTopic(topic string) {
 
 func (m *Model) SetNickname(nickname string) {
 	m.nickname = nickname
+	m.setInputWidth(m.viewport.Width())
 }
 
 func (m *Model) Nickname() string {

@@ -24,6 +24,21 @@ func TestSetInputValueMovesCursorToEndAndHonorsLimit(t *testing.T) {
 	}
 }
 
+func TestSetNicknameRecalculatesInputWidth(t *testing.T) {
+	theme := styles.RosePineTheme()
+	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
+	m.SetSize(80, 12)
+
+	m.SetNickname("a")
+	shortWidth := m.input.Width()
+	m.SetNickname("long-nickname")
+	longWidth := m.input.Width()
+
+	if got, want := shortWidth-longWidth, len("long-nickname")-len("a"); got != want {
+		t.Fatalf("input width change = %d, want %d", got, want)
+	}
+}
+
 type stubChannelMembers struct {
 	nicks []string
 }
