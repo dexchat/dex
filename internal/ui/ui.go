@@ -90,7 +90,7 @@ func New(cfg *config.Config) *Model {
 		terminalFocused: true,
 		now:             time.Now,
 		persistence: persistenceState{
-			channelRemovals: make(map[BufferKey]bool),
+			detachedHistory: make(map[BufferKey]detachedHistory),
 		},
 	}
 	m.usernameColors = styles.NewUsernameColors(m.theme.Colors.Nicknames)
@@ -166,6 +166,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.markBufferRead(m.getActiveBuffer())
 				if cmd := m.startPersistence(); cmd != nil {
 					return m, cmd
+				}
+				if m.persistence.flushInFlight {
+					return m, nil
 				}
 				return m, tea.Quit
 			}
@@ -336,14 +339,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		cmds = append(cmds, m.scheduleHistoryFlush())
 	case historyFlushFinishedMsg:
-		m.applyPersistenceResult(msgTyped)
-		if m.persistence.shutdownRequested {
-			return m, tea.Quit
+		if cmd := m.applyPersistenceResult(msgTyped); cmd != nil {
+			return m, cmd
 		}
-	case closeBufferFinishedMsg:
-		m.finishCloseBuffer(msgTyped)
-	case channelRemovalFinishedMsg:
-		m.finishChannelRemoval(msgTyped)
 
 	case startConnectionMsg:
 		if m.ircClientManager != nil {
@@ -572,13 +570,18 @@ func (m *Model) getOrCreateBuffer(server, channel string) (*Buffer, tea.Cmd) {
 		return nil, nil
 	}
 
+	log := history.NewLog()
+	if detached, ok := m.persistence.detachedHistory[key]; ok {
+		log = detached.log
+		delete(m.persistence.detachedHistory, key)
+	}
 	buf := &Buffer{
 		Key:     key,
 		Server:  server,
 		Buffer:  channel,
 		Chat:    chat.New(m.theme, m.usernameColors),
 		Users:   users.New(m.theme, m.usernameColors),
-		History: history.NewLog(),
+		History: log,
 	}
 
 	// copy nickname from the server buffer
@@ -620,29 +623,7 @@ func (m *Model) removeChannelBuffer(server, channel string) tea.Cmd {
 	if !exists {
 		return nil
 	}
-	if m.persistence.channelRemovals[key] {
-		return nil
-	}
-	if m.persistence.channelRemovals == nil {
-		m.persistence.channelRemovals = make(map[BufferKey]bool)
-	}
-
-	wasActive := key == m.activeBuffer
-	if wasActive {
-		m.markBufferRead(buf)
-	}
-	m.persistence.channelRemovals[key] = true
-	snapshot, dirty := buf.History.Snapshot()
-	if !dirty {
-		m.finishChannelRemoval(channelRemovalFinishedMsg{
-			key:       key,
-			server:    server,
-			channel:   channel,
-			wasActive: wasActive,
-		})
-		return nil
-	}
-	return flushChannelHistoryCmd(key, server, channel, wasActive, snapshot)
+	return m.removeBuffer(buf, false)
 }
 
 func (m *Model) requestHistoryLoad(buf *Buffer) tea.Cmd {

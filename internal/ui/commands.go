@@ -64,18 +64,7 @@ func (m *Model) handleCloseCommand(buffer *Buffer, args []string) tea.Cmd {
 		return nil
 	}
 
-	if m.persistence.pendingClose != "" {
-		m.addCommandError(buffer, "error: another private message is being closed")
-		return nil
-	}
-
-	snapshot, dirty := buffer.History.Snapshot()
-	m.persistence.pendingClose = buffer.Key
-	if !dirty {
-		m.finishCloseBuffer(closeBufferFinishedMsg{key: buffer.Key})
-		return nil
-	}
-	return flushSingleHistoryCmd(buffer.Key, buffer.Server, buffer.Buffer, snapshot)
+	return m.removeBuffer(buffer, true)
 }
 
 func (m *Model) handleListCommand(buffer *Buffer, args []string) {

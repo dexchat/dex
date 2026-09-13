@@ -112,7 +112,7 @@ func TestSelfPartRemovesActiveChannelAndSelectsServer(t *testing.T) {
 	}
 }
 
-func TestSelfPartPersistsDirtyChannelBeforeRemovingBuffer(t *testing.T) {
+func TestSelfPartQueuesDirtyHistoryForPersistence(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	m := newActivityTestModel()
 	key := makeBufferKey("libera", "#go")
@@ -129,34 +129,37 @@ func TestSelfPartPersistsDirtyChannelBeforeRemovingBuffer(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("dirty self-PART should schedule persistence")
 	}
-	if _, exists := m.buffers[key]; !exists {
-		t.Fatal("channel should remain until persistence completes")
+	if _, exists := m.buffers[key]; exists {
+		t.Fatal("server-confirmed PART should remove the channel immediately")
+	}
+	if _, pending := m.persistence.detachedHistory[key]; !pending {
+		t.Fatal("removed channel history should remain queued for persistence")
 	}
 
 	_, _ = m.Update(cmd())
-	if _, exists := m.buffers[key]; exists {
-		t.Fatal("channel should be removed after persistence completes")
+	if _, pending := m.persistence.detachedHistory[key]; pending {
+		t.Fatal("persisted channel history should leave the queue")
 	}
 }
 
-func TestSelfPartKeepsBufferWhenPersistenceFails(t *testing.T) {
+func TestSelfPartKeepsHistoryQueuedWhenPersistenceFails(t *testing.T) {
 	m := newActivityTestModel()
 	key := makeBufferKey("libera", "#go")
-	m.activeBuffer = key
-	m.persistence.channelRemovals[key] = true
+	log := history.NewLog()
+	log.Insert(history.LogEntry{ServerTime: 1})
+	m.persistence.detachedHistory[key] = detachedHistory{
+		server: "libera",
+		buffer: "#go",
+		log:    log,
+	}
+	m.persistence.flushInFlight = true
 
-	m.finishChannelRemoval(channelRemovalFinishedMsg{
-		key:     key,
-		server:  "libera",
-		channel: "#go",
-		err:     errTestPersistence,
+	m.applyPersistenceResult(historyFlushFinishedMsg{
+		results: []historyFlushResult{{key: key, log: log, revision: 1, err: errTestPersistence}},
 	})
 
-	if _, exists := m.buffers[key]; !exists {
-		t.Fatal("channel should remain when persistence fails")
-	}
-	if _, pending := m.persistence.channelRemovals[key]; pending {
-		t.Fatal("failed channel removal should clear its pending state")
+	if _, pending := m.persistence.detachedHistory[key]; !pending {
+		t.Fatal("failed channel history should remain queued for retry")
 	}
 }
 
@@ -205,7 +208,7 @@ func TestCloseRemovesPrivateBufferAndSelectsServer(t *testing.T) {
 	}
 }
 
-func TestClosePersistsDirtyPrivateBufferBeforeRemovingIt(t *testing.T) {
+func TestCloseQueuesDirtyPrivateHistoryForPersistence(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	m := newActivityTestModel()
 	key := makeBufferKey("libera", "alice")
@@ -223,29 +226,121 @@ func TestClosePersistsDirtyPrivateBufferBeforeRemovingIt(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("dirty /close should schedule persistence")
 	}
-	if _, exists := m.buffers[key]; !exists {
-		t.Fatal("private buffer should remain until persistence completes")
+	if _, exists := m.buffers[key]; exists {
+		t.Fatal("/close should remove the private buffer immediately")
+	}
+	if _, pending := m.persistence.detachedHistory[key]; !pending {
+		t.Fatal("closed private history should remain queued for persistence")
 	}
 
 	_, _ = m.Update(cmd())
-	if _, exists := m.buffers[key]; exists {
-		t.Fatal("private buffer should be removed after persistence completes")
+	if _, pending := m.persistence.detachedHistory[key]; pending {
+		t.Fatal("persisted private history should leave the queue")
 	}
 }
 
-func TestCloseKeepsBufferWhenPersistenceFails(t *testing.T) {
+func TestCloseKeepsHistoryQueuedWhenPersistenceFails(t *testing.T) {
 	m := newActivityTestModel()
 	key := makeBufferKey("libera", "alice")
-	_, _ = m.getOrCreateBuffer("libera", "alice")
-	m.persistence.pendingClose = key
-
-	m.finishCloseBuffer(closeBufferFinishedMsg{key: key, err: errTestPersistence})
-
-	if _, exists := m.buffers[key]; !exists {
-		t.Fatal("private buffer should remain when persistence fails")
+	log := history.NewLog()
+	log.Insert(history.LogEntry{ServerTime: 1})
+	m.persistence.detachedHistory[key] = detachedHistory{
+		server: "libera",
+		buffer: "alice",
+		log:    log,
 	}
-	if m.persistence.pendingClose != "" {
-		t.Fatal("failed close should clear its pending state")
+	m.persistence.flushInFlight = true
+
+	m.applyPersistenceResult(historyFlushFinishedMsg{
+		results: []historyFlushResult{{key: key, log: log, revision: 1, err: errTestPersistence}},
+	})
+
+	if _, pending := m.persistence.detachedHistory[key]; !pending {
+		t.Fatal("failed private history should remain queued for retry")
+	}
+}
+
+func TestReopenedBufferKeepsDetachedHistoryWhilePersistenceRuns(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	m := newActivityTestModel()
+	key := makeBufferKey("libera", "alice")
+	buffer, _ := m.getOrCreateBuffer("libera", "alice")
+	m.activeBuffer = key
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "alice",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "first",
+	})
+
+	firstFlush := m.handleCloseCommand(buffer, nil)
+	if firstFlush == nil {
+		t.Fatal("first close should start persistence")
+	}
+	reopened, _ := m.getOrCreateBuffer("libera", "alice")
+	if reopened.History != buffer.History {
+		t.Fatal("reopened buffer should reuse history still being persisted")
+	}
+	m.activeBuffer = key
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "alice",
+		Timestamp: time.Now().Add(time.Second),
+		From:      "alice",
+		Text:      "second",
+	})
+	if cmd := m.handleCloseCommand(reopened, nil); cmd != nil {
+		t.Fatal("second close should queue behind the in-flight persistence")
+	}
+
+	_, secondFlush := m.Update(firstFlush())
+	if secondFlush == nil {
+		t.Fatal("newer detached history should trigger a second flush")
+	}
+	_, _ = m.Update(secondFlush())
+	if _, pending := m.persistence.detachedHistory[key]; pending {
+		t.Fatal("latest detached history should leave the queue after persistence")
+	}
+	if got := len(history.Load("libera", "alice").Entries()); got != 2 {
+		t.Fatalf("persisted history contains %d messages, want 2", got)
+	}
+}
+
+func TestShutdownWaitsForInFlightPersistenceAndFlushesNewRevision(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	m := newActivityTestModel()
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#go",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "first",
+	})
+
+	firstFlush := m.startPersistence()
+	if firstFlush == nil {
+		t.Fatal("dirty history should start persistence")
+	}
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#go",
+		Timestamp: time.Now().Add(time.Second),
+		From:      "alice",
+		Text:      "second",
+	})
+	m.persistence.shutdownRequested = true
+	if cmd := m.startPersistence(); cmd != nil {
+		t.Fatal("shutdown should wait for the in-flight command")
+	}
+
+	_, secondFlush := m.Update(firstFlush())
+	if secondFlush == nil {
+		t.Fatal("shutdown should persist changes newer than the first snapshot")
+	}
+	_, quitCmd := m.Update(secondFlush())
+	if quitCmd == nil {
+		t.Fatal("shutdown should quit after the final snapshot is persisted")
 	}
 }
 
