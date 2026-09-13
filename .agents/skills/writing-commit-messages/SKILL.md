@@ -17,13 +17,14 @@ Use Conventional Commits:
 
 [optional references]
 
-[optional body]
+[body]
 
 ```
 
 ## Rules
 
-### Subject line
+### Summary line
+
 - Choose the narrowest accurate semantic type, such as `fix`, `feat`, `chore`,
   `refactor`, `docs`, `test`, `ci`, `build`, `perf`, or `sec`.
 - Add a scope only when it materially clarifies the subject.
@@ -31,16 +32,25 @@ Use Conventional Commits:
   and keep the complete subject ideally under 60 characters.
 
 ### References
+
 - Include issue, pull request, or discussion references only when known. Never
   invent them.
 
 ### Body
+
 - Describe **what changed**, **what the previous behavior was**,
   and **how the new behavior works** at a high level.
 - Use plain prose, not bullet points. Wrap lines at ~72 characters.
 - Focus on the _why_ and _how_ rather than restating the diff.
 - Keep the tone direct and technical without filler phrases.
 - Don't exceed a handful of paragraphs; less is more.
+
+When to write a body:
+
+- The motivation is not clear from the summary
+- The change has side effects, tradeoffs, or gotchas worth calling out
+- You are reverting a commit; reference the SHA and explain the reason
+- The approach taken deserves a brief explanation
 
 ## Workflow
 

@@ -7,6 +7,7 @@ the TUI subtree.
 ## General guidelines
 
 - Keep the Bubble Tea update loop responsive.
+- Keep things simple; do not overcomplicate.
 - Do not add network calls, disk scans, long loops, or expensive rendering
   directly to `Model.Update`.
 - Represent asynchronous results as typed `tea.Msg` values and apply their

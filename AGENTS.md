@@ -128,13 +128,6 @@ Homebrew, APT, GitHub Releases, or GHCR publication succeeded.
   end with periods unless comments are at the end of the line. Wrap comments
   at 78 columns.
 
-## Committing
-
-- ALWAYS use semantic commits (`fix:`, `feat:`, `chore:`, `refactor:`,
-  `docs:`, `sec:`, `ci:`, etc).
-- Try to keep commits to one line, not including your attribution. Only use
-  multi-line commits when additional context is truly necessary.
-
 ## Issue and PR Guidelines
 
 - Never create an issue.
