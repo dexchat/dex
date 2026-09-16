@@ -131,6 +131,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				break
 			}
 		}
+		return m.updateContent(), nil
 	case ActivityUpdateMsg:
 		for i, n := range m.nodes {
 			if !n.isServer && strings.EqualFold(n.parent, msg.Server) && strings.EqualFold(n.name, msg.Buffer) {
@@ -140,6 +141,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				break
 			}
 		}
+		return m.updateContent(), nil
 	case notificationPulseTickMsg:
 		for i, n := range m.nodes {
 			if n.isServer || !strings.EqualFold(n.parent, msg.server) || !strings.EqualFold(n.name, msg.buffer) {
@@ -160,6 +162,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.nodes[i].notificationPulseDimmed = false
 			break
 		}
+		return m.updateContent(), nil
 	case NewBufferMsg:
 		// find the position to insert: after the server and its existing channels
 		insertIdx := len(m.nodes) // default to end
@@ -183,6 +186,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 		// insert at the correct position
 		m.nodes = append(m.nodes[:insertIdx], append([]node{newNode}, m.nodes[insertIdx:]...)...)
+		return m.updateContent(), nil
 	case RemoveBufferMsg:
 		removeIdx := -1
 		for i, existingNode := range m.nodes {
@@ -207,15 +211,14 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				}
 			}
 		}
-	}
-
-	if _, ok := msg.(tea.KeyMsg); ok {
 		return m.updateContent(), nil
+	case tea.MouseWheelMsg:
+		var cmd tea.Cmd
+		m.viewport, cmd = m.viewport.Update(msg)
+		return m, cmd
+	default:
+		return m, nil
 	}
-
-	var cmd tea.Cmd
-	m.viewport, cmd = m.viewport.Update(msg)
-	return m.updateContent(), cmd
 }
 
 func (m Model) SetSize(width, height int) Model {
@@ -451,7 +454,7 @@ func (m Model) MoveUp() Model {
 			m.selected = currentItem.parent + ":" + currentItem.name
 		}
 	}
-	return m.ensureCursorVisible()
+	return m.ensureCursorVisible().updateContent()
 }
 
 // MoveDown moves the cursor down to the next channel
@@ -472,7 +475,7 @@ func (m Model) MoveDown() Model {
 			m.selected = currentItem.parent + ":" + currentItem.name
 		}
 	}
-	return m.ensureCursorVisible()
+	return m.ensureCursorVisible().updateContent()
 }
 
 func (m Model) Selected() ChannelSelectionMsg {

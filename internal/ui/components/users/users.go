@@ -49,21 +49,18 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	var cmd tea.Cmd
-
 	switch msg := msg.(type) {
 	case UserListMsg:
 		m.users = msg.Users
 		m.prefixes = msg.Prefixes
 		return m.updateContent(), nil
-	}
-	// This prevents j/k in the input box from scrolling the viewport
-	if _, ok := msg.(tea.KeyMsg); ok {
+	case tea.MouseWheelMsg:
+		var cmd tea.Cmd
+		m.viewport, cmd = m.viewport.Update(msg)
 		return m, cmd
+	default:
+		return m, nil
 	}
-
-	m.viewport, cmd = m.viewport.Update(msg)
-	return m, cmd
 }
 
 func (m Model) updateContent() Model {

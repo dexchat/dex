@@ -25,6 +25,24 @@ func TestMouseWheelScrollsUserList(t *testing.T) {
 	}
 }
 
+func TestUpdateIgnoresUnrelatedMessages(t *testing.T) {
+	m := newScrollableUsersModel()
+	beforeContent := m.viewport.GetContent()
+	beforeOffset := m.viewport.YOffset()
+
+	updated, cmd := m.Update(struct{}{})
+
+	if cmd != nil {
+		t.Fatal("unrelated message returned a command")
+	}
+	if got := updated.viewport.GetContent(); got != beforeContent {
+		t.Fatal("unrelated message changed rendered content")
+	}
+	if got := updated.viewport.YOffset(); got != beforeOffset {
+		t.Fatalf("unrelated message changed viewport offset to %d, want %d", got, beforeOffset)
+	}
+}
+
 func TestUserPaneRendersRequestedHeight(t *testing.T) {
 	m := newScrollableUsersModel()
 

@@ -33,6 +33,39 @@ func TestMouseWheelScrollsListWithoutChangingSelection(t *testing.T) {
 	}
 }
 
+func TestUpdateIgnoresUnrelatedMessages(t *testing.T) {
+	m := newScrollableChannelsModel()
+	beforeContent := m.viewport.GetContent()
+	beforeOffset := m.viewport.YOffset()
+	beforeSelection := m.Selected()
+
+	updated, cmd := m.Update(struct{}{})
+
+	if cmd != nil {
+		t.Fatal("unrelated message returned a command")
+	}
+	if got := updated.viewport.GetContent(); got != beforeContent {
+		t.Fatal("unrelated message changed rendered content")
+	}
+	if got := updated.viewport.YOffset(); got != beforeOffset {
+		t.Fatalf("unrelated message changed viewport offset to %d, want %d", got, beforeOffset)
+	}
+	if got := updated.Selected(); got != beforeSelection {
+		t.Fatalf("unrelated message changed selection to %#v, want %#v", got, beforeSelection)
+	}
+}
+
+func TestMoveDownUpdatesRenderedSelection(t *testing.T) {
+	m := newScrollableChannelsModel()
+	before := m.viewport.GetContent()
+
+	m = m.MoveDown()
+
+	if got := m.viewport.GetContent(); got == before {
+		t.Fatal("MoveDown did not update the rendered selection")
+	}
+}
+
 func TestChannelRowsRenderFullViewportWidth(t *testing.T) {
 	m := newScrollableChannelsModel()
 

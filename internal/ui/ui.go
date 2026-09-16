@@ -154,8 +154,9 @@ func (m *Model) Init() tea.Cmd {
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
-		cmd  tea.Cmd
-		cmds []tea.Cmd
+		cmd               tea.Cmd
+		cmds              []tea.Cmd
+		forwardToChildren bool
 	)
 
 	switch msgTyped := msg.(type) {
@@ -183,6 +184,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if _, ok := msg.(palette.EditInEditorMsg); ok {
 			cmds = append(cmds, m.editActiveInput())
+		}
+		switch msg.(type) {
+		case nil, channels.ChannelSelectionMsg, palette.LastBufferMsg, palette.EditInEditorMsg:
+		default:
+			forwardToChildren = true
 		}
 
 	case palette.OpenChannelPickerMsg:
@@ -368,6 +374,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msgTyped.version == m.notificationNoticeVersion {
 			m.channels = m.channels.ClearNotificationNotice()
 		}
+
+	default:
+		// Unknown messages may belong to a child Bubbles model. Keep forwarding
+		// them so private cursor, viewport, and component messages still work.
+		forwardToChildren = true
+	}
+
+	if !forwardToChildren {
+		return m, tea.Batch(cmds...)
 	}
 
 	paletteWasVisible := m.palette.IsVisible()
