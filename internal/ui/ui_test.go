@@ -142,6 +142,30 @@ func TestSelfPartQueuesDirtyHistoryForPersistence(t *testing.T) {
 	}
 }
 
+func TestPersistenceMergesUnloadedHistory(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	writeTestHistory(t, "libera", "#go", "old message")
+	m := newActivityTestModel()
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#go",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "new message",
+	})
+
+	cmd := m.startPersistence()
+	if cmd == nil {
+		t.Fatal("dirty unloaded history should schedule persistence")
+	}
+	_, _ = m.Update(cmd())
+
+	entries := history.Load("libera", "#go").Entries()
+	if len(entries) != 2 {
+		t.Fatalf("saved history entries = %d, want 2", len(entries))
+	}
+}
+
 func TestSelfPartKeepsHistoryQueuedWhenPersistenceFails(t *testing.T) {
 	m := newActivityTestModel()
 	key := makeBufferKey("libera", "#go")

@@ -3,6 +3,8 @@ package history
 import (
 	"compress/gzip"
 	"encoding/json"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -148,27 +150,86 @@ func (log *Log) Flush(server, buffer string) error {
 }
 
 func FlushSnapshot(server, buffer string, entries []LogEntry) error {
-
 	path := logFullPath(server, buffer)
-
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 
-	file, err := os.Create(path)
+	file, err := os.CreateTemp(dir, ".history-*.tmp")
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	tempPath := file.Name()
+	cleanup := func() {
+		_ = file.Close()
+		_ = os.Remove(tempPath)
+	}
 
 	gz := gzip.NewWriter(file)
-	defer gz.Close()
-
 	encoder := json.NewEncoder(gz)
 	for _, entry := range entries {
 		if err := encoder.Encode(entry); err != nil {
+			_ = gz.Close()
+			cleanup()
 			return err
 		}
 	}
+	if err := gz.Close(); err != nil {
+		cleanup()
+		return err
+	}
+	if err := file.Sync(); err != nil {
+		cleanup()
+		return err
+	}
+	if err := file.Close(); err != nil {
+		_ = os.Remove(tempPath)
+		return err
+	}
+	if err := os.Rename(tempPath, path); err != nil {
+		_ = os.Remove(tempPath)
+		return err
+	}
 	return nil
+}
+
+// MergeStoredEntries combines incoming entries with an existing history file.
+// It is used when live messages arrive before a buffer's history is loaded.
+func MergeStoredEntries(server, buffer string, incoming []LogEntry) ([]LogEntry, error) {
+	path := logFullPath(server, buffer)
+	file, err := os.Open(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return append([]LogEntry(nil), incoming...), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	gz, err := gzip.NewReader(file)
+	if err != nil {
+		return nil, err
+	}
+	defer gz.Close()
+
+	merged := NewLog()
+	decoder := json.NewDecoder(gz)
+	for {
+		var entry LogEntry
+		err := decoder.Decode(&entry)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		merged.Insert(entry)
+	}
+	for _, entry := range incoming {
+		if !merged.IsDuplicate(entry) {
+			merged.Insert(entry)
+		}
+	}
+	return append([]LogEntry(nil), merged.Entries()...), nil
 }

@@ -8,6 +8,8 @@ import (
 	"github.com/dexchat/dex/internal/ui/components/channels"
 )
 
+// persistenceState coordinates asynchronous saves and keeps removed buffers
+// available until their pending history has been written.
 type persistenceState struct {
 	// flushInFlight prevents overlapping persistence commands.
 	flushInFlight bool
@@ -20,6 +22,8 @@ type persistenceState struct {
 	detachedHistory map[BufferKey]detachedHistory
 }
 
+// historyFlushFinishedMsg carries persistence results back to the Bubble Tea
+// update loop, where dirty flags and shutdown state are updated safely.
 type (
 	historyFlushMsg         struct{}
 	historyLoadedMsg        []loadedBufferHistory
@@ -46,6 +50,8 @@ type historyFlushFinishedMsg struct {
 	readDirty         bool
 }
 
+// historyFlushResult reports whether one history snapshot was written and
+// which log revision was included in that write.
 type historyFlushResult struct {
 	key      BufferKey
 	log      *history.Log
@@ -53,20 +59,30 @@ type historyFlushResult struct {
 	err      error
 }
 
+// historyFlushSnapshot contains immutable data for one asynchronous history
+// write.
 type historyFlushSnapshot struct {
 	key      BufferKey
 	server   string
 	buffer   string
 	log      *history.Log
 	snapshot history.LogSnapshot
+
+	// mergeExisting is true when the live log does not include disk history.
+	mergeExisting bool
 }
 
+// detachedHistory retains a removed buffer's log until its pending write
+// completes, including whether disk history must be merged first.
 type detachedHistory struct {
-	server string
-	buffer string
-	log    *history.Log
+	server        string
+	buffer        string
+	log           *history.Log
+	mergeExisting bool
 }
 
+// persistenceSnapshot is the complete set of copied data used by one save
+// command. It must not reference mutable collections while the command runs.
 type persistenceSnapshot struct {
 	history        []historyFlushSnapshot
 	directMessages history.DirectMessages
@@ -99,11 +115,12 @@ func (m *Model) snapshotPersistence() persistenceSnapshot {
 			continue
 		}
 		snapshot.history = append(snapshot.history, historyFlushSnapshot{
-			key:      key,
-			server:   detached.server,
-			buffer:   detached.buffer,
-			log:      detached.log,
-			snapshot: logSnapshot,
+			key:           key,
+			server:        detached.server,
+			buffer:        detached.buffer,
+			log:           detached.log,
+			snapshot:      logSnapshot,
+			mergeExisting: detached.mergeExisting,
 		})
 	}
 	for key, buf := range m.buffers {
@@ -112,11 +129,12 @@ func (m *Model) snapshotPersistence() persistenceSnapshot {
 			continue
 		}
 		snapshot.history = append(snapshot.history, historyFlushSnapshot{
-			key:      key,
-			server:   buf.Server,
-			buffer:   buf.Buffer,
-			log:      buf.History,
-			snapshot: logSnapshot,
+			key:           key,
+			server:        buf.Server,
+			buffer:        buf.Buffer,
+			log:           buf.History,
+			snapshot:      logSnapshot,
+			mergeExisting: !buf.historyLoaded,
 		})
 	}
 	return snapshot
@@ -142,7 +160,21 @@ func flushHistoryCmd(snapshot persistenceSnapshot) tea.Cmd {
 	return func() tea.Msg {
 		results := make([]historyFlushResult, 0, len(snapshot.history))
 		for _, item := range snapshot.history {
-			err := history.FlushSnapshot(item.server, item.buffer, item.snapshot.Entries)
+			entries := item.snapshot.Entries
+			if item.mergeExisting {
+				var err error
+				entries, err = history.MergeStoredEntries(item.server, item.buffer, entries)
+				if err != nil {
+					results = append(results, historyFlushResult{
+						key:      item.key,
+						log:      item.log,
+						revision: item.snapshot.Revision,
+						err:      err,
+					})
+					continue
+				}
+			}
+			err := history.FlushSnapshot(item.server, item.buffer, entries)
 			results = append(results, historyFlushResult{
 				key:      item.key,
 				log:      item.log,
@@ -176,9 +208,10 @@ func (m *Model) removeBuffer(buffer *Buffer, forgetDirectMessage bool) tea.Cmd {
 	}
 	if _, dirty := buffer.History.Snapshot(); dirty {
 		m.persistence.detachedHistory[key] = detachedHistory{
-			server: buffer.Server,
-			buffer: buffer.Buffer,
-			log:    buffer.History,
+			server:        buffer.Server,
+			buffer:        buffer.Buffer,
+			log:           buffer.History,
+			mergeExisting: !buffer.historyLoaded,
 		}
 	}
 	delete(m.buffers, key)
