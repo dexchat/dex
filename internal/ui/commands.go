@@ -16,41 +16,54 @@ func (m *Model) handleCommand(buffer *Buffer, command commands.Command) tea.Cmd 
 	case "help":
 		m.showHelp()
 	case "join":
-		m.handleJoinCommand(buffer, command.Args)
+		return m.handleJoinCommand(buffer, command.Args)
 	case "leave":
-		m.handleLeaveCommand(buffer, command.Args)
+		return m.handleLeaveCommand(buffer, command.Args)
 	case "part":
-		m.handleLeaveCommand(buffer, command.Args)
+		return m.handleLeaveCommand(buffer, command.Args)
 	case "close":
 		return m.handleCloseCommand(buffer, command.Args)
 	case "list":
-		m.handleListCommand(buffer, command.Args)
+		return m.handleListCommand(buffer, command.Args)
 	case "msg":
-		m.handleMsgCommand(buffer, command.Args)
+		return m.handleMsgCommand(buffer, command.Args)
 	default:
 		m.addCommandError(buffer, "unknown command: /"+command.Name)
 	}
 	return nil
 }
 
-func (m *Model) handleJoinCommand(buffer *Buffer, args []string) {
+func (m *Model) handleJoinCommand(buffer *Buffer, args []string) tea.Cmd {
 	if len(args) < 1 || len(args) > 2 {
 		m.addCommandError(buffer, "usage: /join <channel> [key]")
-		return
+		return nil
 	}
 
 	key := ""
 	if len(args) == 2 {
 		key = args[1]
 	}
-	if m.ircClientManager != nil {
-		go m.ircClientManager.Join(buffer.Server, args[0], key)
+	manager := m.ircClientManager
+	if manager == nil {
+		return nil
+	}
+	server, channel := buffer.Server, args[0]
+	return func() tea.Msg {
+		manager.Join(server, channel, key)
+		return nil
 	}
 }
 
-func (m *Model) handleLeaveCommand(buffer *Buffer, args []string) {
-	if m.ircClientManager != nil {
-		go m.ircClientManager.Part(buffer.Server, buffer.Buffer, strings.Join(args, " "))
+func (m *Model) handleLeaveCommand(buffer *Buffer, args []string) tea.Cmd {
+	manager := m.ircClientManager
+	if manager == nil {
+		return nil
+	}
+	server, channel := buffer.Server, buffer.Buffer
+	reason := strings.Join(args, " ")
+	return func() tea.Msg {
+		manager.Part(server, channel, reason)
+		return nil
 	}
 }
 
@@ -67,32 +80,38 @@ func (m *Model) handleCloseCommand(buffer *Buffer, args []string) tea.Cmd {
 	return m.removeBuffer(buffer, true)
 }
 
-func (m *Model) handleListCommand(buffer *Buffer, args []string) {
+func (m *Model) handleListCommand(buffer *Buffer, args []string) tea.Cmd {
 	if len(args) > 1 {
 		m.addCommandError(buffer, "usage: /list [channel]")
-		return
+		return nil
 	}
 
 	channel := ""
 	if len(args) == 1 {
 		channel = args[0]
 	}
-	if m.ircClientManager != nil {
-		go m.ircClientManager.List(buffer.Server, channel)
+	manager := m.ircClientManager
+	if manager == nil {
+		return nil
+	}
+	server := buffer.Server
+	return func() tea.Msg {
+		manager.List(server, channel)
+		return nil
 	}
 }
 
-func (m *Model) handleMsgCommand(buffer *Buffer, args []string) {
+func (m *Model) handleMsgCommand(buffer *Buffer, args []string) tea.Cmd {
 	if len(args) < 2 {
 		m.addCommandError(buffer, "usage: /msg <user> <message>")
-		return
+		return nil
 	}
 
 	target := args[0]
 	message := strings.Join(args[1:], " ")
 	privateBuffer, createCmd := m.getOrCreateBuffer(buffer.Server, target)
 	if privateBuffer == nil {
-		return
+		return nil
 	}
 	if createCmd != nil {
 		m.channels, _ = m.channels.Update(createCmd())
@@ -113,8 +132,18 @@ func (m *Model) handleMsgCommand(buffer *Buffer, args []string) {
 		Username:  privateBuffer.Chat.Nickname(),
 		Text:      message,
 	})
-	if m.ircClientManager != nil {
-		go m.ircClientManager.Send(buffer.Server, target, message)
+	return m.sendMessageCmd(buffer.Server, target, message)
+}
+
+func (m *Model) sendMessageCmd(server, target, message string) tea.Cmd {
+	manager := m.ircClientManager
+	if manager == nil {
+		return nil
+	}
+
+	return func() tea.Msg {
+		manager.Send(server, target, message)
+		return nil
 	}
 }
 

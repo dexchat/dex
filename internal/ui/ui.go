@@ -340,8 +340,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// insert it with the correct server timestamp. We already display
 			// it immediately in the UI above.
 
-			// Send it asynchronously to avoid blocking the UI by girc
-			go m.ircClientManager.Send(buffer.Server, buffer.Buffer, msgTyped.Text)
+			cmds = append(cmds, m.sendMessageCmd(buffer.Server, buffer.Buffer, msgTyped.Text))
 		}
 
 	case historyFlushMsg:
