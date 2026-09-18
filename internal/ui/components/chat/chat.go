@@ -24,7 +24,12 @@ type Model struct {
 	nickname string
 	input    textinput.Model
 
-	needsRender bool
+	// Rendered content is cached so queued messages only render the new tail of
+	// the chat history. Changes that affect existing lines invalidate this cache.
+	needsRender      bool
+	renderedLines    []string
+	renderedMessages int
+	renderWidth      int
 
 	channelMembers ChannelMembers
 	completion     nicknameCompletion
@@ -152,32 +157,60 @@ func (m *Model) SetSize(width, height int) {
 		viewportHeight = 3 // Minimum height for viewport
 	}
 
-	if m.viewport.Width() == width && m.viewport.Height() == viewportHeight && !m.needsRender {
+	widthChanged := m.viewport.Width() != width
+	heightChanged := m.viewport.Height() != viewportHeight
+	if !widthChanged && !heightChanged && !m.needsRender {
 		return
 	}
 
-	m.viewport.SetWidth(width)
-	m.viewport.SetHeight(viewportHeight)
-	m.updateContent()
+	if widthChanged {
+		m.viewport.SetWidth(width)
+		m.invalidateRenderedContent()
+	}
+	if heightChanged {
+		m.viewport.SetHeight(viewportHeight)
+	}
+	if m.needsRender {
+		m.updateContent()
+	}
 }
 
 func (m *Model) updateContent() {
-	var lastTimestamp time.Time
-	var lines []string
+	width := m.viewport.Width()
+	if m.renderWidth != width || m.renderedMessages > len(m.messages) {
+		m.renderedLines = nil
+		m.renderedMessages = 0
+		m.renderWidth = width
+	}
 
-	for _, msg := range m.messages {
+	var lastTimestamp time.Time
+	if m.renderedMessages > 0 {
+		lastTimestamp = m.messages[m.renderedMessages-1].Timestamp
+	}
+
+	for _, msg := range m.messages[m.renderedMessages:] {
 		if !lastTimestamp.IsZero() && !sameDay(lastTimestamp, msg.Timestamp) {
-			lines = append(lines, m.renderDateSeparator(msg.Timestamp, m.viewport.Width()))
+			m.renderedLines = append(m.renderedLines, strings.Split(m.renderDateSeparator(msg.Timestamp, width), "\n")...)
 		}
 		lastTimestamp = msg.Timestamp
-		lines = append(lines, m.renderMessage(msg, m.viewport.Width()))
+		m.renderedLines = append(m.renderedLines, strings.Split(m.renderMessage(msg, width), "\n")...)
 	}
 
 	wasAtBottom := m.viewport.AtBottom()
-	m.viewport.SetContent(strings.Join(lines, "\n"))
+	m.viewport.SetContentLines(m.renderedLines)
 	if wasAtBottom {
 		m.viewport.GotoBottom()
 	}
+	m.renderedMessages = len(m.messages)
+	m.renderWidth = width
+	m.needsRender = false
+}
+
+func (m *Model) invalidateRenderedContent() {
+	m.renderedLines = nil
+	m.renderedMessages = 0
+	m.renderWidth = 0
+	m.needsRender = true
 }
 
 func sameDay(a, b time.Time) bool {
@@ -201,8 +234,8 @@ func (m *Model) renderDateSeparator(date time.Time, width int) string {
 }
 
 func (m *Model) AddMessage(msg Message) {
-	m.messages = append(m.messages, msg)
-	m.updateContent()
+	m.QueueMessage(msg)
+	m.FlushQueue()
 }
 
 func (m *Model) QueueMessage(msg Message) {
@@ -210,17 +243,16 @@ func (m *Model) QueueMessage(msg Message) {
 	m.needsRender = true
 }
 
-// ReplaceMessages swaps the complete transcript without rendering it on the
+// ReplaceMessages swaps the complete chat history without rendering it on the
 // current update. History loading uses this to avoid blocking the UI.
 func (m *Model) ReplaceMessages(messages []Message) {
 	m.messages = messages
-	m.needsRender = true
+	m.invalidateRenderedContent()
 }
 
 func (m *Model) FlushQueue() {
 	if m.needsRender {
 		m.updateContent()
-		m.needsRender = false
 	}
 }
 
@@ -229,8 +261,12 @@ func (m *Model) SetTopic(topic string) {
 }
 
 func (m *Model) SetNickname(nickname string) {
+	if m.nickname == nickname {
+		return
+	}
 	m.nickname = nickname
 	m.setInputWidth(m.viewport.Width())
+	m.invalidateRenderedContent()
 }
 
 func (m *Model) Nickname() string {
@@ -238,7 +274,8 @@ func (m *Model) Nickname() string {
 }
 
 func (m *Model) RefreshContent() {
-	m.updateContent()
+	m.invalidateRenderedContent()
+	m.FlushQueue()
 }
 
 func (m *Model) SetChannelMembers(members ChannelMembers) {

@@ -311,6 +311,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				buf.Chat.SetNickname(msgTyped.Nick)
 			}
 		}
+		if buf := m.getActiveBuffer(); buf.Server == msgTyped.Server {
+			buf.Chat.FlushQueue()
+		}
 
 	case irc.ChannelNameUpdateMsg:
 		m.channels, cmd = m.channels.Update(channels.ChannelNameUpdateMsg{

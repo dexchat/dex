@@ -2,6 +2,7 @@ package chat
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -130,6 +131,72 @@ func TestUpdateContentFollowsBottomWhenAlreadyAtBottom(t *testing.T) {
 
 	if !m.viewport.AtBottom() {
 		t.Fatalf("expected adding content to keep viewport at bottom, offset=%d", m.viewport.YOffset())
+	}
+}
+
+func TestFlushQueueRendersOnlyNewMessages(t *testing.T) {
+	theme := styles.RosePineTheme()
+	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
+	m.SetSize(80, 12)
+	m.ReplaceMessages([]Message{{
+		Timestamp: time.Date(2026, time.January, 1, 12, 0, 0, 0, time.UTC),
+		Username:  "alice",
+		Text:      "first message",
+	}})
+	m.FlushQueue()
+
+	initialLines := append([]string(nil), m.renderedLines...)
+	m.QueueMessage(Message{
+		Timestamp: time.Date(2026, time.January, 1, 12, 1, 0, 0, time.UTC),
+		Username:  "bob",
+		Text:      "second message",
+	})
+	m.FlushQueue()
+
+	if got, want := m.renderedMessages, 2; got != want {
+		t.Fatalf("rendered messages = %d, want %d", got, want)
+	}
+	if got, want := m.renderedLines[:len(initialLines)], initialLines; !slices.Equal(got, want) {
+		t.Fatalf("existing rendered lines changed after append")
+	}
+	if !strings.Contains(strings.Join(m.renderedLines, "\n"), "second message") {
+		t.Fatal("expected appended message in rendered lines")
+	}
+}
+
+func TestReplacingMessagesInvalidatesRenderedContent(t *testing.T) {
+	theme := styles.RosePineTheme()
+	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
+	m.SetSize(80, 12)
+	m.AddMessage(Message{Timestamp: time.Now(), Username: "alice", Text: "first"})
+
+	m.ReplaceMessages([]Message{{Timestamp: time.Now(), Username: "bob", Text: "replacement"}})
+
+	if !m.needsRender {
+		t.Fatal("expected replacement to require rendering")
+	}
+	if got := m.renderedMessages; got != 0 {
+		t.Fatalf("rendered messages = %d, want 0", got)
+	}
+	m.FlushQueue()
+	if got := strings.Join(m.renderedLines, "\n"); !strings.Contains(got, "replacement") || strings.Contains(got, "first") {
+		t.Fatalf("rendered chat history = %q, want only replacement", got)
+	}
+}
+
+func TestSetNicknameInvalidatesRenderedContent(t *testing.T) {
+	theme := styles.RosePineTheme()
+	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
+	m.SetSize(80, 12)
+	m.AddMessage(Message{Timestamp: time.Now(), Username: "alice", Text: "hello"})
+
+	m.SetNickname("dexuser")
+
+	if !m.needsRender {
+		t.Fatal("expected nickname change to require rendering")
+	}
+	if got := m.renderedMessages; got != 0 {
+		t.Fatalf("rendered messages = %d, want 0", got)
 	}
 }
 
