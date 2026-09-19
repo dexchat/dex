@@ -82,8 +82,11 @@ func New(cfg *config.Config) *Model {
 		directMessages = &history.DirectMessages{}
 	}
 	theme := styles.RosePineTheme()
-	if cfg.UI.Theme == config.ThemeAyuDark {
+	switch cfg.UI.Theme {
+	case config.ThemeAyuDark:
 		theme = styles.AyuDarkTheme()
+	case config.ThemeGruvboxDark:
+		theme = styles.GruvboxDarkTheme()
 	}
 	m := Model{
 		config:          cfg,

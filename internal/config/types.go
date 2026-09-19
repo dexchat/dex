@@ -10,6 +10,7 @@ const (
 	NotificationDirectMessage = "direct_message"
 	ThemeRosePine             = "rose-pine"
 	ThemeAyuDark              = "ayu-dark"
+	ThemeGruvboxDark          = "gruvbox-dark"
 )
 
 // rawConfig stores the config file as it is

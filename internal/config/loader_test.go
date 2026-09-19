@@ -164,6 +164,25 @@ channels = ["#go"]
 	}
 }
 
+func TestLoadAcceptsGruvboxTheme(t *testing.T) {
+	cfg, err := loadFromBytes([]byte(`
+[ui]
+theme = "gruvbox-dark"
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+	if err != nil {
+		t.Fatalf("loadFromBytes() error = %v", err)
+	}
+	if got := cfg.UI.Theme; got != ThemeGruvboxDark {
+		t.Fatalf("UI theme = %q, want %q", got, ThemeGruvboxDark)
+	}
+}
+
 func TestLoadDefaultsNotifications(t *testing.T) {
 	cfg, err := loadFromBytes([]byte(`
 [servers.libera]

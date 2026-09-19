@@ -816,12 +816,24 @@ func TestNewBuildsChannelListWithoutLoadingChannelHistory(t *testing.T) {
 func TestNewUsesConfiguredTheme(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 
-	m := New(&config.Config{UI: config.UI{Theme: config.ThemeAyuDark}})
-	want := styles.AyuDarkTheme().Colors.Base.Background
-	gotR, gotG, gotB, gotA := m.theme.Colors.Base.Background.RGBA()
-	wantR, wantG, wantB, wantA := want.RGBA()
-	if gotR != wantR || gotG != wantG || gotB != wantB || gotA != wantA {
-		t.Fatalf("theme background = %#v, want Ayu Dark %#v", m.theme.Colors.Base.Background, want)
+	tests := []struct {
+		name       string
+		configured string
+		want       styles.Theme
+	}{
+		{name: "Ayu Dark", configured: config.ThemeAyuDark, want: styles.AyuDarkTheme()},
+		{name: "Gruvbox Dark", configured: config.ThemeGruvboxDark, want: styles.GruvboxDarkTheme()},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := New(&config.Config{UI: config.UI{Theme: tt.configured}})
+			gotR, gotG, gotB, gotA := m.theme.Colors.Base.Background.RGBA()
+			wantR, wantG, wantB, wantA := tt.want.Colors.Base.Background.RGBA()
+			if gotR != wantR || gotG != wantG || gotB != wantB || gotA != wantA {
+				t.Fatalf("theme background = %#v, want %#v", m.theme.Colors.Base.Background, tt.want.Colors.Base.Background)
+			}
+		})
 	}
 }
 
