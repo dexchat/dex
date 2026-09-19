@@ -34,14 +34,15 @@ type Colors struct {
 	}
 
 	Chat struct {
-		Nickname      Color
-		Mention       Color
-		Separator     Color
-		Self          Color
-		Connected     Color
-		Disconnected  Color
-		UserEvents    Color
-		ServerMessage Color
+		Nickname         Color
+		InactiveNickname Color
+		Mention          Color
+		Separator        Color
+		Self             Color
+		Connected        Color
+		Disconnected     Color
+		UserEvents       Color
+		ServerMessage    Color
 	}
 
 	Palette struct {

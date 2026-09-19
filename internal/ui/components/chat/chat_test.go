@@ -48,6 +48,25 @@ func (s stubChannelMembers) HasUser(nick string) bool         { return false }
 func (s stubChannelMembers) GetUserPrefix(nick string) string { return "" }
 func (s stubChannelMembers) Nicknames() []string              { return s.nicks }
 
+func TestInactiveNicknameUsesSemanticThemeColor(t *testing.T) {
+	theme := styles.RosePineTheme()
+	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
+	m.SetChannelMembers(stubChannelMembers{})
+
+	view := m.renderMessage(Message{
+		Timestamp: time.Date(2026, time.September, 19, 12, 0, 0, 0, time.UTC),
+		Username:  "alice",
+		Text:      "older message",
+	}, 80)
+
+	inactiveStyle := lipgloss.NewStyle().
+		Foreground(theme.Colors.Chat.InactiveNickname).
+		Background(theme.Colors.Base.Background)
+	if !strings.Contains(view, inactiveStyle.Render(" alice ")) {
+		t.Fatalf("expected inactive nickname color, got %q", view)
+	}
+}
+
 func TestTabCompletesAndCyclesMatchingNicknames(t *testing.T) {
 	m := New(styles.RosePineTheme(), styles.NewUsernameColors(nil))
 	m.SetChannelMembers(stubChannelMembers{nicks: []string{"Alice", "alex", "bob"}})

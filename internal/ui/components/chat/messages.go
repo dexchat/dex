@@ -57,7 +57,7 @@ func (m *Model) renderMessage(msg Message, width int) string {
 		prefix := ""
 		if m.channelMembers != nil {
 			if !m.channelMembers.HasUser(msg.Username) {
-				nickColor = m.theme.Colors.Base.Dimmed
+				nickColor = m.theme.Colors.Chat.InactiveNickname
 			} else {
 				prefix = m.channelMembers.GetUserPrefix(msg.Username)
 			}
