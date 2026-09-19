@@ -11,6 +11,7 @@ const (
 	ThemeRosePine             = "rose-pine"
 	ThemeAyuDark              = "ayu-dark"
 	ThemeGruvboxDark          = "gruvbox-dark"
+	ThemeSolarizedLight       = "solarized-light"
 )
 
 // rawConfig stores the config file as it is

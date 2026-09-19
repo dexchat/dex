@@ -8,9 +8,10 @@ import (
 
 func TestThemeTextContrast(t *testing.T) {
 	themes := map[string]Theme{
-		"ayu-dark":     AyuDarkTheme(),
-		"gruvbox-dark": GruvboxDarkTheme(),
-		"rose-pine":    RosePineTheme(),
+		"ayu-dark":        AyuDarkTheme(),
+		"gruvbox-dark":    GruvboxDarkTheme(),
+		"rose-pine":       RosePineTheme(),
+		"solarized-light": SolarizedLightTheme(),
 	}
 
 	for name, theme := range themes {
@@ -45,6 +46,31 @@ func TestThemeTextContrast(t *testing.T) {
 				t.Errorf("palette selection has contrast %.2f:1, want at least 4.5:1", ratio)
 			}
 		})
+	}
+}
+
+func TestSolarizedLightInteractiveContrast(t *testing.T) {
+	theme := SolarizedLightTheme()
+	assertContrast(t, theme.Colors.Base.Foreground, theme.Colors.Base.Surface)
+	assertContrast(t, theme.Colors.Base.Accent, theme.Colors.Base.Surface)
+
+	selectedText := []Color{
+		theme.Colors.Base.Foreground,
+		theme.Colors.Base.Dimmed,
+		theme.Colors.Sidebar.Server,
+		theme.Colors.Sidebar.Unread,
+		theme.Colors.Sidebar.Notification,
+		theme.Colors.Sidebar.Mention,
+	}
+	for _, textColor := range selectedText {
+		assertContrast(t, textColor, theme.Colors.Sidebar.Selection)
+	}
+}
+
+func assertContrast(t *testing.T, foreground, background color.Color) {
+	t.Helper()
+	if ratio := contrastRatio(foreground, background); ratio < 4.5 {
+		t.Errorf("color %v has contrast %.2f:1 against %v, want at least 4.5:1", foreground, ratio, background)
 	}
 }
 

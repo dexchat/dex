@@ -256,3 +256,89 @@ func RosePineTheme() Theme {
 
 	return theme
 }
+
+func SolarizedLightTheme() Theme {
+	theme := Theme{}
+
+	theme.Colors.Base.Background = lipgloss.Color("#FDF6E3")
+	theme.Colors.Base.Foreground = lipgloss.Color("#4E646B")
+	theme.Colors.Base.Surface = lipgloss.Color("#EEE8D5")
+	theme.Colors.Base.Border = lipgloss.Color("#93A1A1")
+	theme.Colors.Base.Accent = lipgloss.Color("#1B6EA3")
+	theme.Colors.Base.Error = lipgloss.Color("#C23130")
+	theme.Colors.Base.Dimmed = lipgloss.Color("#556B72")
+	theme.Colors.Base.Subtle = lipgloss.Color("#556B72")
+
+	theme.Colors.Sidebar.Server = lipgloss.Color("#1A7473")
+	theme.Colors.Sidebar.Unread = lipgloss.Color("#1B6EA3")
+	theme.Colors.Sidebar.Notification = lipgloss.Color("#766813")
+	theme.Colors.Sidebar.Mention = lipgloss.Color("#B1471A")
+	theme.Colors.Sidebar.Selection = lipgloss.Color("#EEE8D5")
+
+	theme.Colors.Chat.Nickname = lipgloss.Color("#1B6EA3")
+	theme.Colors.Chat.InactiveNickname = lipgloss.Color("#556B72")
+	theme.Colors.Chat.Mention = lipgloss.Color("#B53477")
+	theme.Colors.Chat.Separator = lipgloss.Color("#93A1A1")
+	theme.Colors.Chat.Self = lipgloss.Color("#557113")
+	theme.Colors.Chat.Connected = lipgloss.Color("#1A7473")
+	theme.Colors.Chat.Disconnected = lipgloss.Color("#C23130")
+	theme.Colors.Chat.UserEvents = lipgloss.Color("#556B72")
+	theme.Colors.Chat.ServerMessage = lipgloss.Color("#B1471A")
+
+	theme.Colors.Palette.Border = lipgloss.Color("#1B6EA3")
+	theme.Colors.Palette.Highlight = lipgloss.Color("#1B6EA3")
+
+	theme.Colors.Nicknames = []Color{
+		lipgloss.Color("#766813"),
+		lipgloss.Color("#B1471A"),
+		lipgloss.Color("#C23130"),
+		lipgloss.Color("#B53477"),
+		lipgloss.Color("#5764A9"),
+		lipgloss.Color("#1B6EA3"),
+		lipgloss.Color("#1A7473"),
+		lipgloss.Color("#557113"),
+	}
+
+	theme.Styles.App = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground)
+
+	theme.Styles.Sidebar = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground).
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(theme.Colors.Base.Background).
+		BorderBackground(theme.Colors.Base.Background)
+
+	theme.Styles.UnreadItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Unread)
+
+	theme.Styles.NotifiedItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Notification).
+		Bold(true)
+
+	theme.Styles.MentionedItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Mention).
+		Bold(true)
+
+	theme.Styles.ServerItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Server).
+		Bold(true)
+
+	theme.Styles.ChatArea = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground).
+		BorderForeground(theme.Colors.Base.Background).
+		BorderBackground(theme.Colors.Base.Background).
+		Border(lipgloss.NormalBorder())
+
+	theme.Styles.InputField = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Surface).
+		Foreground(theme.Colors.Base.Foreground)
+
+	return theme
+}

@@ -88,7 +88,7 @@ func loadFromBytes(data []byte) (*Config, error) {
 	cfg := defaultValues()
 	if raw.UI.Theme != "" {
 		switch raw.UI.Theme {
-		case ThemeRosePine, ThemeAyuDark, ThemeGruvboxDark:
+		case ThemeRosePine, ThemeAyuDark, ThemeGruvboxDark, ThemeSolarizedLight:
 			cfg.UI.Theme = raw.UI.Theme
 		default:
 			return nil, fmt.Errorf("config validation failed: unknown UI theme %q", raw.UI.Theme)

@@ -87,6 +87,8 @@ func New(cfg *config.Config) *Model {
 		theme = styles.AyuDarkTheme()
 	case config.ThemeGruvboxDark:
 		theme = styles.GruvboxDarkTheme()
+	case config.ThemeSolarizedLight:
+		theme = styles.SolarizedLightTheme()
 	}
 	m := Model{
 		config:          cfg,

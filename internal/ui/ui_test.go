@@ -823,6 +823,7 @@ func TestNewUsesConfiguredTheme(t *testing.T) {
 	}{
 		{name: "Ayu Dark", configured: config.ThemeAyuDark, want: styles.AyuDarkTheme()},
 		{name: "Gruvbox Dark", configured: config.ThemeGruvboxDark, want: styles.GruvboxDarkTheme()},
+		{name: "Solarized Light", configured: config.ThemeSolarizedLight, want: styles.SolarizedLightTheme()},
 	}
 
 	for _, tt := range tests {

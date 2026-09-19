@@ -183,6 +183,25 @@ channels = ["#go"]
 	}
 }
 
+func TestLoadAcceptsSolarizedLightTheme(t *testing.T) {
+	cfg, err := loadFromBytes([]byte(`
+[ui]
+theme = "solarized-light"
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+	if err != nil {
+		t.Fatalf("loadFromBytes() error = %v", err)
+	}
+	if got := cfg.UI.Theme; got != ThemeSolarizedLight {
+		t.Fatalf("UI theme = %q, want %q", got, ThemeSolarizedLight)
+	}
+}
+
 func TestLoadDefaultsNotifications(t *testing.T) {
 	cfg, err := loadFromBytes([]byte(`
 [servers.libera]
