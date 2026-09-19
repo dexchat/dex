@@ -54,12 +54,12 @@ func TestTabCompletesAndCyclesMatchingNicknames(t *testing.T) {
 	m.input.SetValue("al")
 	m.input.CursorEnd()
 
-	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	m, _, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	if got := m.input.Value(); got != "Alice: " {
 		t.Fatalf("expected first matching nick, got %q", got)
 	}
 
-	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	m, _, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	if got := m.input.Value(); got != "alex: " {
 		t.Fatalf("expected Tab to cycle to next matching nick, got %q", got)
 	}
@@ -71,7 +71,7 @@ func TestTabCompletesNicknameAtCursorWithoutAddressSuffix(t *testing.T) {
 	m.input.SetValue("hello al there")
 	m.input.SetCursor(len([]rune("hello al")))
 
-	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	m, _, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	if got := m.input.Value(); got != "hello Alice there" {
 		t.Fatalf("expected nick at cursor to be completed in place, got %q", got)
 	}
@@ -86,7 +86,7 @@ func TestFocusedInputAllowsMouseWheelToScrollViewport(t *testing.T) {
 	}
 
 	var cmd tea.Cmd
-	m, cmd = m.Update(tea.MouseWheelMsg{
+	m, _, cmd = m.Update(tea.MouseWheelMsg{
 		Button: tea.MouseWheelUp,
 	})
 	if cmd != nil {
@@ -290,4 +290,23 @@ func newScrollableChatModel() Model {
 	}
 
 	return m
+}
+
+func TestEnterReturnsSynchronousSendAction(t *testing.T) {
+	m := New(styles.RosePineTheme(), styles.NewUsernameColors(styles.RosePineTheme().Colors.Nicknames))
+	m.SetInputValue("hello")
+	m, action, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if action == nil || action.Text != "hello" {
+		t.Fatalf("action = %#v", action)
+	}
+	if cmd != nil {
+		t.Fatal("submission must not schedule a message")
+	}
+	if m.InputValue() != "" {
+		t.Fatal("input was not cleared")
+	}
+	_, action, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if action != nil {
+		t.Fatal("empty input must not submit")
+	}
 }

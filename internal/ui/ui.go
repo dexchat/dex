@@ -108,6 +108,7 @@ func New(cfg *config.Config) *Model {
 			Users:   users.New(m.theme, m.usernameColors),
 			History: history.NewLog(),
 		}
+
 		// Set the nickname configured in the config file before connecting;
 		// the server may update after (and change if necessary)
 		serverBuf.Chat.SetNickname(server.Nickname)
@@ -322,27 +323,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		})
 		cmds = append(cmds, cmd)
 
-	case chat.SendMessageMsg:
-		buffer := m.getActiveBuffer()
-		if command, ok := commands.Parse(msgTyped.Text); ok {
-			cmds = append(cmds, m.handleCommand(buffer, command))
-			break
-		}
-		if m.ircClientManager != nil && buffer.isValid() {
-			now := time.Now()
-			buffer.Chat.AddMessage(chat.Message{
-				Timestamp: now,
-				Username:  buffer.Chat.Nickname(),
-				Text:      msgTyped.Text,
-			})
-
-			// Don't insert into history here - let the echo-message or playback
-			// insert it with the correct server timestamp. We already display
-			// it immediately in the UI above.
-
-			cmds = append(cmds, m.sendMessageCmd(buffer.Server, buffer.Buffer, msgTyped.Text))
-		}
-
 	case historyFlushMsg:
 		if cmd := m.startPersistence(); cmd != nil {
 			cmds = append(cmds, cmd)
@@ -422,8 +402,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Update layout components, blocking keyboard input when the palette or help is open
 	msg = m.filterOutKeyMsgs(msg)
 	buf := m.getActiveBuffer()
-	buf.Chat, cmd = buf.Chat.Update(msg)
+	var action *chat.SendAction
+	buf.Chat, action, cmd = buf.Chat.Update(msg)
 	cmds = append(cmds, cmd)
+	if action != nil {
+		cmds = append(cmds, m.handleChatSend(buf, action.Text))
+		return m, tea.Batch(cmds...)
+	}
 
 	buf.Users, cmd = buf.Users.Update(msg)
 	cmds = append(cmds, cmd)
@@ -442,7 +427,7 @@ func (m *Model) updateHoveredScrollPane(msg tea.Msg) tea.Cmd {
 	case scrollPaneChannels:
 		m.channels, cmd = m.channels.Update(msg)
 	case scrollPaneChat:
-		buf.Chat, cmd = buf.Chat.Update(msg)
+		buf.Chat, _, cmd = buf.Chat.Update(msg)
 	case scrollPaneUsers:
 		buf.Users, cmd = buf.Users.Update(msg)
 	}
@@ -728,4 +713,20 @@ func (m *Model) flushReadState() {
 		return
 	}
 	m.readStateDirty = false
+}
+
+func (m *Model) handleChatSend(buffer *Buffer, text string) tea.Cmd {
+	if command, ok := commands.Parse(text); ok {
+		return m.handleCommand(buffer, command)
+	}
+	if m.ircClientManager == nil || !buffer.isValid() {
+		return nil
+	}
+	buffer.Chat.AddMessage(chat.Message{
+		Timestamp: time.Now(),
+		Username:  buffer.Chat.Nickname(),
+		Text:      text,
+	})
+	// Persist the server echo with its authoritative timestamp and message ID.
+	return m.sendMessageCmd(buffer.Server, buffer.Buffer, text)
 }

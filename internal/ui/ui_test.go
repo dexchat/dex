@@ -192,7 +192,7 @@ func TestLeaveDoesNotRemoveChannelBeforeServerConfirmation(t *testing.T) {
 	channelKey := makeBufferKey("libera", "#go")
 	m.activeBuffer = channelKey
 
-	_, _ = m.Update(chat.SendMessageMsg{Text: "/leave"})
+	_, _ = submitChat(m, "/leave")
 
 	if _, exists := m.buffers[channelKey]; !exists {
 		t.Fatal("/leave should keep the channel until the server confirms PART")
@@ -204,7 +204,7 @@ func TestPartIsAliasForLeave(t *testing.T) {
 	channelKey := makeBufferKey("libera", "#go")
 	m.activeBuffer = channelKey
 
-	_, _ = m.Update(chat.SendMessageMsg{Text: "/part"})
+	_, _ = submitChat(m, "/part")
 
 	if _, exists := m.buffers[channelKey]; !exists {
 		t.Fatal("/part should keep the channel until server confirmation")
@@ -217,7 +217,7 @@ func TestCloseRemovesPrivateBufferAndSelectsServer(t *testing.T) {
 	m.directMessages.Add("libera", "alice")
 	m.activeBuffer = makeBufferKey("libera", "alice")
 
-	_, _ = m.Update(chat.SendMessageMsg{Text: "/close"})
+	_, _ = submitChat(m, "/close")
 
 	if _, exists := m.buffers[makeBufferKey("libera", "alice")]; exists {
 		t.Fatal("/close should remove the private buffer")
@@ -229,6 +229,38 @@ func TestCloseRemovesPrivateBufferAndSelectsServer(t *testing.T) {
 		if directMessage.Server == "libera" && directMessage.User == "alice" {
 			t.Fatalf("closed direct message is still persisted: %#v", m.directMessages.Users)
 		}
+	}
+}
+
+func TestChatCloseIsHandledBeforeBufferSwitch(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	m := newActivityTestModel()
+	private, create := m.getOrCreateBuffer("libera", "Alice")
+	m.Update(create())
+	m.activeBuffer = private.Key
+	_, _ = submitChat(m, "/close")
+	if m.buffers[private.Key] != nil {
+		t.Fatal("close should be handled synchronously during Enter")
+	}
+	m.activeBuffer = makeBufferKey("libera", "#random")
+	if m.getActiveBuffer().Buffer != "#random" {
+		t.Fatal("buffer switch failed")
+	}
+}
+
+func TestChannelCloseCannotCloseAnotherConversation(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	m := newActivityTestModel()
+	private, create := m.getOrCreateBuffer("libera", "Alice")
+	m.Update(create())
+	m.activeBuffer = makeBufferKey("libera", "#go")
+	_, cmd := submitChat(m, "/close")
+	m.activeBuffer = private.Key
+	if cmd != nil {
+		t.Fatal("invalid close must not schedule a delayed send")
+	}
+	if m.buffers[private.Key] == nil {
+		t.Fatal("unrelated conversation was closed")
 	}
 }
 
@@ -246,7 +278,7 @@ func TestCloseQueuesDirtyPrivateHistoryForPersistence(t *testing.T) {
 		Text:      "hello",
 	})
 
-	_, cmd := m.Update(chat.SendMessageMsg{Text: "/close"})
+	_, cmd := submitChat(m, "/close")
 	if cmd == nil {
 		t.Fatal("dirty /close should schedule persistence")
 	}
@@ -403,7 +435,7 @@ func TestCloseDoesNotCloseChannel(t *testing.T) {
 	channelKey := makeBufferKey("libera", "#go")
 	m.activeBuffer = channelKey
 
-	_, _ = m.Update(chat.SendMessageMsg{Text: "/close"})
+	_, _ = submitChat(m, "/close")
 
 	if _, exists := m.buffers[channelKey]; !exists {
 		t.Fatal("/close should not remove a channel buffer")
@@ -414,7 +446,7 @@ func TestJoinDoesNotCreateChannelBeforeServerConfirmation(t *testing.T) {
 	m := newActivityTestModel()
 	channelKey := makeBufferKey("libera", "#new")
 
-	_, _ = m.Update(chat.SendMessageMsg{Text: "/join #new"})
+	_, _ = submitChat(m, "/join #new")
 
 	if _, exists := m.buffers[channelKey]; exists {
 		t.Fatal("/join should not create a channel before the server confirms JOIN")
@@ -431,7 +463,7 @@ func TestJoinWithoutChannelShowsUsageInsteadOfCreatingBuffer(t *testing.T) {
 	active := m.getActiveBuffer()
 	active.Chat.SetSize(80, 10)
 
-	_, _ = m.Update(chat.SendMessageMsg{Text: "/join"})
+	_, _ = submitChat(m, "/join")
 
 	if view := plainText(active.Chat.View()); !strings.Contains(view, "usage: /join <channel> [key]") {
 		t.Fatalf("missing /join usage error:\n%s", view)
@@ -443,7 +475,7 @@ func TestListWithTooManyArgumentsShowsUsage(t *testing.T) {
 	active := m.getActiveBuffer()
 	active.Chat.SetSize(80, 10)
 
-	_, _ = m.Update(chat.SendMessageMsg{Text: "/list #go #rust"})
+	_, _ = submitChat(m, "/list #go #rust")
 
 	if view := plainText(active.Chat.View()); !strings.Contains(view, "usage: /list [channel]") {
 		t.Fatalf("missing /list usage error:\n%s", view)
@@ -454,7 +486,7 @@ func TestMsgCreatesAndSelectsPrivateBuffer(t *testing.T) {
 	m := newActivityTestModel()
 	serverBuffer := m.getActiveBuffer()
 
-	_, _ = m.Update(chat.SendMessageMsg{Text: "/msg Alice hello there"})
+	_, _ = submitChat(m, "/msg Alice hello there")
 
 	privateKey := makeBufferKey(serverBuffer.Server, "Alice")
 	privateBuffer, exists := m.buffers[privateKey]
@@ -474,7 +506,7 @@ func TestMsgWithoutTargetOrMessageShowsUsage(t *testing.T) {
 	active := m.getActiveBuffer()
 	active.Chat.SetSize(80, 10)
 
-	_, _ = m.Update(chat.SendMessageMsg{Text: "/msg Alice"})
+	_, _ = submitChat(m, "/msg Alice")
 
 	if view := plainText(active.Chat.View()); !strings.Contains(view, "usage: /msg <user> <message>") {
 		t.Fatalf("missing /msg usage error:\n%s", view)
@@ -1557,4 +1589,9 @@ var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
 func plainText(s string) string {
 	return ansiPattern.ReplaceAllString(s, "")
+}
+
+func submitChat(m *Model, text string) (tea.Model, tea.Cmd) {
+	m.getActiveBuffer().Chat.SetInputValue(text)
+	return m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 }

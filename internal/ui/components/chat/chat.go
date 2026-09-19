@@ -13,7 +13,8 @@ import (
 	"github.com/dexchat/dex/internal/ui/styles"
 )
 
-type SendMessageMsg struct {
+// SendAction is a synchronous request handled by the owning UI model.
+type SendAction struct {
 	Text string
 }
 
@@ -77,7 +78,7 @@ func (m *Model) SetInputValue(value string) {
 	m.input.CursorEnd()
 }
 
-func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (Model, *SendAction, tea.Cmd) {
 	var (
 		cmd  tea.Cmd
 		cmds []tea.Cmd
@@ -89,28 +90,25 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			keyMap := keybindings.DefaultKeyMap()
 			if key.Matches(msg, keyMap.Autocomplete) {
 				m.completeNickname()
-				return *m, nil
+				return *m, nil, nil
 			}
 			m.completion = nicknameCompletion{}
 
 			if msg.Code == tea.KeyEnter && m.input.Value() != "" {
 				text := m.input.Value()
 				m.input.Reset()
-				cmds = append(cmds, func() tea.Msg {
-					return SendMessageMsg{Text: text}
-				})
-				return *m, tea.Batch(cmds...)
+				return *m, &SendAction{Text: text}, nil
 			}
 
 			if key.Matches(msg, keyMap.ScrollUp, keyMap.ScrollDown) {
 				m.viewport, cmd = m.viewport.Update(msg)
 				cmds = append(cmds, cmd)
-				return *m, tea.Batch(cmds...)
+				return *m, nil, tea.Batch(cmds...)
 			}
 
 			m.input, cmd = m.input.Update(msg)
 			cmds = append(cmds, cmd)
-			return *m, tea.Batch(cmds...)
+			return *m, nil, tea.Batch(cmds...)
 		}
 	}
 
@@ -120,7 +118,7 @@ func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	m.viewport, cmd = m.viewport.Update(msg)
 	cmds = append(cmds, cmd)
 
-	return *m, tea.Batch(cmds...)
+	return *m, nil, tea.Batch(cmds...)
 }
 
 func (m *Model) View() string {

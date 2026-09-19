@@ -91,6 +91,11 @@ dimensions.
 ## Message and side-effect rules
 
 - Define small typed messages for events; avoid stringly typed routing.
+- Chat submission returns a synchronous `SendAction` alongside the updated
+  component and `tea.Cmd`. The parent handles it immediately with the originating
+  buffer; only the IRC side effect is scheduled as a command.
+- Messages emitted asynchronously by a buffer must carry that buffer's identity;
+  do not resolve their target from `activeBuffer` when they are delivered.
 - Commands may perform work and return messages, but model mutation belongs in
   `Update` or a synchronous helper called by it.
 - Keep IRC socket handlers non-blocking. Large streams must remain batched or
