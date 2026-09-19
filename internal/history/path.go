@@ -14,7 +14,7 @@ func historyDir() string {
 		home, _ := os.UserHomeDir()
 		osDataDir = filepath.Join(home, ".local", "share")
 	}
-	return filepath.Join(osDataDir, "dexchat", "history")
+	return filepath.Join(osDataDir, "dex", "history")
 }
 
 func logFullPath(server, buffer string) string {
