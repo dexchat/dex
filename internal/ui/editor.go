@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"errors"
+	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -9,9 +12,47 @@ import (
 )
 
 type editorFinishedMsg struct {
-	buffer BufferKey
-	path   string
+	buffer *Buffer
+	draft  string
+	text   string
 	err    error
+}
+
+// editorCommand owns the file and process while Bubble Tea releases the terminal.
+type editorCommand struct {
+	*exec.Cmd
+	draft string
+	text  string
+}
+
+func (c *editorCommand) SetStdin(r io.Reader)  { c.Stdin = r }
+func (c *editorCommand) SetStdout(w io.Writer) { c.Stdout = w }
+func (c *editorCommand) SetStderr(w io.Writer) { c.Stderr = w }
+
+func (c *editorCommand) Run() (err error) {
+	file, err := os.CreateTemp("", "dex-message-*.txt")
+	if err != nil {
+		return fmt.Errorf("could not create editor file: %w", err)
+	}
+	defer func() {
+		if removeErr := os.Remove(file.Name()); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+			err = errors.Join(err, fmt.Errorf("could not remove editor file %s: %w", file.Name(), removeErr))
+		}
+	}()
+	_, writeErr := file.WriteString(c.draft)
+	if err := errors.Join(writeErr, file.Close()); err != nil {
+		return fmt.Errorf("could not prepare editor file: %w", err)
+	}
+	c.Args = append(c.Args, file.Name())
+	if err := c.Cmd.Run(); err != nil {
+		return fmt.Errorf("editor failed: %w", err)
+	}
+	contents, err := os.ReadFile(file.Name())
+	if err != nil {
+		return fmt.Errorf("could not read editor file: %w", err)
+	}
+	c.text = normalizeEditorText(string(contents))
+	return nil
 }
 
 func (m *Model) editActiveInput() tea.Cmd {
@@ -20,50 +61,26 @@ func (m *Model) editActiveInput() tea.Cmd {
 		m.addCommandError(m.getActiveBuffer(), "error: $EDITOR is not set")
 		return nil
 	}
-
-	buffer := m.activeBuffer
-	file, err := os.CreateTemp("", "dex-message-*.txt")
-	if err != nil {
-		m.addCommandError(m.getActiveBuffer(), "error: could not create editor file: "+err.Error())
-		return nil
-	}
-	path := file.Name()
-	if _, err = file.WriteString(m.getActiveBuffer().Chat.InputValue()); err == nil {
-		err = file.Close()
-	} else {
-		_ = file.Close()
-	}
-	if err != nil {
-		_ = os.Remove(path)
-		m.addCommandError(m.getActiveBuffer(), "error: could not prepare editor file: "+err.Error())
-		return nil
-	}
-
-	command := exec.Command("sh", "-c", `exec $EDITOR "$1"`, "dex-editor", path)
+	buffer := m.getActiveBuffer()
+	draft := buffer.Chat.InputValue()
+	command := &editorCommand{Cmd: exec.Command("sh", "-c", `exec $EDITOR "$1"`, "dex-editor"), draft: draft}
 	command.Env = append(os.Environ(), "EDITOR="+editor)
-	return tea.ExecProcess(command, func(err error) tea.Msg {
-		return editorFinishedMsg{buffer: buffer, path: path, err: err}
+	return tea.Exec(command, func(err error) tea.Msg {
+		return editorFinishedMsg{buffer: buffer, draft: draft, text: command.text, err: err}
 	})
 }
 
 func (m *Model) finishEditingInput(msg editorFinishedMsg) {
-	defer os.Remove(msg.path)
-
-	buffer, ok := m.buffers[msg.buffer]
-	if !ok {
+	if m.buffers[msg.buffer.Key] != msg.buffer {
 		return
 	}
 	if msg.err != nil {
-		m.addCommandError(buffer, "error: editor failed: "+msg.err.Error())
-		return
+		m.addCommandError(msg.buffer, "error: "+msg.err.Error())
+	} else if msg.buffer.Chat.InputValue() != msg.draft {
+		m.addCommandError(msg.buffer, "error: draft changed while editing; current draft was preserved")
+	} else {
+		msg.buffer.Chat.SetInputValue(msg.text)
 	}
-
-	contents, err := os.ReadFile(msg.path)
-	if err != nil {
-		m.addCommandError(buffer, "error: could not read editor file: "+err.Error())
-		return
-	}
-	buffer.Chat.SetInputValue(normalizeEditorText(string(contents)))
 }
 
 func normalizeEditorText(value string) string {

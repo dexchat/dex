@@ -3,7 +3,7 @@ package ui
 import (
 	"errors"
 	"os"
-	"path/filepath"
+	"os/exec"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -11,66 +11,100 @@ import (
 )
 
 func TestNormalizeEditorText(t *testing.T) {
-	if got, want := normalizeEditorText("first\r\nsecond\n"), "first second"; got != want {
-		t.Fatalf("normalizeEditorText() = %q, want %q", got, want)
+	if got := normalizeEditorText("first\r\nsecond\n"); got != "first second" {
+		t.Fatalf("normalized text = %q", got)
 	}
 }
 
-func TestFinishEditingInputUpdatesOriginalBufferAndRemovesFile(t *testing.T) {
-	m := newActivityTestModel()
-	buffer := m.activeBuffer
-	path := filepath.Join(t.TempDir(), "message.txt")
-	if err := os.WriteFile(path, []byte("edited\nmessage\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	m.finishEditingInput(editorFinishedMsg{buffer: buffer, path: path})
-
-	if got, want := m.buffers[buffer].Chat.InputValue(), "edited message"; got != want {
-		t.Fatalf("input value = %q, want %q", got, want)
-	}
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Fatalf("temporary file still exists: %v", err)
+func TestEditorCommandRunsAndCleansUp(t *testing.T) {
+	for _, fail := range []bool{false, true} {
+		t.Run(map[bool]string{false: "success", true: "failure"}[fail], func(t *testing.T) {
+			dir := t.TempDir()
+			t.Setenv("TMPDIR", dir)
+			script := `test "$(cat "$1")" = original || exit 2; printf 'edited\nmessage\n' > "$1"`
+			if fail {
+				script += "; exit 1"
+			}
+			command := &editorCommand{Cmd: exec.Command("sh", "-c", script, "test-editor"), draft: "original"}
+			err := command.Run()
+			if (err != nil) != fail {
+				t.Fatalf("Run() error = %v, want failure %t", err, fail)
+			}
+			if !fail && command.text != "edited message" {
+				t.Fatalf("result = %q", command.text)
+			}
+			entries, err := os.ReadDir(dir)
+			if err != nil || len(entries) != 0 {
+				t.Fatalf("temporary files remain: %v, %v", entries, err)
+			}
+		})
 	}
 }
 
-func TestFinishEditingInputPreservesDraftWhenEditorFails(t *testing.T) {
+func TestFinishEditingInputUsesOriginalBuffer(t *testing.T) {
 	m := newActivityTestModel()
-	buffer := m.activeBuffer
-	m.buffers[buffer].Chat.SetInputValue("original")
-	path := filepath.Join(t.TempDir(), "message.txt")
-	if err := os.WriteFile(path, []byte("changed"), 0o600); err != nil {
-		t.Fatal(err)
+	origin := m.getActiveBuffer()
+	m.activeBuffer = makeBufferKey("libera", "#go")
+	m.Update(editorFinishedMsg{buffer: origin, text: "edited"})
+	if origin.Chat.InputValue() != "edited" || m.getActiveBuffer().Chat.InputValue() != "" {
+		t.Fatal("result was not applied exclusively to original buffer")
 	}
+}
 
-	m.finishEditingInput(editorFinishedMsg{buffer: buffer, path: path, err: errors.New("exit status 1")})
-
-	if got := m.buffers[buffer].Chat.InputValue(); got != "original" {
-		t.Fatalf("input value = %q, want original", got)
+func TestFinishEditingInputPreservesDraft(t *testing.T) {
+	for _, scenario := range []string{"failure", "changed", "replaced", "removed"} {
+		t.Run(scenario, func(t *testing.T) {
+			m := newActivityTestModel()
+			origin := m.getActiveBuffer()
+			origin.Chat.SetInputValue("original")
+			msg := editorFinishedMsg{buffer: origin, draft: "original", text: "edited"}
+			switch scenario {
+			case "failure":
+				msg.err = errors.New("editor failed")
+			case "changed":
+				origin.Chat.SetInputValue("new draft")
+			case "replaced":
+				replacement := *origin
+				m.buffers[origin.Key] = &replacement
+			case "removed":
+				delete(m.buffers, origin.Key)
+			}
+			before := origin.Chat.InputValue()
+			m.finishEditingInput(msg)
+			if origin.Chat.InputValue() != before {
+				t.Fatal("draft overwritten")
+			}
+		})
 	}
 }
 
 func TestEditShortcutRequestsEditor(t *testing.T) {
 	for _, controlE := range []bool{false, true} {
 		m := newActivityTestModel()
-
 		if msg := m.handleKeybindings(keyPress('x', true)); msg != nil {
-			t.Fatalf("ctrl+x returned %T, want nil", msg)
+			t.Fatalf("ctrl+x returned %T", msg)
 		}
-		msg := m.handleKeybindings(keyPress('e', controlE))
-
-		if _, ok := msg.(palette.EditInEditorMsg); !ok {
-			t.Fatalf("ctrl+x e (control=%t) returned %T, want palette.EditInEditorMsg", controlE, msg)
+		if msg := m.handleKeybindings(keyPress('e', controlE)); msg != (palette.EditInEditorMsg{}) {
+			t.Fatalf("shortcut returned %T", msg)
 		}
 	}
 }
 
-func TestPaletteEditMessageRequestsEditor(t *testing.T) {
+func TestEditRequestDoesNotCreateFiles(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("TMPDIR", dir)
+	t.Setenv("EDITOR", "vi")
 	m := newActivityTestModel()
+	if m.editActiveInput() == nil {
+		t.Fatal("missing editor command")
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("request performed file I/O: %v, %v", entries, err)
+	}
 	t.Setenv("EDITOR", "")
-
-	if cmd := m.editActiveInput(); cmd != nil {
-		t.Fatal("editActiveInput returned a command without $EDITOR")
+	if m.editActiveInput() != nil {
+		t.Fatal("command returned without EDITOR")
 	}
 }
 
