@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="./images/dexchat-icon.png" alt="Dex logo" width="128">
+  <img src="./resources/dexchat-icon.png" alt="Dex logo" width="128">
   <br>
   dexchat
 </h1>
@@ -19,7 +19,7 @@
   <a href="https://github.com/dexchat/dex/actions/workflows/release.yml"><img src="https://github.com/dexchat/dex/actions/workflows/release.yml/badge.svg" alt="Release Status"></a>
 </p>
 
-![preview](./images/demo.gif)
+![preview](./resources/demo.gif)
 
 ## Features
 
