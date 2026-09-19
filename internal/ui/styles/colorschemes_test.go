@@ -9,6 +9,7 @@ import (
 func TestThemeTextContrast(t *testing.T) {
 	themes := map[string]Theme{
 		"ayu-dark":        AyuDarkTheme(),
+		"dracula":         DraculaTheme(),
 		"gruvbox-dark":    GruvboxDarkTheme(),
 		"rose-pine":       RosePineTheme(),
 		"solarized-light": SolarizedLightTheme(),
@@ -46,6 +47,24 @@ func TestThemeTextContrast(t *testing.T) {
 				t.Errorf("palette selection has contrast %.2f:1, want at least 4.5:1", ratio)
 			}
 		})
+	}
+}
+
+func TestDraculaInteractiveContrast(t *testing.T) {
+	theme := DraculaTheme()
+	assertContrast(t, theme.Colors.Base.Foreground, theme.Colors.Base.Surface)
+	assertContrast(t, theme.Colors.Base.Accent, theme.Colors.Base.Surface)
+
+	selectedText := []Color{
+		theme.Colors.Base.Foreground,
+		theme.Colors.Base.Dimmed,
+		theme.Colors.Sidebar.Server,
+		theme.Colors.Sidebar.Unread,
+		theme.Colors.Sidebar.Notification,
+		theme.Colors.Sidebar.Mention,
+	}
+	for _, textColor := range selectedText {
+		assertContrast(t, textColor, theme.Colors.Sidebar.Selection)
 	}
 }
 

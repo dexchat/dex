@@ -85,6 +85,8 @@ func New(cfg *config.Config) *Model {
 	switch cfg.UI.Theme {
 	case config.ThemeAyuDark:
 		theme = styles.AyuDarkTheme()
+	case config.ThemeDracula:
+		theme = styles.DraculaTheme()
 	case config.ThemeGruvboxDark:
 		theme = styles.GruvboxDarkTheme()
 	case config.ThemeSolarizedLight:

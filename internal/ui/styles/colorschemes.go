@@ -88,6 +88,91 @@ func AyuDarkTheme() Theme {
 	return theme
 }
 
+func DraculaTheme() Theme {
+	theme := Theme{}
+
+	theme.Colors.Base.Background = lipgloss.Color("#282A36")
+	theme.Colors.Base.Foreground = lipgloss.Color("#F8F8F2")
+	theme.Colors.Base.Surface = lipgloss.Color("#343746")
+	theme.Colors.Base.Border = lipgloss.Color("#6272A4")
+	theme.Colors.Base.Accent = lipgloss.Color("#BD93F9")
+	theme.Colors.Base.Error = lipgloss.Color("#FF5555")
+	theme.Colors.Base.Dimmed = lipgloss.Color("#B8B8C2")
+	theme.Colors.Base.Subtle = lipgloss.Color("#B8B8C2")
+
+	theme.Colors.Sidebar.Server = lipgloss.Color("#8BE9FD")
+	theme.Colors.Sidebar.Unread = lipgloss.Color("#D6ACFF")
+	theme.Colors.Sidebar.Notification = lipgloss.Color("#F1FA8C")
+	theme.Colors.Sidebar.Mention = lipgloss.Color("#FF92DF")
+	theme.Colors.Sidebar.Selection = lipgloss.Color("#44475A")
+
+	theme.Colors.Chat.Nickname = lipgloss.Color("#8BE9FD")
+	theme.Colors.Chat.InactiveNickname = lipgloss.Color("#B8B8C2")
+	theme.Colors.Chat.Mention = lipgloss.Color("#FF79C6")
+	theme.Colors.Chat.Separator = lipgloss.Color("#6272A4")
+	theme.Colors.Chat.Self = lipgloss.Color("#50FA7B")
+	theme.Colors.Chat.Connected = lipgloss.Color("#50FA7B")
+	theme.Colors.Chat.Disconnected = lipgloss.Color("#FF5555")
+	theme.Colors.Chat.UserEvents = lipgloss.Color("#B8B8C2")
+	theme.Colors.Chat.ServerMessage = lipgloss.Color("#FFB86C")
+
+	theme.Colors.Palette.Border = lipgloss.Color("#BD93F9")
+	theme.Colors.Palette.Highlight = lipgloss.Color("#BD93F9")
+
+	theme.Colors.Nicknames = []Color{
+		lipgloss.Color("#FF5555"),
+		lipgloss.Color("#FFB86C"),
+		lipgloss.Color("#F1FA8C"),
+		lipgloss.Color("#50FA7B"),
+		lipgloss.Color("#8BE9FD"),
+		lipgloss.Color("#BD93F9"),
+		lipgloss.Color("#FF79C6"),
+	}
+
+	theme.Styles.App = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground)
+
+	theme.Styles.Sidebar = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground).
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(theme.Colors.Base.Background).
+		BorderBackground(theme.Colors.Base.Background)
+
+	theme.Styles.UnreadItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Unread)
+
+	theme.Styles.NotifiedItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Notification).
+		Bold(true)
+
+	theme.Styles.MentionedItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Mention).
+		Bold(true)
+
+	theme.Styles.ServerItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Server).
+		Bold(true)
+
+	theme.Styles.ChatArea = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground).
+		BorderForeground(theme.Colors.Base.Background).
+		BorderBackground(theme.Colors.Base.Background).
+		Border(lipgloss.NormalBorder())
+
+	theme.Styles.InputField = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Surface).
+		Foreground(theme.Colors.Base.Foreground)
+
+	return theme
+}
+
 func GruvboxDarkTheme() Theme {
 	theme := Theme{}
 

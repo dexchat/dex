@@ -37,8 +37,8 @@ events = ["mention", "direct_message"]
 cooldown = "2s"
 
 [ui]
-# Available themes: "rose-pine", "ayu-dark", "gruvbox-dark",
-# "solarized-light".
+# Available themes: "rose-pine", "ayu-dark", "dracula",
+# "gruvbox-dark", "solarized-light".
 theme = "rose-pine"
 unread_badges = true
 mention_badges = true

@@ -202,6 +202,25 @@ channels = ["#go"]
 	}
 }
 
+func TestLoadAcceptsDraculaTheme(t *testing.T) {
+	cfg, err := loadFromBytes([]byte(`
+[ui]
+theme = "dracula"
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+	if err != nil {
+		t.Fatalf("loadFromBytes() error = %v", err)
+	}
+	if got := cfg.UI.Theme; got != ThemeDracula {
+		t.Fatalf("UI theme = %q, want %q", got, ThemeDracula)
+	}
+}
+
 func TestLoadDefaultsNotifications(t *testing.T) {
 	cfg, err := loadFromBytes([]byte(`
 [servers.libera]

@@ -10,6 +10,7 @@ const (
 	NotificationDirectMessage = "direct_message"
 	ThemeRosePine             = "rose-pine"
 	ThemeAyuDark              = "ayu-dark"
+	ThemeDracula              = "dracula"
 	ThemeGruvboxDark          = "gruvbox-dark"
 	ThemeSolarizedLight       = "solarized-light"
 )
