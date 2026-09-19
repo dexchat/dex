@@ -430,6 +430,39 @@ func TestCtrlCQuitsAfterPersistenceCompletes(t *testing.T) {
 	}
 }
 
+func TestShutdownPersistenceFailureKeepsAppOpenForRetry(t *testing.T) {
+	m := newActivityTestModel()
+	m.getActiveBuffer().Chat.SetSize(80, 10)
+	m.readStateDirty = true
+	m.persistence.flushInFlight = true
+	m.persistence.flushPending = true
+	m.persistence.shutdownRequested = true
+
+	cmd := m.applyPersistenceResult(historyFlushFinishedMsg{
+		readDirty:    true,
+		readStateErr: errTestPersistence,
+	})
+
+	if cmd != nil {
+		t.Fatal("failed shutdown persistence should keep the app running")
+	}
+	if m.persistence.shutdownRequested {
+		t.Fatal("failed shutdown persistence should cancel the shutdown request")
+	}
+	if m.persistence.flushPending {
+		t.Fatal("failed shutdown persistence should wait for an explicit retry")
+	}
+	if !m.readStateDirty {
+		t.Fatal("failed read-state persistence should remain dirty")
+	}
+	if view := plainText(m.getActiveBuffer().Chat.View()); !strings.Contains(view, "could not save local data") || !strings.Contains(view, "press ctrl+c to retry") {
+		t.Fatalf("active buffer does not explain the persistence failure:\n%s", view)
+	}
+	if retry := m.startPersistence(); retry == nil {
+		t.Fatal("dirty state should be available for a later persistence retry")
+	}
+}
+
 func TestCloseDoesNotCloseChannel(t *testing.T) {
 	m := newActivityTestModel()
 	channelKey := makeBufferKey("libera", "#go")

@@ -77,7 +77,8 @@ Persistence is coordinated by `persistenceState` in `persistence.go`.
 - When a dirty buffer has not loaded its stored history yet, merge the stored
   entries before replacing the history file.
 - Interactive shutdown waits for pending persistence before returning
-  `tea.Quit`.
+  `tea.Quit`. If persistence fails, keep the app open, preserve dirty state,
+  report the error in the active buffer, and let the user retry.
 
 ### Components
 

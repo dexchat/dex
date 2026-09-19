@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"errors"
+	"fmt"
 	"reflect"
 
 	tea "charm.land/bubbletea/v2"
@@ -247,13 +249,13 @@ func (m *Model) applyPersistenceResult(msg historyFlushFinishedMsg) tea.Cmd {
 	}
 
 	retry := m.persistence.flushPending
-	failed := msg.directMessagesErr != nil || msg.readStateErr != nil
-	for _, result := range msg.results {
-		failed = failed || result.err != nil
-	}
+	persistenceErr := persistenceResultError(msg)
 	if m.persistence.shutdownRequested {
-		if failed {
-			return tea.Quit
+		if persistenceErr != nil {
+			m.persistence.shutdownRequested = false
+			m.persistence.flushPending = false
+			m.addCommandError(m.getActiveBuffer(), "error: could not save local data; press ctrl+c to retry: "+persistenceErr.Error())
+			return nil
 		}
 		retry = retry || m.snapshotPersistence().hasWork()
 		if !retry {
@@ -264,4 +266,20 @@ func (m *Model) applyPersistenceResult(msg historyFlushFinishedMsg) tea.Cmd {
 		return m.startPersistence()
 	}
 	return nil
+}
+
+func persistenceResultError(msg historyFlushFinishedMsg) error {
+	var errs []error
+	for _, result := range msg.results {
+		if result.err != nil {
+			errs = append(errs, fmt.Errorf("history %s: %w", result.key, result.err))
+		}
+	}
+	if msg.directMessagesErr != nil {
+		errs = append(errs, fmt.Errorf("direct messages: %w", msg.directMessagesErr))
+	}
+	if msg.readStateErr != nil {
+		errs = append(errs, fmt.Errorf("read state: %w", msg.readStateErr))
+	}
+	return errors.Join(errs...)
 }
