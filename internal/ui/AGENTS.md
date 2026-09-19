@@ -32,10 +32,14 @@ the TUI subtree.
 - persisted read state and direct-message state;
 - the channels sidebar, command palette, help overlay, and notification state.
 
-Its `Update` method is the central router. It handles application and IRC
-messages first, gives visible overlays priority, routes mouse-wheel events to
-the pane under the pointer, and then updates the active chat, user list, and
-channel list.
+Its `Update` method is the central router. Application and IRC messages handled
+by the root model are not forwarded to child components. Keyboard, mouse, and
+private Bubbles messages are forwarded only when a child may need them.
+
+Unknown messages must continue to reach child components because Bubbles uses
+private message types for cursor blinking, viewport behavior, and other
+component-local events. Visible overlays receive input before the underlying
+chat and sidebars.
 
 Do not bypass this routing casually. New cross-component behavior should
 normally use a typed message handled by the top-level model.
@@ -54,6 +58,26 @@ latest read marker, cached channel membership, and lazy-history flags.
   sendable channel or private-message targets.
 - Keep inactive channel membership as data. Render the user list when the
   buffer becomes active instead of eagerly rendering every playback update.
+
+### Persistence
+
+Persistence is coordinated by `persistenceState` in `persistence.go`.
+
+- Never perform history, read-state, or direct-message disk I/O directly in
+  `Update`.
+- Copy mutable data into an immutable persistence snapshot before returning a
+  `tea.Cmd`.
+- Allow only one persistence command at a time. If another save is requested,
+  set `flushPending` and take a fresh snapshot after the current command
+  finishes.
+- A successful result marks only the persisted log revision as clean. Changes
+  made while the command was running must remain dirty for the next save.
+- Histories removed from the UI remain in `detachedHistory` until their dirty
+  revision is persisted.
+- When a dirty buffer has not loaded its stored history yet, merge the stored
+  entries before replacing the history file.
+- Interactive shutdown waits for pending persistence before returning
+  `tea.Quit`.
 
 ### Components
 
@@ -88,6 +112,20 @@ as topic and input heights. Handle very small terminals. Overlays must remain
 clipped and centered without making the background exceed the terminal
 dimensions.
 
+### Chat rendering cache
+
+Chat rendering is incremental.
+
+- `QueueMessage` appends data and marks the chat dirty without rebuilding the
+  transcript.
+- `FlushQueue` renders only the unrendered tail when the existing cache is
+  valid.
+- Changes to width, nickname, channel membership, or the complete message list
+  must invalidate cached rendered content.
+- Keep inactive buffers dirty and defer their rendering until selection.
+- Do not mutate `renderedLines`, `renderedMessages`, or `renderWidth` without
+  preserving these invalidation rules.
+
 ## Message and side-effect rules
 
 - Define small typed messages for events; avoid stringly typed routing.
@@ -103,7 +141,8 @@ dimensions.
 - Do not perform an entire playback burst in one update. Preserve
   `maxPlaybackMessagesPerUpdate` chunking unless measurements justify a change.
 - Preserve the queued chat-rendering path: append with `QueueMessage`, schedule
-  a flush, and render the active chat on `flushChatMsg`.
+  a flush, and render only the active chat on `flushChatMsg`. Inactive chats
+  remain dirty until selected.
 - History loading is intentionally lazy. Do not start one disk-loading job per
   discovered channel during connection playback.
 - Do not insert an outgoing message into history before the IRC echo arrives;
