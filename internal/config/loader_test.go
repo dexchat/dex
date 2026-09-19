@@ -67,6 +67,7 @@ func TestLoadUsesDefaultConfigWhenFileIsMissing(t *testing.T) {
 func TestLoadParsesUIDefaultsAndServerOverrides(t *testing.T) {
 	cfg, err := loadFromBytes([]byte(`
 [ui]
+theme = "ayu-dark"
 unread_badges = false
 mention_badges = true
 unread_on_user_events = false
@@ -86,6 +87,9 @@ notify_channels = ["#Alerts"]
 
 	if got := cfg.UI.UnreadBadges; got != false {
 		t.Fatalf("global unread_badges = %v, want false", got)
+	}
+	if got := cfg.UI.Theme; got != ThemeAyuDark {
+		t.Fatalf("UI theme = %q, want %q", got, ThemeAyuDark)
 	}
 	if got := cfg.UI.MentionBadges; got != true {
 		t.Fatalf("global mention_badges = %v, want true", got)
@@ -133,11 +137,30 @@ channels = ["#go"]
 	if got := cfg.UI.UnreadBadges; got != true {
 		t.Fatalf("global unread_badges default = %v, want true", got)
 	}
+	if got := cfg.UI.Theme; got != ThemeRosePine {
+		t.Fatalf("UI theme default = %q, want %q", got, ThemeRosePine)
+	}
 	if got := cfg.UI.MentionBadges; got != true {
 		t.Fatalf("global mention_badges default = %v, want true", got)
 	}
 	if got := cfg.UI.UnreadOnUserEvents; got != true {
 		t.Fatalf("global unread_on_user_events default = %v, want true", got)
+	}
+}
+
+func TestLoadRejectsUnknownUITheme(t *testing.T) {
+	_, err := loadFromBytes([]byte(`
+[ui]
+theme = "rose-pink"
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+	if err == nil || !strings.Contains(err.Error(), `unknown UI theme "rose-pink"`) {
+		t.Fatalf("expected unknown UI theme error, got %v", err)
 	}
 }
 

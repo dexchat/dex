@@ -8,6 +8,8 @@ import (
 const (
 	NotificationMention       = "mention"
 	NotificationDirectMessage = "direct_message"
+	ThemeRosePine             = "rose-pine"
+	ThemeAyuDark              = "ayu-dark"
 )
 
 // rawConfig stores the config file as it is
@@ -42,12 +44,14 @@ type Notifications struct {
 }
 
 type rawUI struct {
-	UnreadBadges       *bool `toml:"unread_badges"`
-	MentionBadges      *bool `toml:"mention_badges"`
-	UnreadOnUserEvents *bool `toml:"unread_on_user_events"`
+	Theme              string `toml:"theme"`
+	UnreadBadges       *bool  `toml:"unread_badges"`
+	MentionBadges      *bool  `toml:"mention_badges"`
+	UnreadOnUserEvents *bool  `toml:"unread_on_user_events"`
 }
 
 type UI struct {
+	Theme              string
 	UnreadBadges       bool
 	MentionBadges      bool
 	UnreadOnUserEvents bool

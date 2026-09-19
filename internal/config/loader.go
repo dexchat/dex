@@ -86,6 +86,14 @@ func loadFromBytes(data []byte) (*Config, error) {
 	}
 
 	cfg := defaultValues()
+	if raw.UI.Theme != "" {
+		switch raw.UI.Theme {
+		case ThemeRosePine, ThemeAyuDark:
+			cfg.UI.Theme = raw.UI.Theme
+		default:
+			return nil, fmt.Errorf("config validation failed: unknown UI theme %q", raw.UI.Theme)
+		}
+	}
 	if raw.UI.UnreadBadges != nil {
 		cfg.UI.UnreadBadges = *raw.UI.UnreadBadges
 	}
@@ -133,7 +141,7 @@ func loadFromBytes(data []byte) (*Config, error) {
 
 func defaultValues() *Config {
 	return &Config{
-		UI:            UI{UnreadBadges: true, MentionBadges: true, UnreadOnUserEvents: true},
+		UI:            UI{Theme: ThemeRosePine, UnreadBadges: true, MentionBadges: true, UnreadOnUserEvents: true},
 		Notifications: Notifications{Sound: true, Events: map[string]bool{NotificationMention: true, NotificationDirectMessage: true}, Cooldown: 2 * time.Second},
 	}
 }

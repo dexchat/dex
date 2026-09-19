@@ -15,6 +15,7 @@ import (
 	"github.com/dexchat/dex/internal/ui/components/chat"
 	"github.com/dexchat/dex/internal/ui/components/palette"
 	"github.com/dexchat/dex/internal/ui/components/users"
+	"github.com/dexchat/dex/internal/ui/styles"
 )
 
 var errTestPersistence = errors.New("test persistence failure")
@@ -809,6 +810,18 @@ func TestNewBuildsChannelListWithoutLoadingChannelHistory(t *testing.T) {
 	m.channels = m.channels.SetSize(channelsPanelMaxWidth, 20)
 	if content := plainText(m.channels.View(channelsPanelMaxWidth, 20)); !strings.Contains(content, "#go") {
 		t.Fatalf("expected configured channel to render before history load, got:\n%s", content)
+	}
+}
+
+func TestNewUsesConfiguredTheme(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+
+	m := New(&config.Config{UI: config.UI{Theme: config.ThemeAyuDark}})
+	want := styles.AyuDarkTheme().Colors.Base.Background
+	gotR, gotG, gotB, gotA := m.theme.Colors.Base.Background.RGBA()
+	wantR, wantG, wantB, wantA := want.RGBA()
+	if gotR != wantR || gotG != wantG || gotB != wantB || gotA != wantA {
+		t.Fatalf("theme background = %#v, want Ayu Dark %#v", m.theme.Colors.Base.Background, want)
 	}
 }
 

@@ -81,12 +81,16 @@ func New(cfg *config.Config) *Model {
 	if err != nil {
 		directMessages = &history.DirectMessages{}
 	}
+	theme := styles.RosePineTheme()
+	if cfg.UI.Theme == config.ThemeAyuDark {
+		theme = styles.AyuDarkTheme()
+	}
 	m := Model{
 		config:          cfg,
 		buffers:         make(map[BufferKey]*Buffer),
 		readState:       &history.ReadState{},
 		directMessages:  directMessages,
-		theme:           styles.RosePineTheme(),
+		theme:           theme,
 		terminalFocused: true,
 		now:             time.Now,
 		persistence: persistenceState{
