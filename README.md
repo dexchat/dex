@@ -63,5 +63,20 @@ Or, if you want test it before actually downloading dex, you can run its docker 
 docker run --rm -it ghcr.io/dexchat/dex:latest
 ```
 
+## Configuration
+
+`dexchat` reads its configuration from `$XDG_CONFIG_HOME/dex/config.toml`, or
+`~/.config/dex/config.toml` (when `XDG_CONFIG_HOME` is not set). Start with the
+provided example:
+
+```bash
+mkdir -p "$HOME/.config/dex"
+wget -O "$HOME/.config/dex/config.toml" \
+  https://raw.githubusercontent.com/dexchat/dex/main/config.example.toml
+```
+
+Edit the config file with your IRC server settings and preferences for the app. See
+[`config.example.toml`](./config.example.toml) for all available options.
+
 ## Contributing
 If you have any ideas, sugestions, issues or would like to contribute to dex, see the [contributing guide](https://github.com/dexchat/dex?tab=contributing-ov-file#contributing).
