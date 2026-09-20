@@ -68,6 +68,14 @@ homebrew_casks:
     description: IRC/TUI client for dexchat
     binaries:
       - dex
+    caveats: |
+      Current macOS releases are not yet notarized. If Gatekeeper blocks dex,
+      remove the quarantine attribute from the Homebrew-installed binary:
+
+        xattr -d com.apple.quarantine "$(command -v dex)"
+
+      This bypasses Gatekeeper verification. Only use it with the official
+      dexchat/tap cask.
     commit_msg_template: "chore: update dex to {{ .Tag }}"
 
 snapshot:
