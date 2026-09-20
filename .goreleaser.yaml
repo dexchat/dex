@@ -110,6 +110,7 @@ changelog:
       order: 9999
 
 release:
+  draft: true
   footer: |
     ## Full Changelog
 
