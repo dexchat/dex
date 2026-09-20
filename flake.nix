@@ -23,7 +23,7 @@
             version = "0.1.1-dev";
 
             src = ./.;
-            vendorHash = "sha256-H3O0g5AvWebQfPVleVtuSmKLfEd8KDpWt5Dmwxb23Ks=";
+            vendorHash = "sha256-FH+9Kf7RRj9sj5fce2j1na8jouWCxP6R2QOhdtC9sBo=";
 
             subPackages = [ "cmd/tui" ];
             ldflags = [ "-s" "-w" ];
