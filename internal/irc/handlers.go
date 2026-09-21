@@ -322,6 +322,50 @@ func (c *Client) onPart(client *girc.Client, e girc.Event) {
 	}
 }
 
+func (c *Client) onKick(client *girc.Client, e girc.Event) {
+	if len(e.Params) < 2 {
+		return
+	}
+	channelName := e.Params[0]
+	kickedNick := e.Params[1]
+	reason := ""
+	if len(e.Params) > 2 {
+		reason = e.Params[2]
+	}
+
+	if kickedNick == client.GetNick() {
+		msg := ChannelPartedMsg{
+			Server:  c.serverName,
+			Channel: channelName,
+		}
+		if c.program != nil {
+			// Bubble Tea's Send may block until the UI receives the message.
+			// Keep the IRC socket reader free while delivering this rare event.
+			go c.program.Send(msg)
+		}
+		return
+	}
+
+	kickerName := c.serverName
+	if e.Source != nil {
+		kickerName = e.Source.Name
+	}
+
+	message := fmt.Sprintf("%s has been kicked by %s", kickedNick, kickerName)
+	if reason != "" {
+		message = fmt.Sprintf("%s has been kicked by %s (%s)", kickedNick, kickerName, reason)
+	}
+
+	c.queueMessage(BufferNewMessageMsg{
+		Server:    c.serverName,
+		Buffer:    channelName,
+		Timestamp: time.Now(),
+		From:      "<--",
+		Text:      message,
+		UserEvent: true,
+	})
+}
+
 // updateChannelCase fixes the channel name accordingly to how it's registered in the server
 // Example: the user will join the channel #idlerpg, but the true name is #idleRPG
 // It should be called every time the user joins a channel

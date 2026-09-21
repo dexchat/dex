@@ -27,7 +27,7 @@ type BufferNewMessageMsg struct {
 	Text          string
 	MsgID         string // IRCv3 msgid, nil if the server does not support it
 	OwnEcho       bool   // True if this is the own echo-message of a message sent from this client
-	UserEvent     bool   // True for another user's JOIN, PART, or QUIT event
+	UserEvent     bool   // True for another user's JOIN, PART, QUIT, or KICK event
 	Type          MessageType
 }
 

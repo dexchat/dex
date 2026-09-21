@@ -188,6 +188,7 @@ func (c *Client) addHandlers() {
 	c.Handlers.Add(girc.DISCONNECTED, c.onDisconnect)
 	c.Handlers.Add(girc.JOIN, c.onJoin)
 	c.Handlers.Add(girc.PART, c.onPart)
+	c.Handlers.Add(girc.KICK, c.onKick)
 
 	c.Handlers.Add(girc.PRIVMSG, c.onPrivmsg)
 	c.Handlers.Add(girc.NOTICE, c.onServerMessage)
@@ -196,6 +197,7 @@ func (c *Client) addHandlers() {
 	c.Handlers.AddBg(girc.QUIT, c.onQuit)
 	c.Handlers.AddBg(girc.JOIN, c.onUserListChange)
 	c.Handlers.AddBg(girc.PART, c.onUserListChange)
+	c.Handlers.AddBg(girc.KICK, c.onUserListChange)
 	c.Handlers.AddBg(girc.NICK, c.onUserListChange)
 	c.Handlers.AddBg(girc.MODE, c.onUserListChange)
 

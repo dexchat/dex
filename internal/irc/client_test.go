@@ -65,7 +65,7 @@ func TestMembershipEventsTriggerUserListRefresh(t *testing.T) {
 		Nickname: "tester",
 	}, nil)
 
-	for _, command := range []string{girc.JOIN, girc.PART, girc.NICK, girc.MODE, girc.RPL_ENDOFNAMES, girc.RPL_ENDOFWHO} {
+	for _, command := range []string{girc.JOIN, girc.PART, girc.KICK, girc.NICK, girc.MODE, girc.RPL_ENDOFNAMES, girc.RPL_ENDOFWHO} {
 		t.Run(command, func(t *testing.T) {
 			for _, id := range externalHandlerIDs(t, client, command) {
 				if strings.HasSuffix(id, ":bg") {
@@ -198,6 +198,75 @@ func TestSelfPartDoesNotCreateAChatMessage(t *testing.T) {
 
 	if got := len(client.messageQueue); got != 0 {
 		t.Fatalf("self-PART created %d chat messages, want 0", got)
+	}
+}
+
+func TestSelfKickDoesNotCreateAChatMessage(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+
+	client.onKick(client.Client, girc.Event{
+		Command: girc.KICK,
+		Source:  girc.ParseSource("op!op@example.test"),
+		Params:  []string{"#go", "tester", "spamming"},
+	})
+
+	if got := len(client.messageQueue); got != 0 {
+		t.Fatalf("self-KICK created %d chat messages, want 0", got)
+	}
+}
+
+func TestKickMessageIdentifiesKickerAndReason(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+	client.flushPending = true
+
+	client.onKick(client.Client, girc.Event{
+		Command: girc.KICK,
+		Source:  girc.ParseSource("op!op@example.test"),
+		Params:  []string{"#go", "Guest22", "spamming"},
+	})
+
+	if got := len(client.messageQueue); got != 1 {
+		t.Fatalf("KICK queued %d messages, want 1", got)
+	}
+	msg := client.messageQueue[0]
+	if msg.Buffer != "#go" {
+		t.Fatalf("kick message buffer = %q, want #go", msg.Buffer)
+	}
+	if !msg.UserEvent {
+		t.Fatal("kick message should be marked as a user event")
+	}
+	if want := "Guest22 has been kicked by op (spamming)"; msg.Text != want {
+		t.Fatalf("kick message = %q, want %q", msg.Text, want)
+	}
+}
+
+func TestKickMessageWithoutReasonOmitsParens(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	}, nil)
+	client.flushPending = true
+
+	client.onKick(client.Client, girc.Event{
+		Command: girc.KICK,
+		Source:  girc.ParseSource("op!op@example.test"),
+		Params:  []string{"#go", "Guest22"},
+	})
+
+	if got := len(client.messageQueue); got != 1 {
+		t.Fatalf("KICK queued %d messages, want 1", got)
+	}
+	if want := "Guest22 has been kicked by op"; client.messageQueue[0].Text != want {
+		t.Fatalf("kick message = %q, want %q", client.messageQueue[0].Text, want)
 	}
 }
 
