@@ -267,6 +267,21 @@ func (m *Model) SetNickname(nickname string) {
 	m.invalidateRenderedContent()
 }
 
+func (m *Model) SetTheme(theme styles.Theme, usernameColors styles.UsernameColors) {
+	m.theme = theme
+	m.usernameColors = usernameColors
+	inputStyles := m.input.Styles()
+	inputStyles.Focused.Placeholder = theme.Styles.InputField
+	inputStyles.Focused.Text = theme.Styles.InputField
+	inputStyles.Blurred.Placeholder = theme.Styles.InputField
+	inputStyles.Blurred.Text = theme.Styles.InputField
+	m.input.SetStyles(inputStyles)
+	m.invalidateRenderedContent()
+	if m.viewport.Width() > 0 {
+		m.updateContent()
+	}
+}
+
 func (m *Model) Nickname() string {
 	return m.nickname
 }

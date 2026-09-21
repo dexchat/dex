@@ -16,6 +16,11 @@ type Channel struct {
 	Name   string
 }
 
+type ThemeOption struct {
+	Name  string
+	Label string
+}
+
 const (
 	nameMaxLen                   = 18
 	keyMaxLen                    = 10
@@ -241,6 +246,34 @@ func (m *Model) ShowChannels(channels []Channel) {
 	m.open()
 }
 
+func (m *Model) ShowThemes(themes []ThemeOption, current string) {
+	m.actions = make([]action, 0, len(themes))
+	for _, theme := range themes {
+		theme := theme
+		description := ""
+		if theme.Name == current {
+			description = "current"
+		}
+		m.actions = append(m.actions, action{
+			Name:        theme.Label,
+			Description: description,
+			Keybinding:  key.NewBinding(),
+			Handler: func() tea.Msg {
+				return ThemeSelectionMsg{Name: theme.Name}
+			},
+		})
+	}
+	m.visible = true
+	m.channelPicker = false
+	m.input.Placeholder = "Search themes..."
+	m.open()
+}
+
+func (m *Model) SetTheme(theme styles.Theme) {
+	m.theme = theme
+	m.setInputStyles()
+}
+
 func (m *Model) open() {
 	m.cursor = 0
 	m.input.Reset()
@@ -258,6 +291,19 @@ func (m *Model) close() {
 	m.actions = defaultActions()
 	m.cursor = 0
 	m.input.Reset()
+}
+
+func (m *Model) setInputStyles() {
+	inputStyles := m.input.Styles()
+	inputStyle := lipgloss.NewStyle().
+		Background(m.theme.Colors.Base.Background).
+		Foreground(m.theme.Colors.Base.Foreground)
+	inputStyles.Focused.Text = inputStyle
+	inputStyles.Blurred.Text = inputStyle
+	placeholderStyle := inputStyle.Foreground(m.theme.Colors.Base.Dimmed)
+	inputStyles.Focused.Placeholder = placeholderStyle
+	inputStyles.Blurred.Placeholder = placeholderStyle
+	m.input.SetStyles(inputStyles)
 }
 
 func (m *Model) moveUp() {

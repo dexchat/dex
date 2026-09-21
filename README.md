@@ -24,7 +24,9 @@
 ## Features
 
 - **Quick channel jumping:** move between channels quickly
-- **Command palette:** access common actions from a searchable command menu
+- **Command palette:** access common actions, including a searchable theme selector. Theme
+  selections apply for the current session; change `ui.theme` in the config file to make one
+  permanent.
 - **Fuzzy channel search:** Find channels without iteracting through all of them
 - **Persistent history:** Preserve your conversations between sessions locally
 - **Notifications:** Get notified about mentions and direct messages

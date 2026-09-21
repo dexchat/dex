@@ -168,6 +168,11 @@ func (m *Model) SetSize(width, height int) {
 	m.updateViewportContent()
 }
 
+func (m *Model) SetTheme(theme styles.Theme) {
+	m.theme = theme
+	m.updateViewportContent()
+}
+
 func (m *Model) updateViewportContent() {
 	contentWidth := m.viewport.Width()
 	if contentWidth < 10 {

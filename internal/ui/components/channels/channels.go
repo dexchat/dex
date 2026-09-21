@@ -239,6 +239,14 @@ func (m Model) SetSize(width, height int) Model {
 	return m.updateContent()
 }
 
+func (m Model) SetTheme(theme styles.Theme) Model {
+	m.theme = theme
+	m.viewport.Style = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		PaddingBottom(bottomPaddingHeight)
+	return m.updateContent()
+}
+
 func (m Model) updateContent() Model {
 	var lines []string
 	lastServerName := ""

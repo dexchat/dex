@@ -51,6 +51,7 @@ type Model struct {
 	width          int
 	height         int
 	theme          styles.Theme
+	themeName      string
 	usernameColors styles.UsernameColors
 
 	buffers             map[BufferKey]*Buffer
@@ -81,23 +82,18 @@ func New(cfg *config.Config) *Model {
 	if err != nil {
 		directMessages = &history.DirectMessages{}
 	}
-	theme := styles.RosePineTheme()
-	switch cfg.UI.Theme {
-	case config.ThemeAyuDark:
-		theme = styles.AyuDarkTheme()
-	case config.ThemeDracula:
-		theme = styles.DraculaTheme()
-	case config.ThemeGruvboxDark:
-		theme = styles.GruvboxDarkTheme()
-	case config.ThemeSolarizedLight:
-		theme = styles.SolarizedLightTheme()
+	themeName := cfg.UI.Theme
+	if themeName == "" {
+		themeName = config.ThemeRosePine
 	}
+	theme, _ := themeForName(themeName)
 	m := Model{
 		config:          cfg,
 		buffers:         make(map[BufferKey]*Buffer),
 		readState:       &history.ReadState{},
 		directMessages:  directMessages,
 		theme:           theme,
+		themeName:       themeName,
 		terminalFocused: true,
 		now:             time.Now,
 		persistence: persistenceState{
@@ -206,6 +202,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case palette.OpenChannelPickerMsg:
 		m.showChannelPicker()
 
+	case palette.OpenThemePickerMsg:
+		m.showThemePicker()
+
 	case palette.OpenHelpMsg:
 		m.showHelp()
 
@@ -220,6 +219,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case palette.ChannelSelectionMsg:
 		m.selectBuffer(msgTyped.Server, msgTyped.Channel, &cmds)
+
+	case palette.ThemeSelectionMsg:
+		m.applyTheme(msgTyped.Name)
 
 	case tea.FocusMsg:
 		m.terminalFocused = true

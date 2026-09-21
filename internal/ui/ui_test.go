@@ -74,6 +74,31 @@ func TestGoToChannelKeybindingOpensChannelPickerDirectly(t *testing.T) {
 	}
 }
 
+func TestThemePickerOpensAndAppliesThemeForCurrentSession(t *testing.T) {
+	m := newActivityTestModel()
+	_, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
+
+	_, _ = m.Update(palette.OpenThemePickerMsg{})
+	if !m.palette.IsVisible() {
+		t.Fatal("theme picker should be visible")
+	}
+	if view := plainText(m.palette.View()); !strings.Contains(view, "current") || !strings.Contains(view, "Rose Pine") {
+		t.Fatalf("theme picker should mark the active theme:\n%s", view)
+	}
+
+	configuredTheme := m.config.UI.Theme
+	_, _ = m.Update(palette.ThemeSelectionMsg{Name: config.ThemeAyuDark})
+	if m.themeName != config.ThemeAyuDark {
+		t.Fatalf("active theme = %q, want %q", m.themeName, config.ThemeAyuDark)
+	}
+	if m.config.UI.Theme != configuredTheme {
+		t.Fatalf("theme selection changed config from %q to %q", configuredTheme, m.config.UI.Theme)
+	}
+	if m.theme.Colors.Base.Background != styles.AyuDarkTheme().Colors.Base.Background {
+		t.Fatal("Ayu Dark colors were not applied to the UI")
+	}
+}
+
 func TestLastBufferKeybindingTogglesBetweenRecentBuffers(t *testing.T) {
 	m := newActivityTestModel()
 	var cmds []tea.Cmd

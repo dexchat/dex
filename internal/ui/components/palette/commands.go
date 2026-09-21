@@ -17,6 +17,8 @@ type action struct {
 
 type OpenChannelPickerMsg struct{}
 
+type OpenThemePickerMsg struct{}
+
 type LastBufferMsg struct{}
 
 type OpenHelpMsg struct{}
@@ -26,6 +28,10 @@ type EditInEditorMsg struct{}
 type ChannelSelectionMsg struct {
 	Server  string
 	Channel string
+}
+
+type ThemeSelectionMsg struct {
+	Name string
 }
 
 // matches checks if the command matches the given input query (case-insensitive)
@@ -69,6 +75,12 @@ func defaultActions() []action {
 			Description: "exit dexchat",
 			Keybinding:  kb.Quit,
 			Handler:     func() tea.Msg { return tea.Quit() },
+		},
+		{
+			Name:        "select theme",
+			Description: "change the theme for this session",
+			Keybinding:  key.NewBinding(),
+			Handler:     func() tea.Msg { return OpenThemePickerMsg{} },
 		},
 	}
 }

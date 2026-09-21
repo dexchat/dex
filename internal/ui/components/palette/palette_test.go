@@ -114,6 +114,45 @@ func TestPaletteWidthsDependOnMode(t *testing.T) {
 	}
 }
 
+func TestThemePickerMarksCurrentThemeAndReturnsSelection(t *testing.T) {
+	m := New(styles.RosePineTheme())
+	m.SetSize(90, 12)
+	m.ShowThemes([]ThemeOption{
+		{Name: "rose-pine", Label: "Rose Pine"},
+		{Name: "ayu-dark", Label: "Ayu Dark"},
+	}, "rose-pine")
+
+	if view := m.View(); !strings.Contains(view, "current") {
+		t.Fatalf("theme picker does not mark the active theme:\n%s", view)
+	}
+
+	m.moveDown()
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("theme selection did not return a command")
+	}
+	msg, ok := cmd().(ThemeSelectionMsg)
+	if !ok || msg.Name != "ayu-dark" {
+		t.Fatalf("theme selection = %#v, want Ayu Dark selection", msg)
+	}
+}
+
+func TestSelectThemeActionOpensThemePicker(t *testing.T) {
+	m := New(styles.RosePineTheme())
+	m.Toggle()
+	for range len(m.filteredCommands()) - 1 {
+		m.moveDown()
+	}
+
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("select theme action did not return a command")
+	}
+	if msg := cmd(); msg != (OpenThemePickerMsg{}) {
+		t.Fatalf("select theme action returned %T, want OpenThemePickerMsg", msg)
+	}
+}
+
 func TestChannelPickerSelectsSortedChannel(t *testing.T) {
 	m := New(styles.RosePineTheme())
 	m.ShowChannels([]Channel{

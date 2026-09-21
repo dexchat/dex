@@ -96,6 +96,13 @@ func (m Model) SetSize(width, height int) Model {
 	return m.updateContent()
 }
 
+func (m Model) SetTheme(theme styles.Theme, usernameColors styles.UsernameColors) Model {
+	m.theme = theme
+	m.usernameColors = usernameColors
+	m.viewport.Style = lipgloss.NewStyle().Background(theme.Colors.Base.Background)
+	return m.updateContent()
+}
+
 func (m Model) HasUser(nick string) bool {
 	for _, u := range m.users {
 		stripped, _ := splitUserPrefix(u, m.prefixes)
