@@ -272,6 +272,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// We refresh chat on UserListMsg to dim nick if a user
 				// sends a message then leaves channel.
 				buf.Chat.RefreshContent()
+			} else {
+				// Buffer not visible: invalidate now, render when active.
+				buf.Chat.InvalidateContent()
 			}
 		}
 
@@ -524,12 +527,12 @@ func (m *Model) selectBuffer(server, channel string, cmds *[]tea.Cmd) {
 	m.clearBufferActivity(key)
 	m.channels = m.channels.ClearNotificationNoticeFor(server, channel)
 	m.channels, _ = m.channels.Select(server, channel)
-	buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 	buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
 	var cmd tea.Cmd
+	// Sync membership before SetSize, which reads it while re-rendering.
 	buf.Users, cmd = buf.Users.Update(users.UserListMsg{Users: buf.members, Prefixes: buf.memberPrefixes})
 	*cmds = append(*cmds, cmd)
-	buf.Chat.FlushQueue()
+	buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 	if historyCmd := m.requestHistoryLoad(buf); historyCmd != nil {
 		*cmds = append(*cmds, historyCmd)
 	}

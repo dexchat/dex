@@ -276,6 +276,14 @@ func (m *Model) RefreshContent() {
 	m.FlushQueue()
 }
 
+// InvalidateContent marks the rendered cache as stale without forcing an
+// immediate re-render. Use this for buffers that aren't currently visible;
+// the next FlushQueue (e.g. when the buffer becomes active) will pick up
+// the change.
+func (m *Model) InvalidateContent() {
+	m.invalidateRenderedContent()
+}
+
 func (m *Model) SetChannelMembers(members ChannelMembers) {
 	m.channelMembers = members
 }

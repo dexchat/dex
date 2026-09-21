@@ -48,6 +48,52 @@ func (s stubChannelMembers) HasUser(nick string) bool         { return false }
 func (s stubChannelMembers) GetUserPrefix(nick string) string { return "" }
 func (s stubChannelMembers) Nicknames() []string              { return s.nicks }
 
+// toggleChannelMembers lets tests flip a nick's membership, mimicking a user
+// quitting or parting after their message was already rendered.
+type toggleChannelMembers struct {
+	present bool
+}
+
+func (s *toggleChannelMembers) HasUser(nick string) bool         { return s.present }
+func (s *toggleChannelMembers) GetUserPrefix(nick string) string { return "" }
+func (s *toggleChannelMembers) Nicknames() []string              { return nil }
+
+func TestInvalidateContentRecolorsNicknameOnNextFlush(t *testing.T) {
+	theme := styles.RosePineTheme()
+	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
+	m.SetSize(80, 12)
+	members := &toggleChannelMembers{present: true}
+	m.SetChannelMembers(members)
+	m.AddMessage(Message{Timestamp: time.Now(), Username: "alice", Text: "hello"})
+
+	inactiveStyle := lipgloss.NewStyle().
+		Foreground(theme.Colors.Chat.InactiveNickname).
+		Background(theme.Colors.Base.Background)
+	inactiveNick := inactiveStyle.Render(" alice ")
+
+	// alice quits while this buffer isn't visible: membership flips, but the
+	// already-rendered line is cached and untouched until FlushQueue has a
+	// reason to re-render it.
+	members.present = false
+	m.FlushQueue()
+	if strings.Contains(strings.Join(m.renderedLines, "\n"), inactiveNick) {
+		t.Fatal("expected stale cache to keep alice's line rendered as active before invalidation")
+	}
+
+	m.InvalidateContent()
+	if !m.needsRender {
+		t.Fatal("expected InvalidateContent to require rendering")
+	}
+	if got := m.renderedMessages; got != 0 {
+		t.Fatalf("rendered messages = %d, want 0 immediately after InvalidateContent", got)
+	}
+
+	m.FlushQueue()
+	if !strings.Contains(strings.Join(m.renderedLines, "\n"), inactiveNick) {
+		t.Fatal("expected InvalidateContent + FlushQueue to recolor alice as inactive")
+	}
+}
+
 func TestInactiveNicknameUsesSemanticThemeColor(t *testing.T) {
 	theme := styles.RosePineTheme()
 	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))

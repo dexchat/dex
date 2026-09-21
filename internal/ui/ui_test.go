@@ -8,6 +8,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dexchat/dex/internal/commands"
 	"github.com/dexchat/dex/internal/config"
 	"github.com/dexchat/dex/internal/history"
@@ -756,6 +757,53 @@ func TestInactiveUserListRendersWhenBufferIsSelected(t *testing.T) {
 	random.Users, _ = random.Users.Update(users.UserListMsg{Users: random.members})
 	if !random.Users.HasUser("alice") {
 		t.Fatal("selected buffer should render its saved user list")
+	}
+}
+
+func TestQuitInInactiveChannelDimsNicknameOnceSelected(t *testing.T) {
+	m := newActivityTestModel()
+	var cmds []tea.Cmd
+
+	// alice is present in #random while it's the active buffer, and her
+	// message is rendered with an active nickname color.
+	m.selectBuffer("libera", "#random", &cmds)
+	_, _ = m.Update(irc.UserListMsg{
+		Server:  "libera",
+		Channel: "#random",
+		Users:   []string{"alice"},
+	})
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "hello from random",
+	})
+	random := m.buffers[makeBufferKey("libera", "#random")]
+	random.Chat.FlushQueue()
+
+	inactiveStyle := lipgloss.NewStyle().
+		Foreground(m.theme.Colors.Chat.InactiveNickname).
+		Background(m.theme.Colors.Base.Background)
+	inactiveNick := inactiveStyle.Render(" alice ")
+	if strings.Contains(random.Chat.View(), inactiveNick) {
+		t.Fatal("expected alice's nickname to render active while she's still in the channel")
+	}
+
+	// The user switches away from #random, and alice quits while it's no
+	// longer the active buffer.
+	m.selectBuffer("libera", "#go", &cmds)
+	_, _ = m.Update(irc.UserListMsg{
+		Server:  "libera",
+		Channel: "#random",
+		Users:   []string{},
+	})
+
+	// Switching back to #random should show alice's already-rendered line
+	// recolored as inactive, not the stale active color.
+	m.selectBuffer("libera", "#random", &cmds)
+	if !strings.Contains(random.Chat.View(), inactiveNick) {
+		t.Fatal("expected alice's nickname to render dimmed after quitting in an inactive channel")
 	}
 }
 
