@@ -207,6 +207,13 @@ func (m *Model) removeBuffer(buffer *Buffer, forgetDirectMessage bool) tea.Cmd {
 	if wasActive {
 		m.markBufferRead(buffer)
 		m.activeBuffer = makeBufferKey(buffer.Server, "")
+		// The new active buffer may not have been resized since it last lost
+		// focus (WindowSizeMsg only resizes the currently active buffer), so
+		// bring it up to date the way selectBuffer does on a normal switch.
+		if newActive, ok := m.buffers[m.activeBuffer]; ok {
+			newActive.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
+			newActive.Users = newActive.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
+		}
 	}
 	if _, dirty := buffer.History.Snapshot(); dirty {
 		m.persistence.detachedHistory[key] = detachedHistory{

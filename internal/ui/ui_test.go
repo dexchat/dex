@@ -234,6 +234,42 @@ func TestCloseRemovesPrivateBufferAndSelectsServer(t *testing.T) {
 	}
 }
 
+func TestCloseResizesServerBufferAfterStaleWindowSize(t *testing.T) {
+	m := newActivityTestModel()
+	_, _ = m.getOrCreateBuffer("libera", "alice")
+	m.directMessages.Add("libera", "alice")
+
+	// Resizing while the DM is active only resizes the DM's chat (per
+	// WindowSizeMsg handling), leaving the server buffer's chat sized from
+	// whatever it last had (its zero value here, since it was never active).
+	m.activeBuffer = makeBufferKey("libera", "alice")
+	_, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
+
+	_, _ = submitChat(m, "/close")
+
+	if got, want := m.activeBuffer, makeBufferKey("libera", ""); got != want {
+		t.Fatalf("activeBuffer = %q, want %q", got, want)
+	}
+
+	// A chat freshly sized to the model's current dimensions is the ground
+	// truth for what the (now active) server buffer should look like.
+	want := chat.New(m.theme, m.usernameColors)
+	want.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
+	wantView := want.View()
+
+	got := m.getActiveBuffer().Chat.View()
+	if lipgloss.Height(got) != lipgloss.Height(wantView) {
+		t.Fatalf("server buffer chat height after /close = %d, want %d", lipgloss.Height(got), lipgloss.Height(wantView))
+	}
+	gotLines := strings.Split(got, "\n")
+	wantLines := strings.Split(wantView, "\n")
+	for i := range gotLines {
+		if lipgloss.Width(gotLines[i]) != lipgloss.Width(wantLines[i]) {
+			t.Fatalf("server buffer chat line %d width after /close = %d, want %d", i, lipgloss.Width(gotLines[i]), lipgloss.Width(wantLines[i]))
+		}
+	}
+}
+
 func TestChatCloseIsHandledBeforeBufferSwitch(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	m := newActivityTestModel()
