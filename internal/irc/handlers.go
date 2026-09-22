@@ -196,8 +196,15 @@ func (c *Client) onTopic(_ *girc.Client, e girc.Event) {
 	})
 }
 
-func (c *Client) onServerMessage(_ *girc.Client, e girc.Event) {
+func (c *Client) onServerMessage(client *girc.Client, e girc.Event) {
 	if e.Command == girc.NOTICE && len(e.Params) > 0 && girc.IsValidChannel(e.Params[0]) {
+		return
+	}
+
+	// A NOTICE sent directly to us (e.g. from NickServ) is a private
+	// message, not a server notice, so route it like a PM/query.
+	if e.Command == girc.NOTICE && e.Source != nil && len(e.Params) > 0 && !girc.IsValidChannel(e.Params[0]) {
+		c.onPrivmsg(client, e)
 		return
 	}
 
