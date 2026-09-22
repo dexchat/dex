@@ -158,6 +158,9 @@ func validate(servers map[string]*Server) error {
 		if server.Port <= 0 || server.Port > 65535 {
 			return fmt.Errorf("server %q: port must be between 1 and 65535", name)
 		}
+		if server.SSLSkipVerify && !server.UseSSL() {
+			return fmt.Errorf("server %q: ssl_skip_verify requires ssl", name)
+		}
 	}
 
 	return nil

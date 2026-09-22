@@ -396,3 +396,31 @@ channels = ["#go"]
 func boolPtr(v bool) *bool {
 	return &v
 }
+
+func TestLoadParsesSSLSkipVerify(t *testing.T) {
+	cfg, err := loadFromBytes([]byte(`
+[servers.znc]
+address = "znc.example.test"
+port = 6697
+ssl_skip_verify = true
+`))
+	if err != nil {
+		t.Fatalf("loadFromBytes() error = %v", err)
+	}
+	if !cfg.Servers[0].SSLSkipVerify {
+		t.Fatal("expected ssl_skip_verify to be enabled")
+	}
+}
+
+func TestLoadRejectsSSLSkipVerifyWithoutSSL(t *testing.T) {
+	_, err := loadFromBytes([]byte(`
+[servers.znc]
+address = "znc.example.test"
+port = 6667
+ssl = false
+ssl_skip_verify = true
+`))
+	if err == nil || !strings.Contains(err.Error(), "ssl_skip_verify requires ssl") {
+		t.Fatalf("loadFromBytes() error = %v, want ssl_skip_verify error", err)
+	}
+}

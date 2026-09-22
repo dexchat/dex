@@ -85,12 +85,8 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 		},
 	}
 
-	// TODO: create a config option for this
-	// Skip certificate verification for self-signed certs (useful for ZNC)
 	if config.UseSSL() {
-		gircConfig.TLSConfig = &tls.Config{
-			InsecureSkipVerify: true,
-		}
+		gircConfig.TLSConfig = tlsConfig(config)
 	}
 
 	client := girc.New(gircConfig)
@@ -105,6 +101,16 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 	c.addHandlers()
 
 	return c
+}
+
+// tlsConfig verifies server certificates unless the server explicitly opts
+// out with ssl_skip_verify, e.g. for a self-hosted ZNC with a self-signed
+// certificate.
+func tlsConfig(server *config.Server) *tls.Config {
+	return &tls.Config{
+		ServerName:         server.Address,
+		InsecureSkipVerify: server.SSLSkipVerify,
+	}
 }
 
 func (c *Client) setChannelUsers(channelName string, users []string) {

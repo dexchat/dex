@@ -70,6 +70,7 @@ type Server struct {
 	Address                  string   `toml:"address"`
 	Port                     int      `toml:"port"`
 	SSL                      *bool    `toml:"ssl"`
+	SSLSkipVerify            bool     `toml:"ssl_skip_verify"`
 	Password                 string   `toml:"password"`
 	Channels                 []string `toml:"channels"`
 	Nickname                 string   `toml:"nickname"`

@@ -490,3 +490,20 @@ func externalHandlerIDs(t *testing.T, client *Client, command string) []string {
 	}
 	return ids
 }
+
+func TestTLSConfigVerifiesCertificatesByDefault(t *testing.T) {
+	conf := tlsConfig(&config.Server{Address: "irc.example.test", Port: 6697})
+	if conf.InsecureSkipVerify {
+		t.Fatal("expected certificate verification to be enabled by default")
+	}
+	if conf.ServerName != "irc.example.test" {
+		t.Fatalf("ServerName = %q, want irc.example.test", conf.ServerName)
+	}
+}
+
+func TestTLSConfigSkipsVerificationWhenConfigured(t *testing.T) {
+	conf := tlsConfig(&config.Server{Address: "znc.example.test", Port: 6697, SSLSkipVerify: true})
+	if !conf.InsecureSkipVerify {
+		t.Fatal("expected certificate verification to be skipped")
+	}
+}

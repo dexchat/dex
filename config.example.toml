@@ -28,6 +28,9 @@ notify_channels = []
 # address = "znc.example.com"
 # port = 6697
 # ssl = true
+# Skip TLS certificate verification. Only enable this for a server you
+# trust that uses a self-signed certificate; it allows MITM attacks.
+# ssl_skip_verify = true
 # nickname = "your-znc-username/znc-server-name"
 # password = "your-znc-password"
 
