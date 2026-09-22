@@ -8,7 +8,6 @@ import (
 	"github.com/dexchat/dex/internal/commands"
 	"github.com/dexchat/dex/internal/irc"
 	"github.com/dexchat/dex/internal/ui/components/chat"
-	"github.com/lrstanley/girc"
 )
 
 func (m *Model) handleCommand(buffer *Buffer, command commands.Command) tea.Cmd {
@@ -72,7 +71,7 @@ func (m *Model) handleCloseCommand(buffer *Buffer, args []string) tea.Cmd {
 		m.addCommandError(buffer, "usage: /close")
 		return nil
 	}
-	if buffer.Buffer == "" || girc.IsValidChannel(buffer.Buffer) {
+	if buffer.Buffer == "" || irc.IsChannel(buffer.Buffer) {
 		m.addCommandError(buffer, "error: /close is only available in a private message")
 		return nil
 	}

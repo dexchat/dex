@@ -608,7 +608,12 @@ func (m *Model) getOrCreateBuffer(server, channel string) (*Buffer, tea.Cmd) {
 		buf.Chat.SetNickname(serverBuf.Chat.Nickname())
 	}
 
-	buf.Chat.SetChannelMembers(&buf.Users)
+	// DM buffers have no NAMES-derived member list, so leave channelMembers
+	// unset there; otherwise every DM peer would be treated as "not in the
+	// channel" and rendered with the inactive/gray nick color.
+	if irc.IsChannel(channel) {
+		buf.Chat.SetChannelMembers(&buf.Users)
+	}
 
 	m.buffers[key] = buf
 

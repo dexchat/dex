@@ -11,6 +11,12 @@ import (
 	"github.com/dexchat/dex/internal/config"
 )
 
+// IsChannel reports whether name is an IRC channel name (as opposed to a
+// nickname/query target), keeping the girc dependency out of other packages.
+func IsChannel(name string) bool {
+	return girc.IsValidChannel(name)
+}
+
 // Client is for a single server connection
 type Client struct {
 	*girc.Client
