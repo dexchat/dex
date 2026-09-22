@@ -252,9 +252,9 @@ func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 	reason := e.Last()
 	host := e.Source.Host
 	ident := e.Source.Ident
-	message := fmt.Sprintf("%s (%s:%s) has quit", host, ident, userName)
+	message := fmt.Sprintf("%s (%s:%s) has quit", userName, host, ident)
 	if reason != "" {
-		message = fmt.Sprintf("%s (%s:%s) has quit (%s)", host, ident, userName, reason)
+		message = fmt.Sprintf("%s (%s:%s) has quit (%s)", userName, host, ident, reason)
 	}
 
 	// send quit message and trigger user list refresh only for channels the user was in
