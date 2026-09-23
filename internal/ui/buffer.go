@@ -26,6 +26,9 @@ const (
 	historyNotLoaded historyState = iota
 	historyLoading
 	historyLoaded
+	// historyUnreadable disables saves so the unreadable stored file is never
+	// replaced. Selecting the buffer again retries the load.
+	historyUnreadable
 )
 
 type Buffer struct {

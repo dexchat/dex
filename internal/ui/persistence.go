@@ -35,8 +35,10 @@ type (
 		readErr   error
 	}
 	loadedBufferHistory struct {
-		key     BufferKey
-		history *history.Log
+		key         BufferKey
+		history     *history.Log
+		quarantined string
+		err         error
 	}
 )
 
@@ -59,6 +61,11 @@ type historyFlushResult struct {
 	log      *history.Log
 	revision uint64
 	err      error
+	// readErr means the stored history could not be read for merging, so
+	// nothing was written and the buffer must stop persisting.
+	readErr error
+	// quarantined is the path a corrupt stored history was moved to.
+	quarantined string
 }
 
 // historyFlushSnapshot contains immutable data for one asynchronous history
@@ -126,6 +133,9 @@ func (m *Model) snapshotPersistence() persistenceSnapshot {
 		})
 	}
 	for key, buf := range m.buffers {
+		if buf.historyState == historyUnreadable {
+			continue
+		}
 		logSnapshot, ok := buf.History.Snapshot()
 		if !ok {
 			continue
@@ -162,27 +172,25 @@ func flushHistoryCmd(snapshot persistenceSnapshot) tea.Cmd {
 	return func() tea.Msg {
 		results := make([]historyFlushResult, 0, len(snapshot.history))
 		for _, item := range snapshot.history {
-			entries := item.snapshot.Entries
-			if item.mergeExisting {
-				var err error
-				entries, err = history.MergeStoredEntries(item.server, item.buffer, entries)
-				if err != nil {
-					results = append(results, historyFlushResult{
-						key:      item.key,
-						log:      item.log,
-						revision: item.snapshot.Revision,
-						err:      err,
-					})
-					continue
-				}
-			}
-			err := history.FlushSnapshot(item.server, item.buffer, entries)
-			results = append(results, historyFlushResult{
+			result := historyFlushResult{
 				key:      item.key,
 				log:      item.log,
 				revision: item.snapshot.Revision,
-				err:      err,
-			})
+			}
+			entries := item.snapshot.Entries
+			if item.mergeExisting {
+				stored, quarantined, err := history.LoadOrQuarantine(item.server, item.buffer)
+				if err != nil {
+					result.readErr = err
+					results = append(results, result)
+					continue
+				}
+				result.quarantined = quarantined
+				stored.Merge(entries)
+				entries = stored.Entries()
+			}
+			result.err = history.FlushSnapshot(item.server, item.buffer, entries)
+			results = append(results, result)
 		}
 		result := historyFlushFinishedMsg{
 			results:           results,
@@ -215,7 +223,7 @@ func (m *Model) removeBuffer(buffer *Buffer, forgetDirectMessage bool) tea.Cmd {
 			newActive.Users = newActive.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
 		}
 	}
-	if _, dirty := buffer.History.Snapshot(); dirty {
+	if _, dirty := buffer.History.Snapshot(); dirty && buffer.historyState != historyUnreadable {
 		m.persistence.detachedHistory[key] = detachedHistory{
 			server:        buffer.Server,
 			buffer:        buffer.Buffer,
@@ -238,6 +246,13 @@ func (m *Model) removeBuffer(buffer *Buffer, forgetDirectMessage bool) tea.Cmd {
 func (m *Model) applyPersistenceResult(msg historyFlushFinishedMsg) tea.Cmd {
 	m.persistence.flushInFlight = false
 	for _, result := range msg.results {
+		if result.quarantined != "" {
+			m.addCommandError(m.bufferForFlushResult(result), quarantineNotice(result.quarantined))
+		}
+		if result.readErr != nil {
+			m.disableHistoryPersistence(result)
+			continue
+		}
 		if result.err != nil {
 			continue
 		}
@@ -273,6 +288,46 @@ func (m *Model) applyPersistenceResult(msg historyFlushFinishedMsg) tea.Cmd {
 		return m.startPersistence()
 	}
 	return nil
+}
+
+// disableHistoryPersistence stops saving the log whose stored history could
+// not be read during a save, so a later save cannot replace that file.
+func (m *Model) disableHistoryPersistence(result historyFlushResult) {
+	if buf, ok := m.buffers[result.key]; ok && buf.History == result.log {
+		m.markHistoryUnreadable(buf, result.readErr)
+		return
+	}
+	if pending, ok := m.persistence.detachedHistory[result.key]; ok && pending.log == result.log {
+		delete(m.persistence.detachedHistory, result.key)
+		m.addCommandError(m.getActiveBuffer(), historyReadErrorNotice(result.readErr))
+	}
+	// Otherwise the log was replaced by a completed load, which merged its
+	// entries, so the failed save is stale.
+}
+
+// markHistoryUnreadable disables saves for buf and reports the error once.
+func (m *Model) markHistoryUnreadable(buf *Buffer, err error) {
+	if buf.historyState != historyUnreadable {
+		m.addCommandError(buf, historyReadErrorNotice(err))
+	}
+	buf.historyState = historyUnreadable
+}
+
+// bufferForFlushResult returns the buffer that owns a saved log, or the
+// active buffer when that buffer was already removed.
+func (m *Model) bufferForFlushResult(result historyFlushResult) *Buffer {
+	if buf, ok := m.buffers[result.key]; ok && buf.History == result.log {
+		return buf
+	}
+	return m.getActiveBuffer()
+}
+
+func historyReadErrorNotice(err error) string {
+	return "error: could not read history; it will not be saved until it can be read: " + err.Error()
+}
+
+func quarantineNotice(path string) string {
+	return "warning: history file was corrupt and moved to " + path
 }
 
 func persistenceResultError(msg historyFlushFinishedMsg) error {

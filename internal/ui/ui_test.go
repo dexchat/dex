@@ -1,7 +1,10 @@
 package ui
 
 import (
+	"compress/gzip"
 	"errors"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -162,7 +165,7 @@ func TestPersistenceMergesUnloadedHistory(t *testing.T) {
 	}
 	_, _ = m.Update(cmd())
 
-	entries := history.Load("libera", "#go").Entries()
+	entries := mustLoadHistory(t, "libera", "#go").Entries()
 	if len(entries) != 2 {
 		t.Fatalf("saved history entries = %d, want 2", len(entries))
 	}
@@ -396,7 +399,7 @@ func TestReopenedBufferKeepsDetachedHistoryWhilePersistenceRuns(t *testing.T) {
 	if _, pending := m.persistence.detachedHistory[key]; pending {
 		t.Fatal("latest detached history should leave the queue after persistence")
 	}
-	if got := len(history.Load("libera", "alice").Entries()); got != 2 {
+	if got := len(mustLoadHistory(t, "libera", "alice").Entries()); got != 2 {
 		t.Fatalf("persisted history contains %d messages, want 2", got)
 	}
 }
@@ -1738,4 +1741,145 @@ func plainText(s string) string {
 func submitChat(m *Model, text string) (tea.Model, tea.Cmd) {
 	m.getActiveBuffer().Chat.SetInputValue(text)
 	return m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+}
+
+func mustLoadHistory(t *testing.T, server, buffer string) *history.Log {
+	t.Helper()
+	log, err := history.Load(server, buffer)
+	if err != nil {
+		t.Fatalf("history.Load() error = %v", err)
+	}
+	return log
+}
+
+// testHistoryPath returns the single history file stored for server.
+func testHistoryPath(t *testing.T, server string) string {
+	t.Helper()
+	matches, err := filepath.Glob(filepath.Join(os.Getenv("XDG_DATA_HOME"), "dex", "history", server, "*.json.gz"))
+	if err != nil || len(matches) != 1 {
+		t.Fatalf("history files for %s = %v (err %v), want exactly one", server, matches, err)
+	}
+	return matches[0]
+}
+
+// corruptTestHistory replaces a stored history with one readable entry
+// followed by damaged data.
+func corruptTestHistory(t *testing.T, path string) {
+	t.Helper()
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	gz := gzip.NewWriter(file)
+	_, _ = gz.Write([]byte(`{"server_time":1,"username":"alice","text":"readable"}` + "\n{broken"))
+	if err := gz.Close(); err != nil {
+		t.Fatalf("gzip Close() error = %v", err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+}
+
+// makeTestHistoryUnreadable removes read permission from the stored history.
+func makeTestHistoryUnreadable(t *testing.T, path string) {
+	t.Helper()
+	if os.Geteuid() == 0 {
+		t.Skip("file permissions are not enforced for root")
+	}
+	if err := os.Chmod(path, 0); err != nil {
+		t.Fatalf("Chmod() error = %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0o600) })
+}
+
+func TestCorruptHistoryIsQuarantinedAndReadableEntriesSaved(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	writeTestHistory(t, "libera", "#go", "stored message")
+	path := testHistoryPath(t, "libera")
+	corruptTestHistory(t, path)
+
+	m := newActivityTestModel()
+	buf := m.buffers[makeBufferKey("libera", "#go")]
+	m.Update(m.requestHistoryLoad(buf)())
+
+	if buf.historyState == historyUnreadable {
+		t.Fatal("corrupt history should be recovered, not disable persistence")
+	}
+	if got := len(buf.History.Entries()); got != 1 {
+		t.Fatalf("recovered entries = %d, want 1", got)
+	}
+	if corrupt, _ := filepath.Glob(path + ".corrupt-*"); len(corrupt) != 1 {
+		t.Fatalf("quarantined files = %v, want one", corrupt)
+	}
+
+	cmd := m.startPersistence()
+	if cmd == nil {
+		t.Fatal("recovered history should be saved again")
+	}
+	m.Update(cmd())
+	if entries := mustLoadHistory(t, "libera", "#go").Entries(); len(entries) != 1 || entries[0].Text != "readable" {
+		t.Fatalf("saved history = %#v, want the readable entry", entries)
+	}
+}
+
+func TestUnreadableHistoryIsNeverReplaced(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	writeTestHistory(t, "libera", "#go", "stored message")
+	path := testHistoryPath(t, "libera")
+	makeTestHistoryUnreadable(t, path)
+
+	m := newActivityTestModel()
+	buf := m.buffers[makeBufferKey("libera", "#go")]
+	m.Update(m.requestHistoryLoad(buf)())
+	if buf.historyState != historyUnreadable {
+		t.Fatalf("history state = %v, want historyUnreadable", buf.historyState)
+	}
+
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#go",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "live message",
+	})
+	if cmd := m.startPersistence(); cmd != nil {
+		t.Fatal("unreadable history must not be persisted")
+	}
+
+	_ = os.Chmod(path, 0o600)
+	if entries := mustLoadHistory(t, "libera", "#go").Entries(); len(entries) != 1 || entries[0].Text != "stored message" {
+		t.Fatalf("stored history = %#v, want the original entry", entries)
+	}
+}
+
+func TestUnreadableHistoryDuringMergeDoesNotBlockShutdown(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	writeTestHistory(t, "libera", "#go", "stored message")
+	path := testHistoryPath(t, "libera")
+	makeTestHistoryUnreadable(t, path)
+
+	m := newActivityTestModel()
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#go",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "live message",
+	})
+	m.persistence.shutdownRequested = true
+	cmd := m.startPersistence()
+	if cmd == nil {
+		t.Fatal("dirty history should schedule persistence")
+	}
+
+	_, next := m.Update(cmd())
+	if next == nil {
+		t.Fatal("shutdown should quit after skipping unreadable history")
+	}
+	if _, ok := next().(tea.QuitMsg); !ok {
+		t.Fatalf("next command returned %T, want tea.QuitMsg", next())
+	}
+	if m.buffers[makeBufferKey("libera", "#go")].historyState != historyUnreadable {
+		t.Fatal("buffer should stop persisting after a merge read error")
+	}
 }

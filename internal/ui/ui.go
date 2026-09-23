@@ -650,7 +650,7 @@ func (m *Model) removeChannelBuffer(server, channel string) tea.Cmd {
 }
 
 func (m *Model) requestHistoryLoad(buf *Buffer) tea.Cmd {
-	if buf.historyState != historyNotLoaded {
+	if buf.historyState == historyLoaded || buf.historyState == historyLoading {
 		return nil
 	}
 	buf.historyState = historyLoading
@@ -659,9 +659,12 @@ func (m *Model) requestHistoryLoad(buf *Buffer) tea.Cmd {
 
 func (m *Model) loadBufferHistory(key BufferKey, server, channel string) tea.Cmd {
 	return func() tea.Msg {
+		log, quarantined, err := history.LoadOrQuarantine(server, channel)
 		return historyLoadedMsg{{
-			key:     key,
-			history: history.Load(server, channel),
+			key:         key,
+			history:     log,
+			quarantined: quarantined,
+			err:         err,
 		}}
 	}
 }
@@ -672,14 +675,17 @@ func (m *Model) applyLoadedHistory(loadedHistory []loadedBufferHistory) {
 		if buf == nil {
 			continue
 		}
-		for _, entry := range buf.History.Entries() {
-			if !loaded.history.IsDuplicate(entry) {
-				loaded.history.Insert(entry)
-			}
+		if loaded.err != nil {
+			m.markHistoryUnreadable(buf, loaded.err)
+			continue
 		}
+		loaded.history.Merge(buf.History.Entries())
 		buf.History = loaded.history
 		buf.historyState = historyLoaded
 		buf.LoadHistory()
+		if loaded.quarantined != "" {
+			m.addCommandError(buf, quarantineNotice(loaded.quarantined))
+		}
 		if buf.Key == m.activeBuffer {
 			buf.Chat.FlushQueue()
 		}

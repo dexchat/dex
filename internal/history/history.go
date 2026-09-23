@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -42,6 +43,21 @@ func (log *Log) Insert(logEntry LogEntry) {
 
 	now := time.Now()
 	log.lastUpdatedAt = &now
+}
+
+// Merge inserts the entries that are not already in the log.
+func (log *Log) Merge(entries []LogEntry) {
+	for _, entry := range entries {
+		if !log.IsDuplicate(entry) {
+			log.Insert(entry)
+		}
+	}
+}
+
+// markDirty forces the log to be included in the next snapshot, e.g. after
+// its entries were recovered from a file that no longer exists on disk.
+func (log *Log) markDirty() {
+	log.revision++
 }
 
 func (log *Log) Snapshot() (LogSnapshot, bool) {
@@ -109,32 +125,76 @@ func (log *Log) IsDuplicate(entry LogEntry) bool {
 	return false
 }
 
-func Load(server, buffer string) *Log {
+// ErrCorrupt reports a history file that exists but cannot be decoded.
+var ErrCorrupt = errors.New("corrupt history file")
+
+// Load reads the stored history for a buffer. A missing file is an empty
+// log. A corrupt file returns the entries decoded before the damage along
+// with an error wrapping ErrCorrupt. Any other error means the file could not
+// be read and must not be replaced.
+func Load(server, buffer string) (*Log, error) {
 	l := NewLog()
 
 	path := logFullPath(server, buffer)
 	file, err := os.Open(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return l, nil
+	}
 	if err != nil {
-		return l
+		return l, fmt.Errorf("open history: %w", err)
 	}
 	defer file.Close()
 
 	gz, err := gzip.NewReader(file)
 	if err != nil {
-		return l
+		return l, fmt.Errorf("%w: %s: %w", ErrCorrupt, path, err)
 	}
 	defer gz.Close()
 
 	decoder := json.NewDecoder(gz)
-	for decoder.More() {
+	for {
 		var entry LogEntry
-		if err := decoder.Decode(&entry); err != nil {
-			break
+		err := decoder.Decode(&entry)
+		if errors.Is(err, io.EOF) {
+			return l, nil
+		}
+		if err != nil {
+			return l, fmt.Errorf("%w: %s: %w", ErrCorrupt, path, err)
 		}
 		l.entries = append(l.entries, entry)
 	}
+}
 
-	return l
+// LoadOrQuarantine loads a buffer's history. When the file is corrupt, it
+// renames the file to "<path>.corrupt-<timestamp>" and returns the readable
+// entries marked dirty, so the next save writes them back without destroying
+// the original. It returns the quarantine path when this call moved the file.
+func LoadOrQuarantine(server, buffer string) (*Log, string, error) {
+	log, err := Load(server, buffer)
+	if !errors.Is(err, ErrCorrupt) {
+		return log, "", err
+	}
+	quarantined, qerr := quarantine(logFullPath(server, buffer))
+	if qerr != nil {
+		return log, "", fmt.Errorf("%w; quarantine: %w", err, qerr)
+	}
+	log.markDirty()
+	return log, quarantined, nil
+}
+
+// quarantine moves a corrupt history file aside. A file that is already gone
+// was moved by a concurrent load or save, which reports it instead, so this
+// returns an empty path without error.
+func quarantine(path string) (string, error) {
+	target := fmt.Sprintf("%s.corrupt-%s", path, time.Now().Format("20060102T150405.000000000"))
+	err := os.Rename(path, target)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return target, nil
 }
 
 func (log *Log) Flush(server, buffer string) error {
@@ -192,44 +252,4 @@ func FlushSnapshot(server, buffer string, entries []LogEntry) error {
 		return err
 	}
 	return nil
-}
-
-// MergeStoredEntries combines incoming entries with an existing history file.
-// It is used when live messages arrive before a buffer's history is loaded.
-func MergeStoredEntries(server, buffer string, incoming []LogEntry) ([]LogEntry, error) {
-	path := logFullPath(server, buffer)
-	file, err := os.Open(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return append([]LogEntry(nil), incoming...), nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	gz, err := gzip.NewReader(file)
-	if err != nil {
-		return nil, err
-	}
-	defer gz.Close()
-
-	merged := NewLog()
-	decoder := json.NewDecoder(gz)
-	for {
-		var entry LogEntry
-		err := decoder.Decode(&entry)
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		merged.Insert(entry)
-	}
-	for _, entry := range incoming {
-		if !merged.IsDuplicate(entry) {
-			merged.Insert(entry)
-		}
-	}
-	return append([]LogEntry(nil), merged.Entries()...), nil
 }
