@@ -650,10 +650,10 @@ func (m *Model) removeChannelBuffer(server, channel string) tea.Cmd {
 }
 
 func (m *Model) requestHistoryLoad(buf *Buffer) tea.Cmd {
-	if buf.historyLoaded || buf.historyLoading {
+	if buf.historyState != historyNotLoaded {
 		return nil
 	}
-	buf.historyLoading = true
+	buf.historyState = historyLoading
 	return m.loadBufferHistory(buf.Key, buf.Server, buf.Buffer)
 }
 
@@ -678,8 +678,7 @@ func (m *Model) applyLoadedHistory(loadedHistory []loadedBufferHistory) {
 			}
 		}
 		buf.History = loaded.history
-		buf.historyLoaded = true
-		buf.historyLoading = false
+		buf.historyState = historyLoaded
 		buf.LoadHistory()
 		if buf.Key == m.activeBuffer {
 			buf.Chat.FlushQueue()

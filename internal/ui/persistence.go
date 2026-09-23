@@ -136,7 +136,7 @@ func (m *Model) snapshotPersistence() persistenceSnapshot {
 			buffer:        buf.Buffer,
 			log:           buf.History,
 			snapshot:      logSnapshot,
-			mergeExisting: !buf.historyLoaded,
+			mergeExisting: buf.historyState != historyLoaded,
 		})
 	}
 	return snapshot
@@ -220,7 +220,7 @@ func (m *Model) removeBuffer(buffer *Buffer, forgetDirectMessage bool) tea.Cmd {
 			server:        buffer.Server,
 			buffer:        buffer.Buffer,
 			log:           buffer.History,
-			mergeExisting: !buffer.historyLoaded,
+			mergeExisting: buffer.historyState != historyLoaded,
 		}
 	}
 	delete(m.buffers, key)

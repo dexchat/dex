@@ -1009,7 +1009,7 @@ func TestDiscoveredChannelHistoryLoadsOnlyWhenRequested(t *testing.T) {
 	if createCmd == nil {
 		t.Fatal("expected a sidebar creation command")
 	}
-	if buf.historyLoading {
+	if buf.historyState == historyLoading {
 		t.Fatal("discovered channel should not start disk history loading at startup")
 	}
 

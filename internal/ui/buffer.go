@@ -18,6 +18,16 @@ func makeBufferKey(server, channel string) BufferKey {
 	return BufferKey(strings.ToLower(server) + ":" + strings.ToLower(channel))
 }
 
+// historyState tracks whether a buffer's stored history is in memory.
+type historyState int
+
+const (
+	// historyNotLoaded means saves must merge with the stored file first.
+	historyNotLoaded historyState = iota
+	historyLoading
+	historyLoaded
+)
+
 type Buffer struct {
 	Key    BufferKey
 	Server string
@@ -34,9 +44,8 @@ type Buffer struct {
 
 	// Channel history is intentionally loaded on demand. Starting one disk job
 	// per channel during a ZNC replay can monopolize the machine at startup.
-	historyLoaded  bool
-	historyLoading bool
-	latestMessage  history.ReadMarker
+	historyState  historyState
+	latestMessage history.ReadMarker
 
 	UnreadCount       int
 	NotificationCount int
