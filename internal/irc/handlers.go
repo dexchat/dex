@@ -11,6 +11,67 @@ import (
 
 const userListRefreshDelay = 25 * time.Millisecond
 
+// onEvent is the only handler dex registers with girc. For each event girc
+// runs ALL_EVENTS handlers to completion before its own state tracking, and
+// events are handled one at a time. Handlers called from here therefore see
+// the state from just before the event, such as the channels of a quitting
+// user, and queue UI events in the order the server sent them.
+//
+// CONNECTED is the exception: girc dispatches it from its own goroutine a few
+// seconds after RPL_WELCOME, so it can interleave with other events.
+func (c *Client) onEvent(client *girc.Client, e girc.Event) {
+	if e.Echo {
+		c.onEchoMessage(client, e)
+		return
+	}
+
+	switch e.Command {
+	case girc.CONNECTED:
+		c.onConnect(client, e)
+	case girc.DISCONNECTED:
+		c.onDisconnect(client, e)
+
+	case girc.PRIVMSG:
+		c.onPrivmsg(client, e)
+	case girc.NOTICE:
+		c.onServerMessage(client, e)
+
+	case girc.JOIN:
+		c.onJoin(client, e)
+		c.onUserListChange(client, e)
+	case girc.PART:
+		c.onPart(client, e)
+		c.onUserListChange(client, e)
+	case girc.KICK:
+		c.onKick(client, e)
+		c.onUserListChange(client, e)
+	case girc.QUIT:
+		c.onQuit(client, e)
+	case girc.NICK:
+		c.onNickUpdate(client, e)
+		c.onUserListChange(client, e)
+	case girc.MODE, girc.RPL_ENDOFNAMES, girc.RPL_ENDOFWHO:
+		c.onUserListChange(client, e)
+
+	case girc.TOPIC, girc.RPL_TOPIC:
+		c.onTopic(client, e)
+
+	case girc.RPL_WELCOME:
+		c.onServerMessage(client, e)
+		c.onNickUpdate(client, e)
+	case girc.RPL_MOTDSTART, girc.RPL_MOTD, girc.RPL_ENDOFMOTD:
+		c.onServerMessage(client, e)
+
+	case girc.ERR_NOCHANMODES, girc.ERR_INVITEONLYCHAN, girc.ERR_RESTRICTED,
+		girc.ERR_BANNEDFROMCHAN, girc.ERR_CHANNELISFULL, girc.ERR_BADCHANNELKEY,
+		girc.ERR_NOSUCHCHANNEL, girc.ERR_TOOMANYCHANNELS, girc.ERR_BADCHANMASK:
+		c.onJoinError(client, e)
+
+	case girc.RPL_LISTSTART, girc.RPL_LIST, girc.RPL_LISTEND, girc.ERR_TOOMANYMATCHES:
+		c.onListReply(client, e)
+	}
+}
+
 func (c *Client) onUserListChange(client *girc.Client, e girc.Event) {
 	var channelName string
 	switch e.Command {
@@ -119,7 +180,6 @@ func (c *Client) refreshUserList(client *girc.Client, channelName string) {
 		prefixOrder = advertised
 	}
 	sortUserList(userList, prefixOrder)
-	c.setChannelUsers(channelName, userList)
 
 	c.events.push(UserListMsg{
 		Server:   c.serverName,
@@ -224,13 +284,28 @@ func (c *Client) onServerMessage(client *girc.Client, e girc.Event) {
 	})
 }
 
+// onNickUpdate reports our nickname from RPL_WELCOME or our own NICK. It runs
+// before girc updates its state, so the new nickname comes from the event.
 func (c *Client) onNickUpdate(client *girc.Client, e girc.Event) {
-	if e.Source.Name == client.GetNick() || e.Params[0] == client.GetNick() {
-		c.events.push(NickUpdateMsg{
-			Server: c.serverName,
-			Nick:   client.GetNick(),
-		})
+	if len(e.Params) == 0 {
+		return
 	}
+	switch e.Command {
+	case girc.RPL_WELCOME:
+		// RPL_WELCOME (001): <nick> :<welcome message>
+	case girc.NICK:
+		// NICK: <new nick>, sent from our current nickname.
+		if e.Source == nil || e.Source.ID() != client.GetID() {
+			return
+		}
+	default:
+		return
+	}
+
+	c.events.push(NickUpdateMsg{
+		Server: c.serverName,
+		Nick:   e.Params[0],
+	})
 }
 
 func (c *Client) onQuit(client *girc.Client, e girc.Event) {
@@ -238,16 +313,14 @@ func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 		return
 	}
 
+	// girc removes the user only after onEvent returns, so its state still
+	// lists the channels they are leaving.
 	userName := e.Source.Name
 	user := client.LookupUser(userName)
-	channels := c.channelsForUser(userName)
-	if user != nil && len(user.ChannelList) > 0 {
-		channels = user.ChannelList
-	}
-	if len(channels) == 0 {
+	if user == nil || len(user.ChannelList) == 0 {
 		return
 	}
-	c.forgetUser(userName)
+	channels := user.ChannelList
 
 	reason := e.Last()
 	host := e.Source.Host
@@ -537,7 +610,7 @@ func (c *Client) onListReply(_ *girc.Client, e girc.Event) {
 
 // onEchoMessage handles echo-message capability (user's own messages echoed back by the server)
 func (c *Client) onEchoMessage(client *girc.Client, e girc.Event) {
-	if !e.Echo || (e.Command != girc.PRIVMSG && e.Command != girc.NOTICE) {
+	if e.Command != girc.PRIVMSG && e.Command != girc.NOTICE {
 		return
 	}
 

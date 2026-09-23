@@ -10,26 +10,30 @@ import (
 	"github.com/dexchat/dex/internal/config"
 )
 
-func TestMessageHandlersAreSynchronous(t *testing.T) {
+func TestClientRegistersOnlyOneSynchronousHandler(t *testing.T) {
 	client := NewClient("testnet", &config.Server{
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
 	})
 
-	for _, command := range []string{girc.PRIVMSG, girc.NOTICE, girc.ALL_EVENTS} {
-		t.Run(command, func(t *testing.T) {
-			handlers := externalHandlerIDs(t, client, command)
-			if len(handlers) == 0 {
-				t.Fatalf("expected %s handler to be registered", command)
-			}
+	handlers := reflect.ValueOf(client.Handlers).Elem().FieldByName("external")
+	if !handlers.IsValid() {
+		t.Fatal("girc Caller no longer exposes external handlers in the expected shape")
+	}
+	var commands []string
+	for _, command := range handlers.MapKeys() {
+		if handlers.MapIndex(command).Len() > 0 {
+			commands = append(commands, command.String())
+		}
+	}
+	if want := []string{girc.ALL_EVENTS}; !reflect.DeepEqual(commands, want) {
+		t.Fatalf("handlers registered for %v, want only %v", commands, want)
+	}
 
-			for _, id := range handlers {
-				if strings.HasSuffix(id, ":bg") {
-					t.Fatalf("%s handler %q is registered as background; order-sensitive message handlers must be synchronous", command, id)
-				}
-			}
-		})
+	ids := externalHandlerIDs(t, client, girc.ALL_EVENTS)
+	if len(ids) != 1 || strings.HasSuffix(ids[0], ":bg") {
+		t.Fatalf("ALL_EVENTS handlers = %v, want one synchronous handler", ids)
 	}
 }
 
@@ -59,20 +63,31 @@ func TestSortUserListUsesAdvertisedPrefixOrder(t *testing.T) {
 }
 
 func TestMembershipEventsTriggerUserListRefresh(t *testing.T) {
-	client := NewClient("testnet", &config.Server{
-		Address:  "irc.example.test",
-		Port:     6697,
-		Nickname: "tester",
-	})
+	tests := []girc.Event{
+		{Command: girc.JOIN, Source: girc.ParseSource("alice!alice@example.test"), Params: []string{"#go"}},
+		{Command: girc.PART, Source: girc.ParseSource("alice!alice@example.test"), Params: []string{"#go"}},
+		{Command: girc.KICK, Source: girc.ParseSource("op!op@example.test"), Params: []string{"#go", "alice"}},
+		{Command: girc.NICK, Source: girc.ParseSource("alice!alice@example.test"), Params: []string{"alice_"}},
+		{Command: girc.MODE, Source: girc.ParseSource("op!op@example.test"), Params: []string{"#go", "+o", "alice"}},
+		{Command: girc.RPL_ENDOFNAMES, Params: []string{"tester", "#go", "End of /NAMES list"}},
+		{Command: girc.RPL_ENDOFWHO, Params: []string{"tester", "#go", "End of /WHO list"}},
+	}
 
-	for _, command := range []string{girc.JOIN, girc.PART, girc.KICK, girc.NICK, girc.MODE, girc.RPL_ENDOFNAMES, girc.RPL_ENDOFWHO} {
-		t.Run(command, func(t *testing.T) {
-			for _, id := range externalHandlerIDs(t, client, command) {
-				if strings.HasSuffix(id, ":bg") {
-					return
-				}
+	for _, event := range tests {
+		t.Run(event.Command, func(t *testing.T) {
+			client := NewClient("testnet", &config.Server{
+				Address:  "irc.example.test",
+				Port:     6697,
+				Nickname: "tester",
+			})
+
+			client.onEvent(client.Client, event)
+
+			client.userListRefreshMu.Lock()
+			defer client.userListRefreshMu.Unlock()
+			if !client.userListRefreshScheduled {
+				t.Fatalf("%s did not schedule a user-list refresh", event.Command)
 			}
-			t.Fatalf("expected %s to have a background user-list refresh handler, got %v", command, externalHandlerIDs(t, client, command))
 		})
 	}
 }
@@ -120,13 +135,7 @@ func TestJoinErrorIsRoutedToServerBuffer(t *testing.T) {
 	}
 }
 
-func TestJoinErrorHandlersCoverProtocolFailures(t *testing.T) {
-	client := NewClient("testnet", &config.Server{
-		Address:  "irc.example.test",
-		Port:     6697,
-		Nickname: "tester",
-	})
-
+func TestJoinErrorsAreQueuedForServerBuffer(t *testing.T) {
 	for _, numeric := range []string{
 		girc.ERR_NOSUCHCHANNEL,
 		girc.ERR_TOOMANYCHANNELS,
@@ -136,8 +145,19 @@ func TestJoinErrorHandlersCoverProtocolFailures(t *testing.T) {
 		girc.ERR_INVITEONLYCHAN,
 		girc.ERR_BADCHANMASK,
 	} {
-		if got := externalHandlerIDs(t, client, numeric); len(got) == 0 {
-			t.Errorf("expected JOIN error handler for numeric %s", numeric)
+		client := NewClient("testnet", &config.Server{
+			Address:  "irc.example.test",
+			Port:     6697,
+			Nickname: "tester",
+		})
+
+		client.onEvent(client.Client, girc.Event{
+			Command: numeric,
+			Params:  []string{"tester", "#private", "Cannot join channel"},
+		})
+
+		if got := len(queuedMessages(client)); got != 1 {
+			t.Errorf("JOIN error numeric %s queued %d messages, want 1", numeric, got)
 		}
 	}
 }
@@ -166,16 +186,21 @@ func TestListReplyIsFormattedForServerBuffer(t *testing.T) {
 	}
 }
 
-func TestListReplyHandlersAreRegistered(t *testing.T) {
-	client := NewClient("testnet", &config.Server{
-		Address:  "irc.example.test",
-		Port:     6697,
-		Nickname: "tester",
-	})
-
+func TestListRepliesAreQueuedForServerBuffer(t *testing.T) {
 	for _, numeric := range []string{girc.RPL_LISTSTART, girc.RPL_LIST, girc.RPL_LISTEND, girc.ERR_TOOMANYMATCHES} {
-		if got := externalHandlerIDs(t, client, numeric); len(got) == 0 {
-			t.Errorf("expected LIST reply handler for numeric %s", numeric)
+		client := NewClient("testnet", &config.Server{
+			Address:  "irc.example.test",
+			Port:     6697,
+			Nickname: "tester",
+		})
+
+		client.onEvent(client.Client, girc.Event{
+			Command: numeric,
+			Params:  []string{"tester", "#go", "42", "The Go channel"},
+		})
+
+		if got := len(queuedMessages(client)); got != 1 {
+			t.Errorf("LIST numeric %s queued %d messages, want 1", numeric, got)
 		}
 	}
 }
@@ -279,9 +304,8 @@ func TestJoinAndPartUserListChangesDoNotSendWhoRefresh(t *testing.T) {
 				Debug:      &debug,
 			})
 			client := &Client{
-				Client:       ircClient,
-				serverName:   "testnet",
-				userChannels: make(map[string]map[string]struct{}),
+				Client:     ircClient,
+				serverName: "testnet",
 			}
 
 			client.onUserListChange(ircClient, girc.Event{
@@ -415,53 +439,96 @@ func TestDirectPrivmsgFromSelfUsesRecipientBuffer(t *testing.T) {
 	}
 }
 
-func TestUserChannelSnapshotTracksAndForgetsMembership(t *testing.T) {
+func TestQuitIsRoutedToChannelsGircIsAboutToForget(t *testing.T) {
 	client := NewClient("libera", &config.Server{
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
 	})
+	quitter := girc.ParseSource("Guest22!~Guest22@2804:1e68:c211:45f3:5485:907e:2a08:1c7b")
 
-	client.setChannelUsers("#brasil", []string{"Guest22", "johnbogle"})
-	client.setChannelUsers("#idlerpg", []string{"guest22"})
+	// Use girc's real dispatch so its state tracking runs alongside onEvent.
+	client.RunHandlers(&girc.Event{Command: girc.JOIN, Source: quitter, Params: []string{"#brasil"}})
+	client.RunHandlers(&girc.Event{Command: girc.QUIT, Source: quitter, Params: []string{"Quit: Client closed"}})
 
-	channels := client.channelsForUser("GUEST22")
-	want := []string{"#brasil", "#idlerpg"}
-	if !reflect.DeepEqual(channels, want) {
-		t.Fatalf("channelsForUser() = %v, want %v", channels, want)
+	if user := client.LookupUser("Guest22"); user != nil {
+		t.Fatalf("girc still tracks the quitting user in %v", user.ChannelList)
 	}
 
-	client.forgetUser("Guest22")
-	if channels := client.channelsForUser("Guest22"); len(channels) != 0 {
-		t.Fatalf("expected Guest22 to be removed from snapshot, still in %v", channels)
+	var quits []BufferNewMessageMsg
+	for _, msg := range queuedMessages(client) {
+		if strings.Contains(msg.Text, "has quit") {
+			quits = append(quits, msg)
+		}
+	}
+	if len(quits) != 1 {
+		t.Fatalf("queued %d quit messages, want 1: %#v", len(quits), quits)
+	}
+	if quits[0].Buffer != "#brasil" {
+		t.Fatalf("quit message buffer = %q, want #brasil", quits[0].Buffer)
+	}
+	if !quits[0].UserEvent {
+		t.Fatal("quit message should be marked as a user event")
 	}
 }
 
-func TestQuitUsesMembershipSnapshotWhenGircStateIsAlreadyDeleted(t *testing.T) {
+func TestNickUpdateUsesNicknameFromEvent(t *testing.T) {
 	client := NewClient("libera", &config.Server{
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
 	})
-	client.setChannelUsers("#brasil", []string{"Guest22"})
 
-	client.onQuit(client.Client, girc.Event{
-		Command: girc.QUIT,
-		Source:  girc.ParseSource("Guest22!~Guest22@2804:1e68:c211:45f3:5485:907e:2a08:1c7b"),
-		Params:  []string{"Quit: Client closed"},
+	// Call onEvent directly: girc's own RPL_WELCOME handler would rename us and
+	// dispatch CONNECTED from another goroutine.
+	client.onEvent(client.Client, girc.Event{
+		Command: girc.RPL_WELCOME,
+		Source:  girc.ParseSource("irc.example.test"),
+		Params:  []string{"tester_", "Welcome to the network"},
+	})
+	client.RunHandlers(&girc.Event{
+		Command: girc.NICK,
+		Source:  girc.ParseSource("alice!alice@example.test"),
+		Params:  []string{"alice_"},
+	})
+	client.RunHandlers(&girc.Event{
+		Command: girc.NICK,
+		Source:  girc.ParseSource("tester!tester@example.test"),
+		Params:  []string{"dexter"},
 	})
 
-	if len(queuedMessages(client)) != 1 {
-		t.Fatalf("expected one quit message, got %d", len(queuedMessages(client)))
+	var nicks []string
+	for _, event := range queuedEvents(client) {
+		if update, ok := event.(NickUpdateMsg); ok {
+			nicks = append(nicks, update.Nick)
+		}
 	}
-	if queuedMessages(client)[0].Buffer != "#brasil" {
-		t.Fatalf("quit message buffer = %q, want #brasil", queuedMessages(client)[0].Buffer)
+	if want := []string{"tester_", "dexter"}; !reflect.DeepEqual(nicks, want) {
+		t.Fatalf("nickname updates = %v, want %v", nicks, want)
 	}
-	if !queuedMessages(client)[0].UserEvent {
-		t.Fatal("quit message should be marked as a user event")
+}
+
+func TestEchoMessageIsMarkedAsOwnEcho(t *testing.T) {
+	client := NewClient("libera", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	})
+	client.pendingMessages.Store(pendingMessageKey("libera", "#go", "hello"), struct{}{})
+
+	client.onEvent(client.Client, girc.Event{
+		Command: girc.PRIVMSG,
+		Source:  girc.ParseSource("tester!tester@example.test"),
+		Params:  []string{"#go", "hello"},
+		Echo:    true,
+	})
+
+	messages := queuedMessages(client)
+	if len(messages) != 1 {
+		t.Fatalf("echo queued %d messages, want 1", len(messages))
 	}
-	if channels := client.channelsForUser("Guest22"); len(channels) != 0 {
-		t.Fatalf("expected quit user to be removed from snapshot, still in %v", channels)
+	if !messages[0].OwnEcho || messages[0].Buffer != "#go" {
+		t.Fatalf("echo message = %+v, want OwnEcho in #go", messages[0])
 	}
 }
 

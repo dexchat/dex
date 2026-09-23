@@ -25,8 +25,8 @@ remain **dex**.
 
 ```text
 IRC handlers
-    ↓ typed tea.Msg
-ui.Model.Update
+    ↓ typed irc.Event, one ordered queue per server
+ui.Model.Update (pulls batches with a tea.Cmd)
     ↓
 buffers + child components
     ↓
@@ -47,8 +47,9 @@ three-pane terminal UI
 
 ### Key patterns
 
-- IRC handlers translate network events into typed Bubble Tea messages; the UI
-  owns presentation state.
+- IRC handlers translate network events into typed `irc.Event` values and push
+  them onto their server's queue without blocking. The `irc` package does not
+  import Bubble Tea; the UI pulls events and owns presentation state.
 - Config, history, and read-state paths follow XDG conventions under the
   operational name `dex`.
 
