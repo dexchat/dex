@@ -18,14 +18,14 @@ func historyDir() string {
 }
 
 // logFullPath returns the history file for a buffer. IRC names are
-// case-insensitive, so the name is lowercased like buffer keys and read
-// markers.
+// case-insensitive, so the name goes through NameKey like buffer keys and
+// read markers.
 func logFullPath(server, buffer string) string {
-	return filepath.Join(historyDir(), sanitize(server), hashString(strings.ToLower(buffer))+".json.gz")
+	return filepath.Join(historyDir(), sanitize(server), hashString(NameKey(buffer))+".json.gz")
 }
 
 func sanitize(s string) string {
-	s = strings.ToLower(s)
+	s = NameKey(s)
 	r := strings.NewReplacer("/", "_", "\\", "_", ":", "_", " ", "_")
 	return r.Replace(s)
 }

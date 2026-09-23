@@ -5,12 +5,15 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type DirectMessage struct {
 	Server string `json:"server"`
 	User   string `json:"user"`
+}
+
+func (d DirectMessage) matches(server, user string) bool {
+	return NameKey(d.Server) == NameKey(server) && NameKey(d.User) == NameKey(user)
 }
 
 type DirectMessages struct {
@@ -35,7 +38,7 @@ func LoadDirectMessages() (*DirectMessages, error) {
 
 func (d *DirectMessages) Add(server, user string) bool {
 	for _, directMessage := range d.Users {
-		if strings.EqualFold(directMessage.Server, server) && strings.EqualFold(directMessage.User, user) {
+		if directMessage.matches(server, user) {
 			return false
 		}
 	}
@@ -45,7 +48,7 @@ func (d *DirectMessages) Add(server, user string) bool {
 
 func (d *DirectMessages) Remove(server, user string) bool {
 	for i, directMessage := range d.Users {
-		if strings.EqualFold(directMessage.Server, server) && strings.EqualFold(directMessage.User, user) {
+		if directMessage.matches(server, user) {
 			d.Users = append(d.Users[:i], d.Users[i+1:]...)
 			return true
 		}

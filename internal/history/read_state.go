@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type ReadMarker struct {
@@ -98,5 +97,5 @@ func readStatePath() string {
 }
 
 func readMarkerKey(server, buffer string) string {
-	return strings.ToLower(server) + ":" + strings.ToLower(buffer)
+	return NameKey(server) + ":" + NameKey(buffer)
 }

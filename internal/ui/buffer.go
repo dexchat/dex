@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"strings"
 	"time"
 
 	"github.com/dexchat/dex/internal/history"
@@ -15,7 +14,7 @@ type BufferKey string
 
 func makeBufferKey(server, channel string) BufferKey {
 	// IRC channel names are case-insensitive
-	return BufferKey(strings.ToLower(server) + ":" + strings.ToLower(channel))
+	return BufferKey(history.NameKey(server) + ":" + history.NameKey(channel))
 }
 
 // historyState tracks whether a buffer's stored history is in memory.
