@@ -15,7 +15,7 @@ func TestMessageHandlersAreSynchronous(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
+	})
 
 	for _, command := range []string{girc.PRIVMSG, girc.NOTICE, girc.ALL_EVENTS} {
 		t.Run(command, func(t *testing.T) {
@@ -63,7 +63,7 @@ func TestMembershipEventsTriggerUserListRefresh(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
+	})
 
 	for _, command := range []string{girc.JOIN, girc.PART, girc.KICK, girc.NICK, girc.MODE, girc.RPL_ENDOFNAMES, girc.RPL_ENDOFWHO} {
 		t.Run(command, func(t *testing.T) {
@@ -77,12 +77,12 @@ func TestMembershipEventsTriggerUserListRefresh(t *testing.T) {
 	}
 }
 
-func TestSelfJoinIsQueuedForAsynchronousUIDelivery(t *testing.T) {
+func TestSelfJoinIsQueuedForUI(t *testing.T) {
 	client := NewClient("testnet", &config.Server{
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
+	})
 
 	client.onJoin(client.Client, girc.Event{
 		Command: girc.JOIN,
@@ -90,10 +90,9 @@ func TestSelfJoinIsQueuedForAsynchronousUIDelivery(t *testing.T) {
 		Params:  []string{"#go"},
 	})
 
-	client.channelQueueMu.Lock()
-	defer client.channelQueueMu.Unlock()
-	if got := client.channelQueue; len(got) != 1 || got[0] != (ChannelJoinedMsg{Server: "testnet", Channel: "#go"}) {
-		t.Fatalf("queued self-JOIN = %#v, want testnet/#go", got)
+	want := []Event{ChannelJoinedMsg{Server: "testnet", Channel: "#go"}}
+	if got := queuedEvents(client); !reflect.DeepEqual(got, want) {
+		t.Fatalf("queued self-JOIN = %#v, want %#v", got, want)
 	}
 }
 
@@ -102,18 +101,17 @@ func TestJoinErrorIsRoutedToServerBuffer(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
-	client.flushPending = true
+	})
 
 	client.onJoinError(client.Client, girc.Event{
 		Command: girc.ERR_INVITEONLYCHAN,
 		Params:  []string{"tester", "#private", "Cannot join channel (+i)"},
 	})
 
-	if got := len(client.messageQueue); got != 1 {
+	if got := len(queuedMessages(client)); got != 1 {
 		t.Fatalf("join error queued %d messages, want 1", got)
 	}
-	msg := client.messageQueue[0]
+	msg := queuedMessages(client)[0]
 	if msg.Buffer != "" {
 		t.Fatalf("join error buffer = %q, want server buffer", msg.Buffer)
 	}
@@ -127,7 +125,7 @@ func TestJoinErrorHandlersCoverProtocolFailures(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
+	})
 
 	for _, numeric := range []string{
 		girc.ERR_NOSUCHCHANNEL,
@@ -149,18 +147,17 @@ func TestListReplyIsFormattedForServerBuffer(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
-	client.flushPending = true
+	})
 
 	client.onListReply(client.Client, girc.Event{
 		Command: girc.RPL_LIST,
 		Params:  []string{"tester", "#go", "42", "The Go channel"},
 	})
 
-	if got := len(client.messageQueue); got != 1 {
+	if got := len(queuedMessages(client)); got != 1 {
 		t.Fatalf("LIST reply queued %d messages, want 1", got)
 	}
-	msg := client.messageQueue[0]
+	msg := queuedMessages(client)[0]
 	if msg.Buffer != "" {
 		t.Fatalf("LIST reply buffer = %q, want server buffer", msg.Buffer)
 	}
@@ -174,7 +171,7 @@ func TestListReplyHandlersAreRegistered(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
+	})
 
 	for _, numeric := range []string{girc.RPL_LISTSTART, girc.RPL_LIST, girc.RPL_LISTEND, girc.ERR_TOOMANYMATCHES} {
 		if got := externalHandlerIDs(t, client, numeric); len(got) == 0 {
@@ -188,7 +185,7 @@ func TestSelfPartDoesNotCreateAChatMessage(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
+	})
 
 	client.onPart(client.Client, girc.Event{
 		Command: girc.PART,
@@ -196,8 +193,9 @@ func TestSelfPartDoesNotCreateAChatMessage(t *testing.T) {
 		Params:  []string{"#go"},
 	})
 
-	if got := len(client.messageQueue); got != 0 {
-		t.Fatalf("self-PART created %d chat messages, want 0", got)
+	want := []Event{ChannelPartedMsg{Server: "testnet", Channel: "#go"}}
+	if got := queuedEvents(client); !reflect.DeepEqual(got, want) {
+		t.Fatalf("self-PART queued %#v, want only %#v", got, want)
 	}
 }
 
@@ -206,7 +204,7 @@ func TestSelfKickDoesNotCreateAChatMessage(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
+	})
 
 	client.onKick(client.Client, girc.Event{
 		Command: girc.KICK,
@@ -214,8 +212,9 @@ func TestSelfKickDoesNotCreateAChatMessage(t *testing.T) {
 		Params:  []string{"#go", "tester", "spamming"},
 	})
 
-	if got := len(client.messageQueue); got != 0 {
-		t.Fatalf("self-KICK created %d chat messages, want 0", got)
+	want := []Event{ChannelPartedMsg{Server: "testnet", Channel: "#go"}}
+	if got := queuedEvents(client); !reflect.DeepEqual(got, want) {
+		t.Fatalf("self-KICK queued %#v, want only %#v", got, want)
 	}
 }
 
@@ -224,8 +223,7 @@ func TestKickMessageIdentifiesKickerAndReason(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
-	client.flushPending = true
+	})
 
 	client.onKick(client.Client, girc.Event{
 		Command: girc.KICK,
@@ -233,10 +231,10 @@ func TestKickMessageIdentifiesKickerAndReason(t *testing.T) {
 		Params:  []string{"#go", "Guest22", "spamming"},
 	})
 
-	if got := len(client.messageQueue); got != 1 {
+	if got := len(queuedMessages(client)); got != 1 {
 		t.Fatalf("KICK queued %d messages, want 1", got)
 	}
-	msg := client.messageQueue[0]
+	msg := queuedMessages(client)[0]
 	if msg.Buffer != "#go" {
 		t.Fatalf("kick message buffer = %q, want #go", msg.Buffer)
 	}
@@ -253,8 +251,7 @@ func TestKickMessageWithoutReasonOmitsParens(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
-	client.flushPending = true
+	})
 
 	client.onKick(client.Client, girc.Event{
 		Command: girc.KICK,
@@ -262,11 +259,11 @@ func TestKickMessageWithoutReasonOmitsParens(t *testing.T) {
 		Params:  []string{"#go", "Guest22"},
 	})
 
-	if got := len(client.messageQueue); got != 1 {
+	if got := len(queuedMessages(client)); got != 1 {
 		t.Fatalf("KICK queued %d messages, want 1", got)
 	}
-	if want := "Guest22 has been kicked by op"; client.messageQueue[0].Text != want {
-		t.Fatalf("kick message = %q, want %q", client.messageQueue[0].Text, want)
+	if want := "Guest22 has been kicked by op"; queuedMessages(client)[0].Text != want {
+		t.Fatalf("kick message = %q, want %q", queuedMessages(client)[0].Text, want)
 	}
 }
 
@@ -305,7 +302,7 @@ func TestUserListRefreshRequestsAreCoalescedByChannel(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
+	})
 
 	client.scheduleUserListRefresh(client.Client, "#brasil")
 	client.scheduleUserListRefresh(client.Client, "#Brasil")
@@ -327,7 +324,7 @@ func TestNickUserListChangeSchedulesRefreshDespiteNonChannelParam(t *testing.T) 
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
+	})
 	client.onUserListChange(client.Client, girc.Event{
 		Command: girc.NICK,
 		Source:  girc.ParseSource("alice!alice@example.test"),
@@ -347,7 +344,7 @@ func TestClientDisablesGircAutoJoinQueries(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
+	})
 
 	if !client.Config.DisableAutoWHOOnJoin {
 		t.Fatal("expected dex to disable girc automatic WHO on self-JOIN")
@@ -371,8 +368,7 @@ func TestPrivmsgFromSelfConsumesPendingMessage(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "johnbogle",
-	}, nil)
-	client.flushPending = true
+	})
 	client.pendingMessages.Store(pendingMessageKey("libera", "#brasil", "hello from dex"), struct{}{})
 
 	client.onPrivmsg(client.Client, girc.Event{
@@ -385,10 +381,10 @@ func TestPrivmsgFromSelfConsumesPendingMessage(t *testing.T) {
 		t.Fatal("expected self PRIVMSG to consume the pending message")
 	}
 
-	if len(client.messageQueue) != 1 {
-		t.Fatalf("expected one queued message, got %d", len(client.messageQueue))
+	if len(queuedMessages(client)) != 1 {
+		t.Fatalf("expected one queued message, got %d", len(queuedMessages(client)))
 	}
-	if !client.messageQueue[0].OwnEcho {
+	if !queuedMessages(client)[0].OwnEcho {
 		t.Fatal("expected self PRIVMSG matching a pending send to be marked OwnEcho")
 	}
 }
@@ -398,8 +394,7 @@ func TestDirectPrivmsgFromSelfUsesRecipientBuffer(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "johnbogle",
-	}, nil)
-	client.flushPending = true
+	})
 	client.pendingMessages.Store(pendingMessageKey("libera", "alice", "hello alice"), struct{}{})
 
 	client.onPrivmsg(client.Client, girc.Event{
@@ -408,10 +403,10 @@ func TestDirectPrivmsgFromSelfUsesRecipientBuffer(t *testing.T) {
 		Params:  []string{"alice", "hello alice"},
 	})
 
-	if len(client.messageQueue) != 1 {
-		t.Fatalf("expected one queued message, got %d", len(client.messageQueue))
+	if len(queuedMessages(client)) != 1 {
+		t.Fatalf("expected one queued message, got %d", len(queuedMessages(client)))
 	}
-	msg := client.messageQueue[0]
+	msg := queuedMessages(client)[0]
 	if msg.Buffer != "alice" {
 		t.Fatalf("direct self-echo buffer = %q, want alice", msg.Buffer)
 	}
@@ -425,7 +420,7 @@ func TestUserChannelSnapshotTracksAndForgetsMembership(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
+	})
 
 	client.setChannelUsers("#brasil", []string{"Guest22", "johnbogle"})
 	client.setChannelUsers("#idlerpg", []string{"guest22"})
@@ -447,8 +442,7 @@ func TestQuitUsesMembershipSnapshotWhenGircStateIsAlreadyDeleted(t *testing.T) {
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
-	}, nil)
-	client.flushPending = true
+	})
 	client.setChannelUsers("#brasil", []string{"Guest22"})
 
 	client.onQuit(client.Client, girc.Event{
@@ -457,18 +451,66 @@ func TestQuitUsesMembershipSnapshotWhenGircStateIsAlreadyDeleted(t *testing.T) {
 		Params:  []string{"Quit: Client closed"},
 	})
 
-	if len(client.messageQueue) != 1 {
-		t.Fatalf("expected one quit message, got %d", len(client.messageQueue))
+	if len(queuedMessages(client)) != 1 {
+		t.Fatalf("expected one quit message, got %d", len(queuedMessages(client)))
 	}
-	if client.messageQueue[0].Buffer != "#brasil" {
-		t.Fatalf("quit message buffer = %q, want #brasil", client.messageQueue[0].Buffer)
+	if queuedMessages(client)[0].Buffer != "#brasil" {
+		t.Fatalf("quit message buffer = %q, want #brasil", queuedMessages(client)[0].Buffer)
 	}
-	if !client.messageQueue[0].UserEvent {
+	if !queuedMessages(client)[0].UserEvent {
 		t.Fatal("quit message should be marked as a user event")
 	}
 	if channels := client.channelsForUser("Guest22"); len(channels) != 0 {
 		t.Fatalf("expected quit user to be removed from snapshot, still in %v", channels)
 	}
+}
+
+func TestSelfPartIsQueuedAfterEarlierChannelMessages(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	})
+
+	client.onPrivmsg(client.Client, girc.Event{
+		Command: girc.PRIVMSG,
+		Source:  girc.ParseSource("alice!alice@example.test"),
+		Params:  []string{"#go", "last words"},
+	})
+	client.onPart(client.Client, girc.Event{
+		Command: girc.PART,
+		Source:  girc.ParseSource("tester!tester@example.test"),
+		Params:  []string{"#go"},
+	})
+
+	events := queuedEvents(client)
+	if len(events) != 2 {
+		t.Fatalf("queued %d events, want 2: %#v", len(events), events)
+	}
+	if msg, ok := events[0].(BufferNewMessageMsg); !ok || msg.Text != "last words" {
+		t.Fatalf("first event = %#v, want the channel message", events[0])
+	}
+	if _, ok := events[1].(ChannelPartedMsg); !ok {
+		t.Fatalf("second event = %#v, want the self-PART", events[1])
+	}
+}
+
+// queuedEvents returns the client's queued events without waiting for the
+// batching window.
+func queuedEvents(client *Client) []Event {
+	client.events.mu.Lock()
+	defer client.events.mu.Unlock()
+	return append([]Event(nil), client.events.events...)
+}
+
+func queuedMessages(client *Client) []BufferNewMessageMsg {
+	var messages []BufferNewMessageMsg
+	for _, event := range queuedEvents(client) {
+		if msg, ok := event.(BufferNewMessageMsg); ok {
+			messages = append(messages, msg)
+		}
+	}
+	return messages
 }
 
 func externalHandlerIDs(t *testing.T, client *Client, command string) []string {

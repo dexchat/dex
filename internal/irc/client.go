@@ -1,12 +1,11 @@
 package irc
 
 import (
+	"context"
 	"crypto/tls"
 	"sort"
 	"sync"
-	"time"
 
-	tea "charm.land/bubbletea/v2"
 	"github.com/lrstanley/girc"
 	"github.com/dexchat/dex/internal/config"
 )
@@ -22,26 +21,15 @@ type Client struct {
 	*girc.Client
 	serverName string
 	channels   []string
-	program    *tea.Program
+
+	// events is the single ordered path from IRC handlers to the UI. The UI
+	// pulls from it with Next, so handlers never wait on Bubble Tea.
+	events eventQueue
 
 	// pendingMessages tracks messages sent from dexchat so we can ignore the echo returned by
 	// the server. Since we display the message sent instantly in the UI (before sending to the server),
 	// when the server echoes them back, we skip/ignore the echo to avoid duplicates.
 	pendingMessages sync.Map // Key format: "server:channel:message"
-
-	// messageQueue collects BufferNewMessageMsg and flushes them to bubbletea every 50ms,
-	// reducing the number of messages in bubbletea's queue when a lot of messages are returned
-	// by the server in the same second (for example, in ZNC)
-	messageQueue   []BufferNewMessageMsg
-	messageQueueMu sync.Mutex
-	flushPending   bool
-
-	// channelQueue decouples self-JOIN handling from Bubble Tea. Program.Send
-	// blocks until the UI receives the message, so calling it from a normal
-	// girc handler can stop the socket reader during a ZNC replay.
-	channelQueue        []ChannelJoinedMsg
-	channelQueueMu      sync.Mutex
-	channelFlushPending bool
 
 	// userChannels stores the channels each user is part of to handle QUIT properly.
 	// girc can remove a quitting user from its state before our handler reads it,
@@ -50,13 +38,13 @@ type Client struct {
 	userChannels   map[string]map[string]struct{}
 
 	// userListRefreshPending tracks pending user list channel refreshes and sends
-	// them in one short batch instead of updating bubbletea for every IRC event
+	// them in one short batch instead of updating the UI for every IRC event
 	userListRefreshMu        sync.Mutex
 	userListRefreshPending   map[string]string
 	userListRefreshScheduled bool
 }
 
-func NewClient(serverName string, config *config.Server, teaProgram *tea.Program) *Client {
+func NewClient(serverName string, config *config.Server) *Client {
 	gircConfig := girc.Config{
 		Server:     config.Address,
 		Port:       config.Port,
@@ -94,7 +82,6 @@ func NewClient(serverName string, config *config.Server, teaProgram *tea.Program
 		Client:     client,
 		serverName: serverName,
 		channels:   config.Channels,
-		program:    teaProgram,
 
 		userChannels: make(map[string]map[string]struct{}),
 	}
@@ -155,44 +142,10 @@ func (c *Client) forgetUser(nick string) {
 	c.userChannelsMu.Unlock()
 }
 
-func (c *Client) queueMessage(msg BufferNewMessageMsg) {
-	c.messageQueueMu.Lock()
-	c.messageQueue = append(c.messageQueue, msg)
-	if !c.flushPending {
-		c.flushPending = true
-		go func() {
-			time.Sleep(50 * time.Millisecond)
-			c.messageQueueMu.Lock()
-			batch := c.messageQueue
-			c.messageQueue = nil
-			c.flushPending = false
-			c.messageQueueMu.Unlock()
-			if len(batch) > 0 {
-				c.program.Send(BufferNewMessageBatchMsg(batch))
-			}
-		}()
-	}
-	c.messageQueueMu.Unlock()
-}
-
-func (c *Client) queueChannelJoined(msg ChannelJoinedMsg) {
-	c.channelQueueMu.Lock()
-	c.channelQueue = append(c.channelQueue, msg)
-	if !c.channelFlushPending {
-		c.channelFlushPending = true
-		go func() {
-			time.Sleep(50 * time.Millisecond)
-			c.channelQueueMu.Lock()
-			batch := c.channelQueue
-			c.channelQueue = nil
-			c.channelFlushPending = false
-			c.channelQueueMu.Unlock()
-			if len(batch) > 0 && c.program != nil {
-				c.program.Send(ChannelJoinedBatchMsg(batch))
-			}
-		}()
-	}
-	c.channelQueueMu.Unlock()
+// Next blocks until this server has events for the UI and returns every
+// event queued so far, in order. Bursts are collected into one batch.
+func (c *Client) Next(ctx context.Context) ([]Event, error) {
+	return c.events.next(ctx, eventBatchWindow)
 }
 
 func (c *Client) addHandlers() {

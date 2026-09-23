@@ -20,7 +20,7 @@ func main() {
 	tui := ui.New(cfg)
 	p := tea.NewProgram(tui)
 
-	ircClientManager := irc.NewClientManager(cfg.Servers, p)
+	ircClientManager := irc.NewClientManager(cfg.Servers)
 	defer ircClientManager.DisconnectAll()
 
 	tui.SetManager(ircClientManager)

@@ -15,8 +15,8 @@ import (
 type flushChatMsg struct{}
 
 // Keep replay work below a frame's worth of UI processing. ZNC can deliver a
-// very large playback burst in one IRC batch; processing it all in one Update
-// starves rendering and input until the burst is exhausted.
+// very large playback burst in one IRC batch; applying all of its events in
+// one Update starves rendering and input until the burst is exhausted.
 const maxPlaybackMessagesPerUpdate = 50
 
 const maxNotificationAge = 30 * time.Second
@@ -25,13 +25,6 @@ const notificationNoticeDuration = 4 * time.Second
 
 type notificationNoticeExpiredMsg struct {
 	version uint64
-}
-
-func playbackChunk(messages irc.BufferNewMessageBatchMsg) (current, remaining irc.BufferNewMessageBatchMsg) {
-	if len(messages) <= maxPlaybackMessagesPerUpdate {
-		return messages, nil
-	}
-	return messages[:maxPlaybackMessagesPerUpdate], messages[maxPlaybackMessagesPerUpdate:]
 }
 
 func (m *Model) scheduleFlush() tea.Cmd {

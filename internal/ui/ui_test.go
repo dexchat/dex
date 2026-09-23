@@ -24,6 +24,12 @@ import (
 
 var errTestPersistence = errors.New("test persistence failure")
 
+// updateIRC applies events as one batch pulled from server's queue.
+func updateIRC(m *Model, server string, events ...irc.Event) tea.Cmd {
+	_, cmd := m.Update(ircEventsMsg{server: server, events: events})
+	return cmd
+}
+
 func TestPaneForMouseWheelUsesPaneBounds(t *testing.T) {
 	tests := []struct {
 		name string
@@ -104,7 +110,7 @@ func TestSelfPartRemovesActiveChannelAndSelectsServer(t *testing.T) {
 	channelKey := makeBufferKey("libera", "#go")
 	m.activeBuffer = channelKey
 
-	_, _ = m.Update(irc.ChannelPartedMsg{Server: "libera", Channel: "#go"})
+	_ = updateIRC(m, "libera", irc.ChannelPartedMsg{Server: "libera", Channel: "#go"})
 
 	if _, exists := m.buffers[channelKey]; exists {
 		t.Fatal("self-PART should remove the channel buffer")
@@ -130,7 +136,7 @@ func TestSelfPartQueuesDirtyHistoryForPersistence(t *testing.T) {
 		Text:      "hello",
 	})
 
-	_, cmd := m.Update(irc.ChannelPartedMsg{Server: "libera", Channel: "#go"})
+	cmd := updateIRC(m, "libera", irc.ChannelPartedMsg{Server: "libera", Channel: "#go"})
 	if cmd == nil {
 		t.Fatal("dirty self-PART should schedule persistence")
 	}
@@ -526,7 +532,7 @@ func TestJoinDoesNotCreateChannelBeforeServerConfirmation(t *testing.T) {
 		t.Fatal("/join should not create a channel before the server confirms JOIN")
 	}
 
-	_, _ = m.Update(irc.ChannelJoinedMsg{Server: "libera", Channel: "#new"})
+	_ = updateIRC(m, "libera", irc.ChannelJoinedMsg{Server: "libera", Channel: "#new"})
 	if _, exists := m.buffers[channelKey]; !exists {
 		t.Fatal("self-JOIN confirmation should create the channel buffer")
 	}
@@ -598,13 +604,55 @@ func TestPaneForMouseWheelIgnoresNonWheelMouse(t *testing.T) {
 }
 
 func TestPlaybackBatchIsSplitIntoResponsiveChunks(t *testing.T) {
-	messages := make(irc.BufferNewMessageBatchMsg, maxPlaybackMessagesPerUpdate+1)
-	current, remaining := playbackChunk(messages)
-	if got := len(current); got != maxPlaybackMessagesPerUpdate {
-		t.Fatalf("current playback chunk has %d messages, want %d", got, maxPlaybackMessagesPerUpdate)
+	m := newActivityTestModel()
+	events := make([]irc.Event, maxPlaybackMessagesPerUpdate+1)
+	for i := range events {
+		events[i] = irc.BufferNewMessageMsg{
+			Server:    "libera",
+			Buffer:    "#go",
+			Timestamp: time.Unix(int64(i+1), 0),
+			From:      "alice",
+			Text:      "playback",
+		}
 	}
-	if got := len(remaining); got != 1 {
-		t.Fatalf("remaining playback chunk has %d messages, want 1", got)
+
+	_ = updateIRC(m, "libera", events...)
+	if got := len(m.ircPending["libera"]); got != 1 {
+		t.Fatalf("pending events after first update = %d, want 1", got)
+	}
+
+	_, _ = m.Update(ircContinueMsg{server: "libera"})
+	if _, pending := m.ircPending["libera"]; pending {
+		t.Fatalf("pending events after continuing = %d, want 0", len(m.ircPending["libera"]))
+	}
+	if got := len(m.buffers[makeBufferKey("libera", "#go")].History.Entries()); got != len(events) {
+		t.Fatalf("applied %d playback messages, want %d", got, len(events))
+	}
+}
+
+func TestSelfPartAfterSplitPlaybackDoesNotRecreateChannel(t *testing.T) {
+	m := newActivityTestModel()
+	channelKey := makeBufferKey("libera", "#go")
+	events := make([]irc.Event, 0, maxPlaybackMessagesPerUpdate+1)
+	for i := range maxPlaybackMessagesPerUpdate {
+		events = append(events, irc.BufferNewMessageMsg{
+			Server:    "libera",
+			Buffer:    "#go",
+			Timestamp: time.Unix(int64(i+1), 0),
+			From:      "alice",
+			Text:      "before part",
+		})
+	}
+	events = append(events, irc.ChannelPartedMsg{Server: "libera", Channel: "#go"})
+
+	_ = updateIRC(m, "libera", events...)
+	if _, exists := m.buffers[channelKey]; !exists {
+		t.Fatal("PART was applied before the messages that preceded it")
+	}
+
+	_, _ = m.Update(ircContinueMsg{server: "libera"})
+	if _, exists := m.buffers[channelKey]; exists {
+		t.Fatal("self-PART at the end of a split batch should remove the channel")
 	}
 }
 
@@ -781,7 +829,7 @@ func TestActiveBufferMessagesAndOwnEchoesDoNotIncrementActivity(t *testing.T) {
 
 func TestInactiveUserListRendersWhenBufferIsSelected(t *testing.T) {
 	m := newActivityTestModel()
-	_, _ = m.Update(irc.UserListMsg{
+	_ = updateIRC(m, "libera", irc.UserListMsg{
 		Server:  "libera",
 		Channel: "#random",
 		Users:   []string{"alice"},
@@ -806,7 +854,7 @@ func TestQuitInInactiveChannelDimsNicknameOnceSelected(t *testing.T) {
 	// alice is present in #random while it's the active buffer, and her
 	// message is rendered with an active nickname color.
 	m.selectBuffer("libera", "#random", &cmds)
-	_, _ = m.Update(irc.UserListMsg{
+	_ = updateIRC(m, "libera", irc.UserListMsg{
 		Server:  "libera",
 		Channel: "#random",
 		Users:   []string{"alice"},
@@ -832,7 +880,7 @@ func TestQuitInInactiveChannelDimsNicknameOnceSelected(t *testing.T) {
 	// The user switches away from #random, and alice quits while it's no
 	// longer the active buffer.
 	m.selectBuffer("libera", "#go", &cmds)
-	_, _ = m.Update(irc.UserListMsg{
+	_ = updateIRC(m, "libera", irc.UserListMsg{
 		Server:  "libera",
 		Channel: "#random",
 		Users:   []string{},
@@ -973,10 +1021,10 @@ func TestPersistedDirectMessagesRestoreAfterServerConnects(t *testing.T) {
 		t.Fatal("persisted direct message restored before the server connected")
 	}
 
-	_, cmd := m.Update(irc.BufferNewMessageBatchMsg{{
+	cmd := updateIRC(m, "libera", irc.BufferNewMessageMsg{
 		Server: "libera",
 		Type:   irc.MessageTypeConnected,
-	}})
+	})
 	if cmd != nil {
 		cmd()
 	}
@@ -988,10 +1036,10 @@ func TestPersistedDirectMessagesRestoreAfterServerConnects(t *testing.T) {
 		t.Fatal("connecting one server restored another server's direct message")
 	}
 
-	_, cmd = m.Update(irc.BufferNewMessageBatchMsg{{
+	cmd = updateIRC(m, "libera", irc.BufferNewMessageMsg{
 		Server: "libera",
 		Type:   irc.MessageTypeConnected,
-	}})
+	})
 	if cmd != nil {
 		cmd()
 	}
@@ -1613,7 +1661,7 @@ func TestNickUpdateChangesOnlyMatchingServerWithoutRenderingInactiveBuffers(t *t
 	liberaChannel.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 	liberaChannel.Chat.QueueMessage(chat.Message{Text: "deferred message"})
 
-	_, _ = m.Update(irc.NickUpdateMsg{Server: "libera", Nick: "new-libera"})
+	_ = updateIRC(m, "libera", irc.NickUpdateMsg{Server: "libera", Nick: "new-libera"})
 
 	if got, want := m.buffers[makeBufferKey("libera", "")].Chat.Nickname(), "new-libera"; got != want {
 		t.Fatalf("libera server nickname = %q, want %q", got, want)
@@ -1639,7 +1687,7 @@ func TestTopicUpdateDefersInactiveBufferRenderingUntilSelection(t *testing.T) {
 	channel.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 	channel.Chat.QueueMessage(chat.Message{Text: "deferred message"})
 
-	_, _ = m.Update(irc.ChannelTopicMsg{
+	_ = updateIRC(m, "libera", irc.ChannelTopicMsg{
 		Server:  "libera",
 		Channel: "#go",
 		Topic:   "A deferred topic",

@@ -139,6 +139,9 @@ Chat rendering is incremental.
   `Update` or a synchronous helper called by it.
 - Keep IRC socket handlers non-blocking. Large streams must remain batched or
   coalesced before reaching expensive UI work.
+- IRC events reach the UI only through `waitIRCEvents`. Keep one pull per
+  server outstanding, and start the next pull only after `ircPending` for that
+  server is empty, so events are applied in IRC order.
 - Do not perform an entire playback burst in one update. Preserve
   `maxPlaybackMessagesPerUpdate` chunking unless measurements justify a change.
 - Preserve the queued chat-rendering path: append with `QueueMessage`, schedule

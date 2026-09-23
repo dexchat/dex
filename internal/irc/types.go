@@ -2,6 +2,20 @@ package irc
 
 import "time"
 
+// Event is a notification from an IRC client to the UI. Events from one
+// server are delivered in the order its handlers queued them.
+type Event interface {
+	ircEvent()
+}
+
+func (UserListMsg) ircEvent()          {}
+func (BufferNewMessageMsg) ircEvent()  {}
+func (ChannelTopicMsg) ircEvent()      {}
+func (NickUpdateMsg) ircEvent()        {}
+func (ChannelNameUpdateMsg) ircEvent() {}
+func (ChannelJoinedMsg) ircEvent()     {}
+func (ChannelPartedMsg) ircEvent()     {}
+
 type UserListMsg struct {
 	Server   string
 	Channel  string
@@ -52,11 +66,7 @@ type ChannelJoinedMsg struct {
 	Channel string
 }
 
-type ChannelJoinedBatchMsg []ChannelJoinedMsg
-
 type ChannelPartedMsg struct {
 	Server  string
 	Channel string
 }
-
-type BufferNewMessageBatchMsg []BufferNewMessageMsg

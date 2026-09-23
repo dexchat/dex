@@ -121,7 +121,7 @@ func (c *Client) refreshUserList(client *girc.Client, channelName string) {
 	sortUserList(userList, prefixOrder)
 	c.setChannelUsers(channelName, userList)
 
-	c.program.Send(UserListMsg{
+	c.events.push(UserListMsg{
 		Server:   c.serverName,
 		Channel:  channelName,
 		Users:    userList,
@@ -160,7 +160,7 @@ func (c *Client) onPrivmsg(client *girc.Client, e girc.Event) {
 	}
 
 	msgID, _ := e.Tags.Get("msgid")
-	c.queueMessage(BufferNewMessageMsg{
+	c.events.push(BufferNewMessageMsg{
 		Server:        c.serverName,
 		Buffer:        target,
 		DirectMessage: directMessage,
@@ -189,7 +189,7 @@ func (c *Client) onTopic(_ *girc.Client, e girc.Event) {
 		channelName = e.Params[0]
 	}
 
-	c.program.Send(ChannelTopicMsg{
+	c.events.push(ChannelTopicMsg{
 		Server:  c.serverName,
 		Channel: channelName,
 		Topic:   e.Last(),
@@ -214,7 +214,7 @@ func (c *Client) onServerMessage(client *girc.Client, e girc.Event) {
 		ts = time.Now()
 	}
 
-	c.queueMessage(BufferNewMessageMsg{
+	c.events.push(BufferNewMessageMsg{
 		Server:    c.serverName,
 		Buffer:    "",
 		Timestamp: ts,
@@ -226,7 +226,7 @@ func (c *Client) onServerMessage(client *girc.Client, e girc.Event) {
 
 func (c *Client) onNickUpdate(client *girc.Client, e girc.Event) {
 	if e.Source.Name == client.GetNick() || e.Params[0] == client.GetNick() {
-		c.program.Send(NickUpdateMsg{
+		c.events.push(NickUpdateMsg{
 			Server: c.serverName,
 			Nick:   client.GetNick(),
 		})
@@ -259,7 +259,7 @@ func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 
 	// send quit message and trigger user list refresh only for channels the user was in
 	for _, channelName := range channels {
-		c.queueMessage(BufferNewMessageMsg{
+		c.events.push(BufferNewMessageMsg{
 			Server:    c.serverName,
 			Buffer:    channelName,
 			Timestamp: time.Now(),
@@ -281,12 +281,12 @@ func (c *Client) onJoin(client *girc.Client, e girc.Event) {
 	if e.Source != nil {
 		userName := e.Source.Name
 		if userName == client.GetNick() {
-			c.queueChannelJoined(ChannelJoinedMsg{
+			c.events.push(ChannelJoinedMsg{
 				Server:  c.serverName,
 				Channel: channelName,
 			})
 		} else {
-			c.queueMessage(BufferNewMessageMsg{
+			c.events.push(BufferNewMessageMsg{
 				Server:    c.serverName,
 				Buffer:    channelName,
 				Timestamp: time.Now(),
@@ -307,18 +307,13 @@ func (c *Client) onPart(client *girc.Client, e girc.Event) {
 	if e.Source != nil {
 		userName := e.Source.Name
 		if userName == client.GetNick() {
-			msg := ChannelPartedMsg{
+			c.events.push(ChannelPartedMsg{
 				Server:  c.serverName,
 				Channel: channelName,
-			}
-			if c.program != nil {
-				// Bubble Tea's Send may block until the UI receives the message.
-				// Keep the IRC socket reader free while delivering this rare event.
-				go c.program.Send(msg)
-			}
+			})
 			return
 		}
-		c.queueMessage(BufferNewMessageMsg{
+		c.events.push(BufferNewMessageMsg{
 			Server:    c.serverName,
 			Buffer:    channelName,
 			Timestamp: time.Now(),
@@ -341,15 +336,10 @@ func (c *Client) onKick(client *girc.Client, e girc.Event) {
 	}
 
 	if kickedNick == client.GetNick() {
-		msg := ChannelPartedMsg{
+		c.events.push(ChannelPartedMsg{
 			Server:  c.serverName,
 			Channel: channelName,
-		}
-		if c.program != nil {
-			// Bubble Tea's Send may block until the UI receives the message.
-			// Keep the IRC socket reader free while delivering this rare event.
-			go c.program.Send(msg)
-		}
+		})
 		return
 	}
 
@@ -363,7 +353,7 @@ func (c *Client) onKick(client *girc.Client, e girc.Event) {
 		message = fmt.Sprintf("%s has been kicked by %s (%s)", kickedNick, kickerName, reason)
 	}
 
-	c.queueMessage(BufferNewMessageMsg{
+	c.events.push(BufferNewMessageMsg{
 		Server:    c.serverName,
 		Buffer:    channelName,
 		Timestamp: time.Now(),
@@ -380,7 +370,7 @@ func (c *Client) updateChannelCase(channelName string) {
 	for i, ch := range c.channels {
 		if strings.EqualFold(ch, channelName) && ch != channelName {
 			c.channels[i] = channelName
-			c.program.Send(ChannelNameUpdateMsg{
+			c.events.push(ChannelNameUpdateMsg{
 				Server:        c.serverName,
 				CanonicalName: channelName,
 			})
@@ -434,7 +424,7 @@ func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 	// Auto-join on connect
 	client.Cmd.Join(c.channels...)
 
-	go c.program.Send(ChannelTopicMsg{
+	c.events.push(ChannelTopicMsg{
 		Server:  c.serverName,
 		Channel: "",
 		Topic:   "IRC: " + c.Server(),
@@ -443,12 +433,12 @@ func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 	// Sync the nickname from the server right after the connection.
 	// When using ZNC, the nickname from the config file might be different from the
 	// nickname configured in the ZNC, so we fetch it from there and update it
-	go c.program.Send(NickUpdateMsg{
+	c.events.push(NickUpdateMsg{
 		Server: c.serverName,
 		Nick:   client.GetNick(),
 	})
 
-	c.queueMessage(BufferNewMessageMsg{
+	c.events.push(BufferNewMessageMsg{
 		Server:    c.serverName,
 		Buffer:    "",
 		Timestamp: time.Now(),
@@ -458,7 +448,7 @@ func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 	})
 
 	for _, channelName := range client.ChannelList() {
-		c.queueMessage(BufferNewMessageMsg{
+		c.events.push(BufferNewMessageMsg{
 			Server:    c.serverName,
 			Buffer:    channelName,
 			Timestamp: time.Now(),
@@ -470,7 +460,7 @@ func (c *Client) onConnect(client *girc.Client, _ girc.Event) {
 }
 
 func (c *Client) onDisconnect(client *girc.Client, _ girc.Event) {
-	c.queueMessage(BufferNewMessageMsg{
+	c.events.push(BufferNewMessageMsg{
 		Server:    c.serverName,
 		Buffer:    "",
 		Timestamp: time.Now(),
@@ -480,7 +470,7 @@ func (c *Client) onDisconnect(client *girc.Client, _ girc.Event) {
 	})
 
 	for _, channelName := range client.ChannelList() {
-		c.queueMessage(BufferNewMessageMsg{
+		c.events.push(BufferNewMessageMsg{
 			Server:    c.serverName,
 			Buffer:    channelName,
 			Timestamp: time.Now(),
@@ -500,7 +490,7 @@ func (c *Client) onJoinError(_ *girc.Client, e girc.Event) {
 	if channel != "" {
 		text = fmt.Sprintf("irc: %s: %s", channel, e.Last())
 	}
-	c.queueMessage(BufferNewMessageMsg{
+	c.events.push(BufferNewMessageMsg{
 		Server:    c.serverName,
 		Buffer:    "",
 		Timestamp: time.Now(),
@@ -535,7 +525,7 @@ func (c *Client) onListReply(_ *girc.Client, e girc.Event) {
 	if ts.IsZero() {
 		ts = time.Now()
 	}
-	c.queueMessage(BufferNewMessageMsg{
+	c.events.push(BufferNewMessageMsg{
 		Server:    c.serverName,
 		Buffer:    "",
 		Timestamp: ts,
@@ -578,7 +568,7 @@ func (c *Client) onEchoMessage(client *girc.Client, e girc.Event) {
 	}
 
 	msgID, _ := e.Tags.Get("msgid")
-	c.queueMessage(BufferNewMessageMsg{
+	c.events.push(BufferNewMessageMsg{
 		Server:        c.serverName,
 		Buffer:        target,
 		DirectMessage: directMessage,

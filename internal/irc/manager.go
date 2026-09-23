@@ -1,11 +1,11 @@
 package irc
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
-	tea "charm.land/bubbletea/v2"
 	"github.com/lrstanley/girc"
 	"github.com/dexchat/dex/internal/config"
 )
@@ -14,14 +14,33 @@ import (
 // With more than one connection, the UI wouldn't know which channel to send a message
 type ClientManager struct {
 	clients map[string]*Client
+
+	// ctx is canceled by DisconnectAll to release pending Next calls.
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
-func NewClientManager(servers []*config.Server, p *tea.Program) *ClientManager {
-	m := &ClientManager{clients: make(map[string]*Client)}
+func NewClientManager(servers []*config.Server) *ClientManager {
+	ctx, cancel := context.WithCancel(context.Background())
+	m := &ClientManager{
+		clients: make(map[string]*Client),
+		ctx:     ctx,
+		cancel:  cancel,
+	}
 	for _, server := range servers {
-		m.clients[server.Name] = NewClient(server.Name, server, p)
+		m.clients[server.Name] = NewClient(server.Name, server)
 	}
 	return m
+}
+
+// Next blocks until the named server has events for the UI. It returns an
+// error for an unknown server or after DisconnectAll.
+func (m *ClientManager) Next(server string) ([]Event, error) {
+	client, ok := m.clients[server]
+	if !ok {
+		return nil, fmt.Errorf("irc: unknown server %s", server)
+	}
+	return client.Next(m.ctx)
 }
 
 func (m *ClientManager) ConnectAll() {
@@ -38,7 +57,7 @@ func (m *ClientManager) ConnectAll() {
 					} else {
 						backoff = retryDelays[len(retryDelays)-1]
 					}
-					c.program.Send(BufferNewMessageMsg{
+					c.events.push(BufferNewMessageMsg{
 						Server:    name,
 						Buffer:    "",
 						Timestamp: time.Now(),
@@ -63,7 +82,7 @@ func (m *ClientManager) Send(server, channel, message string) {
 	}
 
 	sendError := func(text string) {
-		client.program.Send(BufferNewMessageMsg{
+		client.events.push(BufferNewMessageMsg{
 			Server:    server,
 			Buffer:    channel,
 			Timestamp: time.Now(),
@@ -97,7 +116,7 @@ func (m *ClientManager) Part(server, channel, reason string) {
 	}
 
 	sendError := func(text string) {
-		client.program.Send(BufferNewMessageMsg{
+		client.events.push(BufferNewMessageMsg{
 			Server:    server,
 			Buffer:    channel,
 			Timestamp: time.Now(),
@@ -134,7 +153,7 @@ func (m *ClientManager) Join(server, channel, key string) {
 	}
 
 	sendError := func(text string) {
-		client.program.Send(BufferNewMessageMsg{
+		client.events.push(BufferNewMessageMsg{
 			Server:    server,
 			Buffer:    "",
 			Timestamp: time.Now(),
@@ -171,7 +190,7 @@ func (m *ClientManager) List(server, channel string) {
 	}
 
 	sendError := func(text string) {
-		client.program.Send(BufferNewMessageMsg{
+		client.events.push(BufferNewMessageMsg{
 			Server:    server,
 			Buffer:    "",
 			Timestamp: time.Now(),
@@ -202,6 +221,7 @@ func pendingMessageKey(server, target, message string) string {
 }
 
 func (m *ClientManager) DisconnectAll() {
+	m.cancel()
 	for _, client := range m.clients {
 		client.Close()
 	}

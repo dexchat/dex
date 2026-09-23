@@ -66,6 +66,9 @@ type Model struct {
 	help         *help.Model
 	flushPending bool
 
+	// ircPending holds events pulled from each server but not yet applied.
+	ircPending map[string][]irc.Event
+
 	terminalFocused           bool
 	lastSoundAt               time.Time
 	notificationNoticeVersion uint64
@@ -95,6 +98,7 @@ func New(cfg *config.Config) *Model {
 	m := Model{
 		config:          cfg,
 		buffers:         make(map[BufferKey]*Buffer),
+		ircPending:      make(map[string][]irc.Event),
 		readState:       &history.ReadState{},
 		directMessages:  directMessages,
 		theme:           theme,
@@ -241,101 +245,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
 		m.channels = m.channels.SetSize(channelsPanelMaxWidth, m.calculateChatHeight())
 
-	case irc.ChannelJoinedMsg:
-		_, createCmd := m.getOrCreateBuffer(msgTyped.Server, msgTyped.Channel)
-		if createCmd != nil {
-			cmds = append(cmds, createCmd)
-		}
-	case irc.ChannelJoinedBatchMsg:
-		for _, joined := range msgTyped {
-			_, createCmd := m.getOrCreateBuffer(joined.Server, joined.Channel)
-			if createCmd != nil {
-				cmds = append(cmds, createCmd)
-			}
-		}
-	case irc.ChannelPartedMsg:
-		if cmd := m.removeChannelBuffer(msgTyped.Server, msgTyped.Channel); cmd != nil {
-			cmds = append(cmds, cmd)
-		}
+	case ircEventsMsg:
+		m.ircPending[msgTyped.server] = append(m.ircPending[msgTyped.server], msgTyped.events...)
+		cmds = append(cmds, m.applyPendingIRCEvents(msgTyped.server))
 
-	case irc.UserListMsg:
-		buf, createCmd := m.getOrCreateBuffer(msgTyped.Server, msgTyped.Channel)
-		if createCmd != nil {
-			cmds = append(cmds, createCmd)
-		}
-		if buf != nil {
-			buf.members = append(buf.members[:0], msgTyped.Users...)
-			buf.memberPrefixes = msgTyped.Prefixes
-			if buf.Key == m.activeBuffer {
-				buf.Users, cmd = buf.Users.Update(users.UserListMsg{Users: buf.members, Prefixes: buf.memberPrefixes})
-				cmds = append(cmds, cmd)
-				// We refresh chat on UserListMsg to dim nick if a user
-				// sends a message then leaves channel.
-				buf.Chat.RefreshContent()
-			} else {
-				// Buffer not visible: invalidate now, render when active.
-				buf.Chat.InvalidateContent()
-			}
-		}
-
-	case irc.BufferNewMessageBatchMsg:
-		current, remaining := playbackChunk(msgTyped)
-		for _, msg := range current {
-			if newBufCmd := m.processIncomingMessage(msg); newBufCmd != nil {
-				cmds = append(cmds, newBufCmd)
-			}
-			if msg.Type == irc.MessageTypeConnected && msg.Buffer == "" {
-				cmds = append(cmds, m.restoreDirectMessages(msg.Server)...)
-			}
-		}
-		if len(remaining) > 0 {
-			cmds = append(cmds, func() tea.Msg { return remaining })
-		}
-		if cmd := m.scheduleFlush(); cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-
-	case irc.BufferNewMessageMsg:
-		if newBufCmd := m.processIncomingMessage(msgTyped); newBufCmd != nil {
-			cmds = append(cmds, newBufCmd)
-		}
-		if msgTyped.Type == irc.MessageTypeConnected && msgTyped.Buffer == "" {
-			cmds = append(cmds, m.restoreDirectMessages(msgTyped.Server)...)
-		}
-		if cmd := m.scheduleFlush(); cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-
-	case irc.ChannelTopicMsg:
-		buf, createCmd := m.getOrCreateBuffer(msgTyped.Server, msgTyped.Channel)
-		if createCmd != nil {
-			cmds = append(cmds, createCmd)
-		}
-		if buf != nil {
-			buf.Chat.SetTopic(msgTyped.Topic)
-			// In case the channel topic is more than one line, resize only the
-			// visible buffer. Inactive buffers are resized when selected.
-			if buf.Key == m.activeBuffer {
-				buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
-			}
-		}
-
-	case irc.NickUpdateMsg:
-		for _, buf := range m.buffers {
-			if buf.Server == msgTyped.Server {
-				buf.Chat.SetNickname(msgTyped.Nick)
-			}
-		}
-		if buf := m.getActiveBuffer(); buf.Server == msgTyped.Server {
-			buf.Chat.FlushQueue()
-		}
-
-	case irc.ChannelNameUpdateMsg:
-		m.channels, cmd = m.channels.Update(channels.ChannelNameUpdateMsg{
-			Server:        msgTyped.Server,
-			CanonicalName: msgTyped.CanonicalName,
-		})
-		cmds = append(cmds, cmd)
+	case ircContinueMsg:
+		cmds = append(cmds, m.applyPendingIRCEvents(msgTyped.server))
 
 	case historyFlushMsg:
 		if cmd := m.startPersistence(); cmd != nil {
@@ -350,6 +265,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case startConnectionMsg:
 		if m.ircClientManager != nil {
 			m.ircClientManager.ConnectAll()
+			for _, server := range m.config.Servers {
+				cmds = append(cmds, m.waitIRCEvents(server.Name))
+			}
 		}
 
 	case historyLoadedMsg:
