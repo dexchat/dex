@@ -169,3 +169,11 @@ func skipIfRoot(t *testing.T) {
 		t.Skip("file permissions are not enforced for root")
 	}
 }
+
+func TestLogPathIgnoresCase(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+
+	if logFullPath("libera", "#IdleRPG") != logFullPath("libera", "#idlerpg") {
+		t.Fatal("different spellings of the same buffer should share a history file")
+	}
+}
