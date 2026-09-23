@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"sync"
+	"sync/atomic"
 
 	"github.com/lrstanley/girc"
 	"github.com/dexchat/dex/internal/config"
@@ -19,7 +20,14 @@ func IsChannel(name string) bool {
 type Client struct {
 	*girc.Client
 	serverName string
-	channels   []string
+
+	// channels are the configured channels joined on every connection. They
+	// are read from several goroutines and must not be modified.
+	channels []string
+
+	// registered reports whether the current connection received
+	// RPL_WELCOME. connectLoop resets its backoff after such a connection.
+	registered atomic.Bool
 
 	// events is the single ordered path from IRC handlers to the UI. The UI
 	// pulls from it with Next, so handlers never wait on Bubble Tea.

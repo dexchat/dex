@@ -58,6 +58,7 @@ func (c *Client) onEvent(client *girc.Client, e girc.Event) {
 		c.onTopic(client, e)
 
 	case girc.RPL_WELCOME:
+		c.registered.Store(true)
 		c.onServerMessage(client, e)
 		c.onNickUpdate(client, e)
 	case girc.RPL_MOTDSTART, girc.RPL_MOTD, girc.RPL_ENDOFMOTD:
@@ -378,11 +379,11 @@ func (c *Client) onJoin(client *girc.Client, e girc.Event) {
 		return
 	}
 	channelName := e.Params[0]
-	c.updateChannelCase(channelName)
 
 	if e.Source != nil {
 		userName := e.Source.Name
 		if userName == client.GetNick() {
+			c.updateChannelCase(channelName)
 			c.events.push(ChannelJoinedMsg{
 				Server:  c.serverName,
 				Channel: channelName,
@@ -465,13 +466,13 @@ func (c *Client) onKick(client *girc.Client, e girc.Event) {
 	})
 }
 
-// updateChannelCase fixes the channel name accordingly to how it's registered in the server
+// updateChannelCase reports the server's spelling of a configured channel.
 // Example: the user will join the channel #idlerpg, but the true name is #idleRPG
-// It should be called every time the user joins a channel
+// It should be called every time the user joins a channel. The update is sent
+// on every such join; applying it again in the UI is harmless.
 func (c *Client) updateChannelCase(channelName string) {
-	for i, ch := range c.channels {
+	for _, ch := range c.channels {
 		if strings.EqualFold(ch, channelName) && ch != channelName {
-			c.channels[i] = channelName
 			c.events.push(ChannelNameUpdateMsg{
 				Server:        c.serverName,
 				CanonicalName: channelName,

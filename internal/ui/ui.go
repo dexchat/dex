@@ -252,6 +252,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ircContinueMsg:
 		cmds = append(cmds, m.applyPendingIRCEvents(msgTyped.server))
 
+	case ircCommandFailedMsg:
+		m.showIRCCommandError(msgTyped)
+
 	case historyFlushMsg:
 		if cmd := m.startPersistence(); cmd != nil {
 			cmds = append(cmds, cmd)
@@ -670,5 +673,5 @@ func (m *Model) handleChatSend(buffer *Buffer, text string) tea.Cmd {
 		Text:      text,
 	})
 	// Persist the server echo with its authoritative timestamp and message ID.
-	return m.sendMessageCmd(buffer.Server, buffer.Buffer, text)
+	return m.sendMessageCmd(buffer, text)
 }

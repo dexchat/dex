@@ -47,10 +47,9 @@ func (m *Model) handleJoinCommand(buffer *Buffer, args []string) tea.Cmd {
 		return nil
 	}
 	server, channel := buffer.Server, args[0]
-	return func() tea.Msg {
-		manager.Join(server, channel, key)
-		return nil
-	}
+	return ircCommand(buffer, func() error {
+		return manager.Join(server, channel, key)
+	})
 }
 
 func (m *Model) handleLeaveCommand(buffer *Buffer, args []string) tea.Cmd {
@@ -60,10 +59,9 @@ func (m *Model) handleLeaveCommand(buffer *Buffer, args []string) tea.Cmd {
 	}
 	server, channel := buffer.Server, buffer.Buffer
 	reason := strings.Join(args, " ")
-	return func() tea.Msg {
-		manager.Part(server, channel, reason)
-		return nil
-	}
+	return ircCommand(buffer, func() error {
+		return manager.Part(server, channel, reason)
+	})
 }
 
 func (m *Model) handleCloseCommand(buffer *Buffer, args []string) tea.Cmd {
@@ -94,10 +92,9 @@ func (m *Model) handleListCommand(buffer *Buffer, args []string) tea.Cmd {
 		return nil
 	}
 	server := buffer.Server
-	return func() tea.Msg {
-		manager.List(server, channel)
-		return nil
-	}
+	return ircCommand(buffer, func() error {
+		return manager.List(server, channel)
+	})
 }
 
 func (m *Model) handleMsgCommand(buffer *Buffer, args []string) tea.Cmd {
@@ -131,18 +128,52 @@ func (m *Model) handleMsgCommand(buffer *Buffer, args []string) tea.Cmd {
 		Username:  privateBuffer.Chat.Nickname(),
 		Text:      message,
 	})
-	return m.sendMessageCmd(buffer.Server, target, message)
+	return m.sendMessageCmd(privateBuffer, message)
 }
 
-func (m *Model) sendMessageCmd(server, target, message string) tea.Cmd {
+// sendMessageCmd sends message to buffer's target. Failures are reported in
+// buffer, where the message was displayed.
+func (m *Model) sendMessageCmd(buffer *Buffer, message string) tea.Cmd {
 	manager := m.ircClientManager
 	if manager == nil {
 		return nil
 	}
 
+	server, target := buffer.Server, buffer.Buffer
+	return ircCommand(buffer, func() error {
+		return manager.Send(server, target, message)
+	})
+}
+
+// ircCommandFailedMsg reports that an IRC command could not be sent. It
+// carries the buffer that issued the command, so the error is shown where the
+// user typed it even if another buffer is active by then.
+type ircCommandFailedMsg struct {
+	server string
+	key    BufferKey
+	err    error
+}
+
+// ircCommand runs send outside the update loop and reports its error to
+// buffer.
+func ircCommand(buffer *Buffer, send func() error) tea.Cmd {
+	server, key := buffer.Server, buffer.Key
 	return func() tea.Msg {
-		manager.Send(server, target, message)
+		if err := send(); err != nil {
+			return ircCommandFailedMsg{server: server, key: key, err: err}
+		}
 		return nil
+	}
+}
+
+func (m *Model) showIRCCommandError(msg ircCommandFailedMsg) {
+	buf := m.buffers[msg.key]
+	if buf == nil {
+		// The buffer was closed while the command ran.
+		buf = m.buffers[makeBufferKey(msg.server, "")]
+	}
+	if buf != nil {
+		m.addCommandError(buf, msg.err.Error())
 	}
 }
 

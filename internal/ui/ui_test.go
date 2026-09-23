@@ -567,6 +567,46 @@ func TestJoinWithoutChannelShowsUsageInsteadOfCreatingBuffer(t *testing.T) {
 	}
 }
 
+func TestIRCCommandErrorIsShownInIssuingBuffer(t *testing.T) {
+	m := newActivityTestModel()
+	channel := m.buffers[makeBufferKey("libera", "#go")]
+	channel.Chat.SetSize(80, 10)
+	m.activeBuffer = makeBufferKey("libera", "#random")
+	active := m.getActiveBuffer()
+	active.Chat.SetSize(80, 10)
+
+	msg := ircCommand(channel, func() error { return errors.New("irc: not in channel #go") })()
+	_, _ = m.Update(msg)
+
+	if view := plainText(channel.Chat.View()); !strings.Contains(view, "irc: not in channel #go") {
+		t.Fatalf("command error missing from the issuing buffer:\n%s", view)
+	}
+	if view := plainText(active.Chat.View()); strings.Contains(view, "not in channel") {
+		t.Fatalf("command error leaked into the active buffer:\n%s", view)
+	}
+}
+
+func TestIRCCommandErrorFallsBackToServerBufferAfterClose(t *testing.T) {
+	m := newActivityTestModel()
+	server := m.buffers[makeBufferKey("libera", "")]
+	server.Chat.SetSize(80, 10)
+	closed := &Buffer{Key: makeBufferKey("libera", "alice"), Server: "libera", Buffer: "alice"}
+
+	msg := ircCommand(closed, func() error { return errors.New("irc: not connected to libera") })()
+	_, _ = m.Update(msg)
+
+	if view := plainText(server.Chat.View()); !strings.Contains(view, "irc: not connected to libera") {
+		t.Fatalf("command error for a closed buffer missing from the server buffer:\n%s", view)
+	}
+}
+
+func TestSuccessfulIRCCommandProducesNoMessage(t *testing.T) {
+	buf := &Buffer{Key: makeBufferKey("libera", "#go"), Server: "libera", Buffer: "#go"}
+	if msg := ircCommand(buf, func() error { return nil })(); msg != nil {
+		t.Fatalf("successful command returned %#v, want nil", msg)
+	}
+}
+
 func TestListWithTooManyArgumentsShowsUsage(t *testing.T) {
 	m := newActivityTestModel()
 	active := m.getActiveBuffer()

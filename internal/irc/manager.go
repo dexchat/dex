@@ -2,9 +2,9 @@ package irc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/lrstanley/girc"
 	"github.com/dexchat/dex/internal/config"
@@ -36,68 +36,30 @@ func NewClientManager(servers []*config.Server) *ClientManager {
 // Next blocks until the named server has events for the UI. It returns an
 // error for an unknown server or after DisconnectAll.
 func (m *ClientManager) Next(server string) ([]Event, error) {
-	client, ok := m.clients[server]
-	if !ok {
-		return nil, fmt.Errorf("irc: unknown server %s", server)
+	client, err := m.client(server)
+	if err != nil {
+		return nil, err
 	}
 	return client.Next(m.ctx)
 }
 
+// ConnectAll starts one connection loop per server. The loops reconnect after
+// failures and stop when DisconnectAll is called.
 func (m *ClientManager) ConnectAll() {
-	for name, client := range m.clients {
-		go func(name string, c *Client) {
-			attempt := 0
-			retryDelays := []int{10, 20, 40, 80, 160, 300}
-
-			for {
-				if err := c.Connect(); err != nil {
-					var backoff int
-					if attempt < len(retryDelays) {
-						backoff = retryDelays[attempt]
-					} else {
-						backoff = retryDelays[len(retryDelays)-1]
-					}
-					c.events.push(BufferNewMessageMsg{
-						Server:    name,
-						Buffer:    "",
-						Timestamp: time.Now(),
-						From:      "--",
-						Text:      fmt.Sprintf("irc: %v, reconnecting in %d seconds...", err, int(backoff)),
-						Type:      MessageTypeDisconnected,
-					})
-					time.Sleep(time.Duration(backoff) * time.Second)
-					attempt++
-					continue
-				}
-				return
-			}
-		}(name, client)
+	for _, client := range m.clients {
+		go client.connectLoop(m.ctx, reconnectDelays)
 	}
 }
 
-func (m *ClientManager) Send(server, channel, message string) {
-	client, ok := m.clients[server]
-	if !ok {
-		return
-	}
-
-	sendError := func(text string) {
-		client.events.push(BufferNewMessageMsg{
-			Server:    server,
-			Buffer:    channel,
-			Timestamp: time.Now(),
-			From:      "--",
-			Text:      text,
-		})
-	}
-
-	if !client.IsConnected() {
-		sendError(fmt.Sprintf("irc: not connected to %s", server))
-		return
+// Send sends a message to a channel or nickname. The returned error describes
+// why it could not be sent; errors from the server arrive as events instead.
+func (m *ClientManager) Send(server, channel, message string) error {
+	client, err := m.connectedClient(server)
+	if err != nil {
+		return err
 	}
 	if girc.IsValidChannel(channel) && !client.IsInChannel(channel) {
-		sendError(fmt.Sprintf("irc: not in channel %s", channel))
-		return
+		return fmt.Errorf("irc: not in channel %s", channel)
 	}
 
 	// TrimSpace normalizes whitespace because IRC servers may strip or add
@@ -107,113 +69,83 @@ func (m *ClientManager) Send(server, channel, message string) {
 	client.pendingMessages.Store(key, struct{}{})
 
 	client.Cmd.Message(channel, message)
+	return nil
 }
 
-func (m *ClientManager) Part(server, channel, reason string) {
-	client, ok := m.clients[server]
-	if !ok {
-		return
-	}
-
-	sendError := func(text string) {
-		client.events.push(BufferNewMessageMsg{
-			Server:    server,
-			Buffer:    channel,
-			Timestamp: time.Now(),
-			From:      "--",
-			Text:      text,
-			Type:      MessageTypeServer,
-		})
-	}
-
-	if !client.IsConnected() {
-		sendError(fmt.Sprintf("irc: not connected to %s", server))
-		return
+func (m *ClientManager) Part(server, channel, reason string) error {
+	client, err := m.connectedClient(server)
+	if err != nil {
+		return err
 	}
 	if !girc.IsValidChannel(channel) {
-		sendError("irc: /leave is only available in a channel")
-		return
+		return errors.New("irc: /leave is only available in a channel")
 	}
 	if !client.IsInChannel(channel) {
-		sendError(fmt.Sprintf("irc: not in channel %s", channel))
-		return
+		return fmt.Errorf("irc: not in channel %s", channel)
 	}
 
 	if reason == "" {
 		client.Cmd.Part(channel)
-		return
+		return nil
 	}
 	client.Cmd.PartMessage(channel, reason)
+	return nil
 }
 
-func (m *ClientManager) Join(server, channel, key string) {
-	client, ok := m.clients[server]
-	if !ok {
-		return
-	}
-
-	sendError := func(text string) {
-		client.events.push(BufferNewMessageMsg{
-			Server:    server,
-			Buffer:    "",
-			Timestamp: time.Now(),
-			From:      "--",
-			Text:      text,
-			Type:      MessageTypeServer,
-		})
-	}
-
-	if !client.IsConnected() {
-		sendError(fmt.Sprintf("irc: not connected to %s", server))
-		return
+func (m *ClientManager) Join(server, channel, key string) error {
+	client, err := m.connectedClient(server)
+	if err != nil {
+		return err
 	}
 	if !girc.IsValidChannel(channel) || strings.Contains(channel, ",") {
-		sendError(fmt.Sprintf("irc: invalid channel %s", channel))
-		return
+		return fmt.Errorf("irc: invalid channel %s", channel)
 	}
 	if client.IsInChannel(channel) {
-		sendError(fmt.Sprintf("irc: already in channel %s", channel))
-		return
+		return fmt.Errorf("irc: already in channel %s", channel)
 	}
 
 	if key == "" {
 		client.Cmd.Join(channel)
-		return
+		return nil
 	}
 	client.Cmd.JoinKey(channel, key)
+	return nil
 }
 
-func (m *ClientManager) List(server, channel string) {
-	client, ok := m.clients[server]
-	if !ok {
-		return
-	}
-
-	sendError := func(text string) {
-		client.events.push(BufferNewMessageMsg{
-			Server:    server,
-			Buffer:    "",
-			Timestamp: time.Now(),
-			From:      "--",
-			Text:      text,
-			Type:      MessageTypeServer,
-		})
-	}
-
-	if !client.IsConnected() {
-		sendError(fmt.Sprintf("irc: not connected to %s", server))
-		return
+func (m *ClientManager) List(server, channel string) error {
+	client, err := m.connectedClient(server)
+	if err != nil {
+		return err
 	}
 	if channel != "" && (!girc.IsValidChannel(channel) || strings.Contains(channel, ",")) {
-		sendError(fmt.Sprintf("irc: invalid channel %s", channel))
-		return
+		return fmt.Errorf("irc: invalid channel %s", channel)
 	}
 
 	if channel == "" {
 		client.Cmd.List()
-		return
+		return nil
 	}
 	client.Cmd.List(channel)
+	return nil
+}
+
+func (m *ClientManager) client(server string) (*Client, error) {
+	client, ok := m.clients[server]
+	if !ok {
+		return nil, fmt.Errorf("irc: unknown server %s", server)
+	}
+	return client, nil
+}
+
+func (m *ClientManager) connectedClient(server string) (*Client, error) {
+	client, err := m.client(server)
+	if err != nil {
+		return nil, err
+	}
+	if !client.IsConnected() {
+		return nil, fmt.Errorf("irc: not connected to %s", server)
+	}
+	return client, nil
 }
 
 func pendingMessageKey(server, target, message string) string {
