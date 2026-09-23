@@ -112,10 +112,13 @@ func (m *Model) applyIRCEvent(event irc.Event) tea.Cmd {
 	return nil
 }
 
+// applyUserList updates an existing channel's members. It never creates a
+// buffer: the self-JOIN always comes first, and a list that arrives after a
+// self-PART must not bring the channel back.
 func (m *Model) applyUserList(event irc.UserListMsg) tea.Cmd {
-	buf, createCmd := m.getOrCreateBuffer(event.Server, event.Channel)
+	buf := m.buffers[makeBufferKey(event.Server, event.Channel)]
 	if buf == nil {
-		return createCmd
+		return nil
 	}
 
 	buf.members = append(buf.members[:0], event.Users...)
@@ -123,7 +126,7 @@ func (m *Model) applyUserList(event irc.UserListMsg) tea.Cmd {
 	if buf.Key != m.activeBuffer {
 		// Buffer not visible: invalidate now, render when active.
 		buf.Chat.InvalidateContent()
-		return createCmd
+		return nil
 	}
 
 	var cmd tea.Cmd
@@ -131,5 +134,5 @@ func (m *Model) applyUserList(event irc.UserListMsg) tea.Cmd {
 	// We refresh chat on UserListMsg to dim nick if a user
 	// sends a message then leaves channel.
 	buf.Chat.RefreshContent()
-	return tea.Batch(createCmd, cmd)
+	return cmd
 }

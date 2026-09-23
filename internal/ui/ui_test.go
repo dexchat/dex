@@ -123,6 +123,23 @@ func TestSelfPartRemovesActiveChannelAndSelectsServer(t *testing.T) {
 	}
 }
 
+func TestUserListAfterSelfPartDoesNotRecreateChannel(t *testing.T) {
+	m := newActivityTestModel()
+	channelKey := makeBufferKey("libera", "#go")
+
+	_ = updateIRC(m, "libera",
+		irc.ChannelPartedMsg{Server: "libera", Channel: "#go"},
+		irc.UserListMsg{Server: "libera", Channel: "#go", Users: []string{"alice"}},
+	)
+
+	if _, exists := m.buffers[channelKey]; exists {
+		t.Fatal("a user list after self-PART should not recreate the channel")
+	}
+	if content := plainText(m.channels.View(channelsPanelMaxWidth, 20)); strings.Contains(content, "#go") {
+		t.Fatalf("a user list after self-PART should not restore the sidebar entry:\n%s", content)
+	}
+}
+
 func TestSelfPartQueuesDirtyHistoryForPersistence(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	m := newActivityTestModel()

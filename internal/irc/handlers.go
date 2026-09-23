@@ -9,13 +9,14 @@ import (
 	"github.com/lrstanley/girc"
 )
 
-const userListRefreshDelay = 25 * time.Millisecond
-
 // onEvent is the only handler dex registers with girc. For each event girc
 // runs ALL_EVENTS handlers to completion before its own state tracking, and
 // events are handled one at a time. Handlers called from here therefore see
 // the state from just before the event, such as the channels of a quitting
 // user, and queue UI events in the order the server sent them.
+//
+// girc reports UPDATE_STATE after applying a state change, which is when
+// user list changes recorded for the event are queued.
 //
 // CONNECTED is the exception: girc dispatches it from its own goroutine a few
 // seconds after RPL_WELCOME, so it can interleave with other events.
@@ -69,80 +70,108 @@ func (c *Client) onEvent(client *girc.Client, e girc.Event) {
 
 	case girc.RPL_LISTSTART, girc.RPL_LIST, girc.RPL_LISTEND, girc.ERR_TOOMANYMATCHES:
 		c.onListReply(client, e)
+
+	case girc.UPDATE_STATE:
+		c.queueDeferredUserListChanges()
 	}
 }
 
+// userListChanged marks a channel whose user list must be sent to the UI. It
+// never leaves the client: Next replaces these markers with one snapshot per
+// channel, so a burst of membership events costs one snapshot per batch.
+type userListChanged struct {
+	channel string
+}
+
+func (userListChanged) ircEvent() {}
+
 func (c *Client) onUserListChange(client *girc.Client, e girc.Event) {
-	var channelName string
 	switch e.Command {
 	case girc.RPL_ENDOFNAMES, girc.RPL_ENDOFWHO:
 		// Format: <nick> <channel> :End of /NAMES list
-		if len(e.Params) < 2 {
+		// The replies before it already updated girc's state.
+		if len(e.Params) >= 2 {
+			c.queueUserListChanges(e.Params[1])
+		}
+	case girc.NICK:
+		// girc renames the user after this handler returns, so the old
+		// nickname still identifies the channels to update.
+		if e.Source == nil {
 			return
 		}
-		channelName = e.Params[1]
+		if user := client.LookupUser(e.Source.Name); user != nil {
+			c.deferUserListChanges(user.ChannelList...)
+		}
 	default:
-		if len(e.Params) == 0 {
-			return
+		// JOIN, PART, KICK, and MODE name the channel first. User MODE
+		// events name a nickname instead and are skipped.
+		if len(e.Params) > 0 {
+			c.deferUserListChanges(e.Params[0])
 		}
-		channelName = e.Params[0]
 	}
-
-	// For NICK events, update all channels the user is in
-	if e.Command == girc.NICK {
-		c.scheduleUserListRefresh(client, client.ChannelList()...)
-		return
-	}
-
-	// In case of user MODE events, for example
-	if !girc.IsValidChannel(channelName) {
-		return
-	}
-
-	c.scheduleUserListRefresh(client, channelName)
 }
 
-func (c *Client) scheduleUserListRefresh(client *girc.Client, channelNames ...string) {
-	c.userListRefreshMu.Lock()
-	if c.userListRefreshPending == nil {
-		c.userListRefreshPending = make(map[string]string)
-	}
+func (c *Client) queueUserListChanges(channelNames ...string) {
 	for _, channelName := range channelNames {
-		if !girc.IsValidChannel(channelName) {
+		if girc.IsValidChannel(channelName) {
+			c.events.push(userListChanged{channel: channelName})
+		}
+	}
+}
+
+// deferUserListChanges records channels changed by the current event. girc
+// applies the event only after onEvent returns; queueing the markers then
+// guarantees that a snapshot taken for them includes the change.
+func (c *Client) deferUserListChanges(channelNames ...string) {
+	c.deferredUserListsMu.Lock()
+	defer c.deferredUserListsMu.Unlock()
+	c.deferredUserLists = append(c.deferredUserLists, channelNames...)
+}
+
+func (c *Client) queueDeferredUserListChanges() {
+	c.deferredUserListsMu.Lock()
+	channelNames := c.deferredUserLists
+	c.deferredUserLists = nil
+	c.deferredUserListsMu.Unlock()
+
+	c.queueUserListChanges(channelNames...)
+}
+
+// resolveUserListChanges replaces userListChanged markers with one user list
+// snapshot per channel, appended after the batch's other events. Markers are
+// queued only after girc applies their change, so each snapshot includes it.
+func (c *Client) resolveUserListChanges(events []Event) []Event {
+	var channelNames []string
+	seen := make(map[string]bool)
+	resolved := events[:0]
+	for _, event := range events {
+		changed, ok := event.(userListChanged)
+		if !ok {
+			resolved = append(resolved, event)
 			continue
 		}
-		c.userListRefreshPending[girc.ToRFC1459(channelName)] = channelName
-	}
-	if c.userListRefreshScheduled {
-		c.userListRefreshMu.Unlock()
-		return
-	}
-	c.userListRefreshScheduled = true
-	c.userListRefreshMu.Unlock()
-
-	go func() {
-		time.Sleep(userListRefreshDelay)
-
-		c.userListRefreshMu.Lock()
-		channels := make([]string, 0, len(c.userListRefreshPending))
-		for _, channelName := range c.userListRefreshPending {
-			channels = append(channels, channelName)
+		id := girc.ToRFC1459(changed.channel)
+		if !seen[id] {
+			seen[id] = true
+			channelNames = append(channelNames, changed.channel)
 		}
-		c.userListRefreshPending = nil
-		c.userListRefreshScheduled = false
-		c.userListRefreshMu.Unlock()
+	}
 
-		sort.Strings(channels)
-		for _, channelName := range channels {
-			c.refreshUserList(client, channelName)
+	for _, channelName := range channelNames {
+		if snapshot, ok := c.userListSnapshot(channelName); ok {
+			resolved = append(resolved, snapshot)
 		}
-	}()
+	}
+	return resolved
 }
 
-func (c *Client) refreshUserList(client *girc.Client, channelName string) {
+// userListSnapshot builds the displayed user list for channelName from girc's
+// state. It reports false when girc no longer tracks the channel.
+func (c *Client) userListSnapshot(channelName string) (UserListMsg, bool) {
+	client := c.Client
 	channel := client.LookupChannel(channelName)
 	if channel == nil {
-		return
+		return UserListMsg{}, false
 	}
 
 	userList := make([]string, len(channel.UserList))
@@ -181,12 +210,12 @@ func (c *Client) refreshUserList(client *girc.Client, channelName string) {
 	}
 	sortUserList(userList, prefixOrder)
 
-	c.events.push(UserListMsg{
+	return UserListMsg{
 		Server:   c.serverName,
 		Channel:  channelName,
 		Users:    userList,
 		Prefixes: prefixSymbols(prefixOrder),
-	})
+	}, true
 }
 
 func (c *Client) onPrivmsg(client *girc.Client, e girc.Event) {
@@ -330,7 +359,7 @@ func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 		message = fmt.Sprintf("%s (%s:%s) has quit (%s)", userName, host, ident, reason)
 	}
 
-	// send quit message and trigger user list refresh only for channels the user was in
+	// Send the quit message and refresh the user list only in the user's channels.
 	for _, channelName := range channels {
 		c.events.push(BufferNewMessageMsg{
 			Server:    c.serverName,
@@ -341,7 +370,7 @@ func (c *Client) onQuit(client *girc.Client, e girc.Event) {
 			UserEvent: true,
 		})
 	}
-	c.scheduleUserListRefresh(client, channels...)
+	c.deferUserListChanges(channels...)
 }
 
 func (c *Client) onJoin(client *girc.Client, e girc.Event) {

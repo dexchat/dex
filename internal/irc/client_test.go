@@ -2,9 +2,12 @@ package irc
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/lrstanley/girc"
 	"github.com/dexchat/dex/internal/config"
@@ -62,11 +65,12 @@ func TestSortUserListUsesAdvertisedPrefixOrder(t *testing.T) {
 	}
 }
 
-func TestMembershipEventsTriggerUserListRefresh(t *testing.T) {
+func TestMembershipEventsMarkUserListChanged(t *testing.T) {
 	tests := []girc.Event{
-		{Command: girc.JOIN, Source: girc.ParseSource("alice!alice@example.test"), Params: []string{"#go"}},
+		{Command: girc.JOIN, Source: girc.ParseSource("bob!bob@example.test"), Params: []string{"#go"}},
 		{Command: girc.PART, Source: girc.ParseSource("alice!alice@example.test"), Params: []string{"#go"}},
 		{Command: girc.KICK, Source: girc.ParseSource("op!op@example.test"), Params: []string{"#go", "alice"}},
+		{Command: girc.QUIT, Source: girc.ParseSource("alice!alice@example.test"), Params: []string{"bye"}},
 		{Command: girc.NICK, Source: girc.ParseSource("alice!alice@example.test"), Params: []string{"alice_"}},
 		{Command: girc.MODE, Source: girc.ParseSource("op!op@example.test"), Params: []string{"#go", "+o", "alice"}},
 		{Command: girc.RPL_ENDOFNAMES, Params: []string{"tester", "#go", "End of /NAMES list"}},
@@ -80,15 +84,55 @@ func TestMembershipEventsTriggerUserListRefresh(t *testing.T) {
 				Port:     6697,
 				Nickname: "tester",
 			})
+			joinChannel(client, "alice", "#go")
 
-			client.onEvent(client.Client, event)
+			client.RunHandlers(&event)
 
-			client.userListRefreshMu.Lock()
-			defer client.userListRefreshMu.Unlock()
-			if !client.userListRefreshScheduled {
-				t.Fatalf("%s did not schedule a user-list refresh", event.Command)
+			if got := changedUserLists(client); !reflect.DeepEqual(got, []string{"#go"}) {
+				t.Fatalf("%s marked user lists %v, want [#go]", event.Command, got)
 			}
 		})
+	}
+}
+
+func TestMembershipChangeIsQueuedOnlyAfterGircAppliesIt(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	})
+
+	// Without girc's own JOIN handling, the change has not been applied.
+	client.onEvent(client.Client, girc.Event{
+		Command: girc.JOIN,
+		Source:  girc.ParseSource("bob!bob@example.test"),
+		Params:  []string{"#go"},
+	})
+	if got := changedUserLists(client); len(got) != 0 {
+		t.Fatalf("user list for %v queued before girc applied the JOIN", got)
+	}
+
+	client.onEvent(client.Client, girc.Event{Command: girc.UPDATE_STATE})
+	if got := changedUserLists(client); !reflect.DeepEqual(got, []string{"#go"}) {
+		t.Fatalf("user lists queued after UPDATE_STATE = %v, want [#go]", got)
+	}
+}
+
+func TestUserModeDoesNotMarkUserListChanged(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	})
+
+	client.onEvent(client.Client, girc.Event{
+		Command: girc.MODE,
+		Source:  girc.ParseSource("tester!tester@example.test"),
+		Params:  []string{"tester", "+i"},
+	})
+
+	if got := changedUserLists(client); len(got) != 0 {
+		t.Fatalf("user MODE marked user lists %v, want none", got)
 	}
 }
 
@@ -321,45 +365,75 @@ func TestJoinAndPartUserListChangesDoNotSendWhoRefresh(t *testing.T) {
 	}
 }
 
-func TestUserListRefreshRequestsAreCoalescedByChannel(t *testing.T) {
+func TestNextSendsOneUserListPerChannelAfterOtherEvents(t *testing.T) {
 	client := NewClient("testnet", &config.Server{
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
 	})
+	joinChannel(client, "alice", "#brasil")
+	client.RunHandlers(&girc.Event{
+		Command: girc.RPL_NAMREPLY,
+		Params:  []string{"tester", "=", "#brasil", "@op alice"},
+	})
+	joinChannel(client, "bob", "#idlerpg")
+	clearQueue(client)
 
-	client.scheduleUserListRefresh(client.Client, "#brasil")
-	client.scheduleUserListRefresh(client.Client, "#Brasil")
-	client.scheduleUserListRefresh(client.Client, "#idlerpg")
+	message := BufferNewMessageMsg{Server: "testnet", Buffer: "#brasil", Text: "hello"}
+	client.queueUserListChanges("#brasil")
+	client.events.push(message)
+	client.queueUserListChanges("#Brasil", "#idlerpg")
 
-	client.userListRefreshMu.Lock()
-	defer client.userListRefreshMu.Unlock()
-
-	if !client.userListRefreshScheduled {
-		t.Fatal("expected user-list refresh to be scheduled")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	events, err := client.Next(ctx)
+	if err != nil {
+		t.Fatalf("Next() error = %v", err)
 	}
-	if got := len(client.userListRefreshPending); got != 2 {
-		t.Fatalf("expected refreshes to be coalesced per channel, got %d pending channels", got)
+
+	want := []Event{
+		message,
+		UserListMsg{Server: "testnet", Channel: "#brasil", Users: []string{"@op", "alice"}, Prefixes: "@+"},
+		UserListMsg{Server: "testnet", Channel: "#idlerpg", Users: []string{"bob"}, Prefixes: "@+"},
+	}
+	if !reflect.DeepEqual(events, want) {
+		t.Fatalf("Next() = %#v, want %#v", events, want)
 	}
 }
 
-func TestNickUserListChangeSchedulesRefreshDespiteNonChannelParam(t *testing.T) {
+func TestNextKeepsWaitingWhenOnlyUntrackedUserListsChanged(t *testing.T) {
 	client := NewClient("testnet", &config.Server{
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "tester",
 	})
-	client.onUserListChange(client.Client, girc.Event{
+	client.queueUserListChanges("#gone")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	events, err := client.Next(ctx)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("Next() = %#v, %v; want to keep waiting until the deadline", events, err)
+	}
+}
+
+func TestNickMarksOnlyTheUsersChannels(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	})
+	joinChannel(client, "alice", "#go")
+	joinChannel(client, "bob", "#rust")
+
+	client.RunHandlers(&girc.Event{
 		Command: girc.NICK,
 		Source:  girc.ParseSource("alice!alice@example.test"),
 		Params:  []string{"alice_"},
 	})
 
-	client.userListRefreshMu.Lock()
-	defer client.userListRefreshMu.Unlock()
-
-	if !client.userListRefreshScheduled {
-		t.Fatal("expected nick change to schedule a user-list refresh")
+	if got := changedUserLists(client); !reflect.DeepEqual(got, []string{"#go"}) {
+		t.Fatalf("NICK marked user lists %v, want [#go]", got)
 	}
 }
 
@@ -560,6 +634,34 @@ func TestSelfPartIsQueuedAfterEarlierChannelMessages(t *testing.T) {
 	if _, ok := events[1].(ChannelPartedMsg); !ok {
 		t.Fatalf("second event = %#v, want the self-PART", events[1])
 	}
+}
+
+// joinChannel adds nick to channel in girc's state through its real JOIN
+// handling, then clears the events that JOIN queued.
+func joinChannel(client *Client, nick, channel string) {
+	client.RunHandlers(&girc.Event{
+		Command: girc.JOIN,
+		Source:  girc.ParseSource(nick + "!" + nick + "@example.test"),
+		Params:  []string{channel},
+	})
+	clearQueue(client)
+}
+
+func clearQueue(client *Client) {
+	client.events.mu.Lock()
+	defer client.events.mu.Unlock()
+	client.events.events = nil
+}
+
+// changedUserLists returns the channels of queued userListChanged markers.
+func changedUserLists(client *Client) []string {
+	var channels []string
+	for _, event := range queuedEvents(client) {
+		if changed, ok := event.(userListChanged); ok {
+			channels = append(channels, changed.channel)
+		}
+	}
+	return channels
 }
 
 // queuedEvents returns the client's queued events without waiting for the

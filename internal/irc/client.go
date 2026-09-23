@@ -30,11 +30,11 @@ type Client struct {
 	// when the server echoes them back, we skip/ignore the echo to avoid duplicates.
 	pendingMessages sync.Map // Key format: "server:channel:message"
 
-	// userListRefreshPending tracks pending user list channel refreshes and sends
-	// them in one short batch instead of updating the UI for every IRC event
-	userListRefreshMu        sync.Mutex
-	userListRefreshPending   map[string]string
-	userListRefreshScheduled bool
+	// deferredUserLists holds channels whose user list changed in an event
+	// girc has not applied yet. They are queued once girc reports
+	// UPDATE_STATE, which it sends after applying the change.
+	deferredUserListsMu sync.Mutex
+	deferredUserLists   []string
 }
 
 func NewClient(serverName string, config *config.Server) *Client {
@@ -92,9 +92,19 @@ func tlsConfig(server *config.Server) *tls.Config {
 }
 
 // Next blocks until this server has events for the UI and returns every
-// event queued so far, in order. Bursts are collected into one batch.
+// event queued so far, in order. Bursts are collected into one batch, and
+// user lists changed by the batch are sent after its other events.
 func (c *Client) Next(ctx context.Context) ([]Event, error) {
-	return c.events.next(ctx, eventBatchWindow)
+	for {
+		events, err := c.events.next(ctx, eventBatchWindow)
+		if err != nil {
+			return nil, err
+		}
+		// A batch can hold only markers for channels girc no longer tracks.
+		if events = c.resolveUserListChanges(events); len(events) > 0 {
+			return events, nil
+		}
+	}
 }
 
 func (c *Client) addHandlers() {
