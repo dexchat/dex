@@ -61,8 +61,8 @@ func (m *Model) applyPendingIRCEvents(server string) tea.Cmd {
 func (m *Model) applyIRCEvent(event irc.Event) tea.Cmd {
 	switch event := event.(type) {
 	case irc.ChannelJoinedMsg:
-		_, cmd := m.getOrCreateBuffer(event.Server, event.Channel)
-		return cmd
+		m.getOrCreateBuffer(event.Server, event.Channel)
+		return nil
 
 	case irc.ChannelPartedMsg:
 		return m.removeChannelBuffer(event.Server, event.Channel)
@@ -71,15 +71,14 @@ func (m *Model) applyIRCEvent(event irc.Event) tea.Cmd {
 		return m.applyUserList(event)
 
 	case irc.BufferNewMessageMsg:
-		cmds := []tea.Cmd{m.processIncomingMessage(event)}
+		cmd := m.processIncomingMessage(event)
 		if event.Type == irc.MessageTypeConnected && event.Buffer == "" {
-			cmds = append(cmds, m.restoreDirectMessages(event.Server)...)
+			m.restoreDirectMessages(event.Server)
 		}
-		cmds = append(cmds, m.scheduleFlush())
-		return tea.Batch(cmds...)
+		return tea.Batch(cmd, m.scheduleFlush())
 
 	case irc.ChannelTopicMsg:
-		buf, cmd := m.getOrCreateBuffer(event.Server, event.Channel)
+		buf := m.getOrCreateBuffer(event.Server, event.Channel)
 		if buf != nil {
 			buf.Chat.SetTopic(event.Topic)
 			// In case the channel topic is more than one line, resize only the
@@ -88,7 +87,7 @@ func (m *Model) applyIRCEvent(event irc.Event) tea.Cmd {
 				buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 			}
 		}
-		return cmd
+		return nil
 
 	case irc.NickUpdateMsg:
 		for _, buf := range m.buffers {

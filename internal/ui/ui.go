@@ -490,15 +490,17 @@ func (m *Model) SetManager(manager *irc.ClientManager) {
 	m.ircClientManager = manager
 }
 
-// getOrCreateBuffer returns the buffer for the given server/channel, creates if needed
-func (m *Model) getOrCreateBuffer(server, channel string) (*Buffer, tea.Cmd) {
+// getOrCreateBuffer returns the buffer for the given server/channel, creates if needed.
+// A new buffer is added to the channels sidebar immediately, because activity
+// and notice updates for a buffer without a sidebar entry are dropped.
+func (m *Model) getOrCreateBuffer(server, channel string) *Buffer {
 	key := makeBufferKey(server, channel)
 	if buf, ok := m.buffers[key]; ok {
-		return buf, nil
+		return buf
 	}
 
 	if channel == "" {
-		return nil, nil
+		return nil
 	}
 
 	log := history.NewLog()
@@ -529,28 +531,19 @@ func (m *Model) getOrCreateBuffer(server, channel string) (*Buffer, tea.Cmd) {
 	}
 
 	m.buffers[key] = buf
-
-	newBufferCmd := func() tea.Msg {
-		return channels.NewBufferMsg{
-			Server: server,
-			Buffer: channel,
-		}
-	}
-	return buf, newBufferCmd
+	m.channels, _ = m.channels.Update(channels.NewBufferMsg{
+		Server: server,
+		Buffer: channel,
+	})
+	return buf
 }
 
-func (m *Model) restoreDirectMessages(server string) []tea.Cmd {
-	var cmds []tea.Cmd
+func (m *Model) restoreDirectMessages(server string) {
 	for _, directMessage := range m.directMessages.Users {
-		if !strings.EqualFold(directMessage.Server, server) {
-			continue
-		}
-		_, cmd := m.getOrCreateBuffer(directMessage.Server, directMessage.User)
-		if cmd != nil {
-			cmds = append(cmds, cmd)
+		if strings.EqualFold(directMessage.Server, server) {
+			m.getOrCreateBuffer(directMessage.Server, directMessage.User)
 		}
 	}
-	return cmds
 }
 
 func (m *Model) removeChannelBuffer(server, channel string) tea.Cmd {

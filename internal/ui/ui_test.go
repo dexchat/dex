@@ -123,6 +123,57 @@ func TestSelfPartRemovesActiveChannelAndSelectsServer(t *testing.T) {
 	}
 }
 
+// sidebarLine returns the rendered sidebar row for name.
+func sidebarLine(m *Model, name string) string {
+	for _, line := range strings.Split(plainText(m.channels.View(channelsPanelMaxWidth, 20)), "\n") {
+		if strings.Contains(line, name) {
+			return strings.TrimSpace(line)
+		}
+	}
+	return ""
+}
+
+func TestUnreadBadgeForChannelJoinedInSameBatch(t *testing.T) {
+	m := newActivityTestModel()
+
+	// A bouncer joins its channels and replays their buffers in one burst,
+	// so the JOIN and the first unread message arrive in the same batch.
+	_ = updateIRC(m, "libera",
+		irc.ChannelJoinedMsg{Server: "libera", Channel: "#ai"},
+		irc.BufferNewMessageMsg{
+			Server:    "libera",
+			Buffer:    "#ai",
+			Timestamp: time.Now(),
+			From:      "alice",
+			Text:      "unread before close",
+		},
+	)
+
+	if got := m.buffers[makeBufferKey("libera", "#ai")].UnreadCount; got != 1 {
+		t.Fatalf("UnreadCount = %d, want 1", got)
+	}
+	if line := sidebarLine(m, "#ai"); !strings.HasSuffix(strings.TrimRight(line, "│ "), "1") {
+		t.Fatalf("sidebar row = %q, want an unread badge of 1", line)
+	}
+}
+
+func TestUnreadBadgeForNewDirectMessage(t *testing.T) {
+	m := newActivityTestModel()
+
+	_ = updateIRC(m, "libera", irc.BufferNewMessageMsg{
+		Server:        "libera",
+		Buffer:        "alice",
+		DirectMessage: true,
+		Timestamp:     time.Now(),
+		From:          "alice",
+		Text:          "hi",
+	})
+
+	if line := sidebarLine(m, "alice"); !strings.HasSuffix(strings.TrimRight(line, "│ "), "1") {
+		t.Fatalf("sidebar row = %q, want an unread badge of 1", line)
+	}
+}
+
 func TestUserListAfterSelfPartDoesNotRecreateChannel(t *testing.T) {
 	m := newActivityTestModel()
 	channelKey := makeBufferKey("libera", "#go")
@@ -241,7 +292,7 @@ func TestPartIsAliasForLeave(t *testing.T) {
 
 func TestCloseRemovesPrivateBufferAndSelectsServer(t *testing.T) {
 	m := newActivityTestModel()
-	_, _ = m.getOrCreateBuffer("libera", "alice")
+	m.getOrCreateBuffer("libera", "alice")
 	m.directMessages.Add("libera", "alice")
 	m.activeBuffer = makeBufferKey("libera", "alice")
 
@@ -262,7 +313,7 @@ func TestCloseRemovesPrivateBufferAndSelectsServer(t *testing.T) {
 
 func TestCloseResizesServerBufferAfterStaleWindowSize(t *testing.T) {
 	m := newActivityTestModel()
-	_, _ = m.getOrCreateBuffer("libera", "alice")
+	m.getOrCreateBuffer("libera", "alice")
 	m.directMessages.Add("libera", "alice")
 
 	// Resizing while the DM is active only resizes the DM's chat (per
@@ -299,8 +350,7 @@ func TestCloseResizesServerBufferAfterStaleWindowSize(t *testing.T) {
 func TestChatCloseIsHandledBeforeBufferSwitch(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	m := newActivityTestModel()
-	private, create := m.getOrCreateBuffer("libera", "Alice")
-	m.Update(create())
+	private := m.getOrCreateBuffer("libera", "Alice")
 	m.activeBuffer = private.Key
 	_, _ = submitChat(m, "/close")
 	if m.buffers[private.Key] != nil {
@@ -315,8 +365,7 @@ func TestChatCloseIsHandledBeforeBufferSwitch(t *testing.T) {
 func TestChannelCloseCannotCloseAnotherConversation(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	m := newActivityTestModel()
-	private, create := m.getOrCreateBuffer("libera", "Alice")
-	m.Update(create())
+	private := m.getOrCreateBuffer("libera", "Alice")
 	m.activeBuffer = makeBufferKey("libera", "#go")
 	_, cmd := submitChat(m, "/close")
 	m.activeBuffer = private.Key
@@ -332,7 +381,7 @@ func TestCloseQueuesDirtyPrivateHistoryForPersistence(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	m := newActivityTestModel()
 	key := makeBufferKey("libera", "alice")
-	_, _ = m.getOrCreateBuffer("libera", "alice")
+	m.getOrCreateBuffer("libera", "alice")
 	m.activeBuffer = key
 	m.processIncomingMessage(irc.BufferNewMessageMsg{
 		Server:    "libera",
@@ -384,7 +433,7 @@ func TestReopenedBufferKeepsDetachedHistoryWhilePersistenceRuns(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	m := newActivityTestModel()
 	key := makeBufferKey("libera", "alice")
-	buffer, _ := m.getOrCreateBuffer("libera", "alice")
+	buffer := m.getOrCreateBuffer("libera", "alice")
 	m.activeBuffer = key
 	m.processIncomingMessage(irc.BufferNewMessageMsg{
 		Server:    "libera",
@@ -398,7 +447,7 @@ func TestReopenedBufferKeepsDetachedHistoryWhilePersistenceRuns(t *testing.T) {
 	if firstFlush == nil {
 		t.Fatal("first close should start persistence")
 	}
-	reopened, _ := m.getOrCreateBuffer("libera", "alice")
+	reopened := m.getOrCreateBuffer("libera", "alice")
 	if reopened.History != buffer.History {
 		t.Fatal("reopened buffer should reuse history still being persisted")
 	}
@@ -1136,12 +1185,12 @@ func TestDiscoveredChannelHistoryLoadsOnlyWhenRequested(t *testing.T) {
 	writeTestHistory(t, "libera", "#go", "stored message")
 
 	m := New(&config.Config{Servers: []*config.Server{{Name: "libera", Nickname: "dexuser"}}})
-	buf, createCmd := m.getOrCreateBuffer("libera", "#go")
+	buf := m.getOrCreateBuffer("libera", "#go")
 	if got := len(buf.History.Entries()); got != 0 {
 		t.Fatalf("new buffer loaded %d history entries synchronously, want 0", got)
 	}
-	if createCmd == nil {
-		t.Fatal("expected a sidebar creation command")
+	if sidebarLine(m, "#go") == "" {
+		t.Fatal("a new buffer should be in the sidebar immediately")
 	}
 	if buf.historyState == historyLoading {
 		t.Fatal("discovered channel should not start disk history loading at startup")
@@ -1593,7 +1642,7 @@ func TestProcessIncomingLiveDirectMessageReturnsBell(t *testing.T) {
 		return now
 	}
 
-	_, _ = m.getOrCreateBuffer("libera", "alice")
+	m.getOrCreateBuffer("libera", "alice")
 	cmd := m.processIncomingMessage(irc.BufferNewMessageMsg{
 		Server:        "libera",
 		Buffer:        "alice",

@@ -53,7 +53,10 @@ latest read marker, cached channel membership, and lazy-history flags.
 - Build keys with `makeBufferKey`; IRC server and target names are
   case-insensitive.
 - Use `getOrCreateBuffer` so creation stays synchronized with the channels
-  sidebar and lazy-history setup.
+  sidebar and lazy-history setup. It adds the sidebar entry synchronously:
+  activity, notice, and pulse updates for a buffer without an entry are
+  dropped, and a bouncer delivers a channel's JOIN and its unread playback in
+  the same batch.
 - A server buffer has an empty `Buffer` field. `Buffer.isValid` is true only for
   sendable channel or private-message targets.
 - Keep inactive channel membership as data. Render the user list when the

@@ -45,9 +45,9 @@ func (m *Model) flushAllChats() {
 // processIncomingMessage handles a single incoming IRC message:
 // deduplicates, inserts into history, and queues for rendering
 func (m *Model) processIncomingMessage(msg irc.BufferNewMessageMsg) tea.Cmd {
-	buf, createCmd := m.getOrCreateBuffer(msg.Server, msg.Buffer)
+	buf := m.getOrCreateBuffer(msg.Server, msg.Buffer)
 	if buf == nil {
-		return createCmd
+		return nil
 	}
 	if msg.DirectMessage && m.directMessages.Add(msg.Server, msg.Buffer) {
 		m.directMessagesDirty = true
@@ -71,12 +71,10 @@ func (m *Model) processIncomingMessage(msg irc.BufferNewMessageMsg) tea.Cmd {
 	}
 
 	if buf.History.IsDuplicate(logEntry) {
-		return createCmd
+		return nil
 	}
 
 	buf.History.Insert(logEntry)
-
-	var notificationCmd tea.Cmd
 
 	if !msg.OwnEcho {
 		buf.Chat.QueueMessage(chat.Message{
@@ -89,13 +87,14 @@ func (m *Model) processIncomingMessage(msg irc.BufferNewMessageMsg) tea.Cmd {
 		notificationNoticeCmd := m.showNotificationNotice(buf, msg)
 		attentionPulseCmd := m.startAttentionPulse(buf, msg)
 
+		var notificationCmd tea.Cmd
 		if m.shouldSoundNotification(buf, msg) {
 			notificationCmd = m.soundNotificationCmd()
 		}
-		return tea.Batch(createCmd, notificationCmd, notificationNoticeCmd, attentionPulseCmd)
+		return tea.Batch(notificationCmd, notificationNoticeCmd, attentionPulseCmd)
 	}
 
-	return tea.Batch(createCmd, notificationCmd)
+	return nil
 }
 
 func (m *Model) updateActivityForMessage(buf *Buffer, msg irc.BufferNewMessageMsg) {

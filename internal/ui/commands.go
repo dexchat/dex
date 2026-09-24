@@ -105,12 +105,9 @@ func (m *Model) handleMsgCommand(buffer *Buffer, args []string) tea.Cmd {
 
 	target := args[0]
 	message := strings.Join(args[1:], " ")
-	privateBuffer, createCmd := m.getOrCreateBuffer(buffer.Server, target)
+	privateBuffer := m.getOrCreateBuffer(buffer.Server, target)
 	if privateBuffer == nil {
 		return nil
-	}
-	if createCmd != nil {
-		m.channels, _ = m.channels.Update(createCmd())
 	}
 
 	// A /msg starts a private conversation immediately. Unlike /join, no
