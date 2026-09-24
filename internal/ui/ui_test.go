@@ -174,6 +174,55 @@ func TestUnreadBadgeForNewDirectMessage(t *testing.T) {
 	}
 }
 
+func directMessageFrom(from, text string) irc.BufferNewMessageMsg {
+	return irc.BufferNewMessageMsg{
+		Server:        "libera",
+		Buffer:        from,
+		DirectMessage: true,
+		Timestamp:     time.Now(),
+		From:          from,
+		Text:          text,
+	}
+}
+
+func TestDirectMessageIsHighlightedLikeMention(t *testing.T) {
+	m := newActivityTestModel()
+
+	_ = updateIRC(m, "libera", directMessageFrom("alice", "are you there?"))
+
+	buf := m.buffers[makeBufferKey("libera", "alice")]
+	if buf.MentionCount != 1 || buf.UnreadCount != 1 {
+		t.Fatalf("MentionCount = %d, UnreadCount = %d, want 1 and 1", buf.MentionCount, buf.UnreadCount)
+	}
+	if line := sidebarLine(m, "alice"); !strings.HasSuffix(strings.TrimRight(line, "│ "), "@1") {
+		t.Fatalf("sidebar row = %q, want a mention badge of @1", line)
+	}
+}
+
+func TestIgnoredDirectMessageStaysPlainUnread(t *testing.T) {
+	m := newActivityTestModel()
+	m.config.Servers[0].IgnoreDirectMessagesFrom = []string{"alertbot"}
+
+	_ = updateIRC(m, "libera", directMessageFrom("AlertBot", "disk is 91% full"))
+
+	buf := m.buffers[makeBufferKey("libera", "AlertBot")]
+	if buf.MentionCount != 0 || buf.UnreadCount != 1 {
+		t.Fatalf("MentionCount = %d, UnreadCount = %d, want 0 and 1", buf.MentionCount, buf.UnreadCount)
+	}
+}
+
+func TestOwnDirectMessageFromAnotherClientIsNotHighlighted(t *testing.T) {
+	m := newActivityTestModel()
+	msg := directMessageFrom("dexuser", "sent from my phone")
+	msg.Buffer = "alice"
+
+	_ = updateIRC(m, "libera", msg)
+
+	if got := m.buffers[makeBufferKey("libera", "alice")].MentionCount; got != 0 {
+		t.Fatalf("MentionCount = %d, want 0 for our own message", got)
+	}
+}
+
 func TestUserListAfterSelfPartDoesNotRecreateChannel(t *testing.T) {
 	m := newActivityTestModel()
 	channelKey := makeBufferKey("libera", "#go")

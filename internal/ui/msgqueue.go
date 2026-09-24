@@ -115,10 +115,19 @@ func (m *Model) updateActivityForMessage(buf *Buffer, msg irc.BufferNewMessageMs
 	if m.config.NotifiesChannel(buf.Server, msg.Buffer) {
 		buf.NotificationCount++
 	}
-	if messageMentionsNick(msg.Text, buf.Chat.Nickname()) {
+	if messageMentionsNick(msg.Text, buf.Chat.Nickname()) || m.highlightsDirectMessage(buf, msg) {
 		buf.MentionCount++
 	}
 	m.updateChannelActivity(buf)
+}
+
+// highlightsDirectMessage reports whether a direct message is highlighted like
+// a mention. Messages from ignored senders and our own messages sent from
+// another client stay plain unread activity.
+func (m *Model) highlightsDirectMessage(buf *Buffer, msg irc.BufferNewMessageMsg) bool {
+	return msg.DirectMessage &&
+		!strings.EqualFold(msg.From, buf.Chat.Nickname()) &&
+		!m.config.IgnoresDirectMessageFrom(buf.Server, msg.From)
 }
 
 func (m *Model) clearBufferActivity(key BufferKey) {
