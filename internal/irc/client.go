@@ -3,11 +3,13 @@ package irc
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
-	"github.com/lrstanley/girc"
 	"github.com/dexchat/dex/internal/config"
+	"github.com/lrstanley/girc"
 )
 
 // IsChannel reports whether name is an IRC channel name (as opposed to a
@@ -83,6 +85,7 @@ func NewClient(serverName string, config *config.Server) *Client {
 		serverName: serverName,
 		channels:   config.Channels,
 	}
+	client.Config.RecoverFunc = c.onHandlerPanic
 	c.addHandlers()
 
 	return c
@@ -116,4 +119,18 @@ func (c *Client) Next(ctx context.Context) ([]Event, error) {
 
 func (c *Client) addHandlers() {
 	c.Handlers.Add(girc.ALL_EVENTS, c.onEvent)
+}
+
+// onHandlerPanic keeps a bug in an IRC handler from crashing dex. girc
+// recovers the panic and the error is shown in the server buffer, where it
+// can be noticed and reported.
+func (c *Client) onHandlerPanic(_ *girc.Client, err *girc.HandlerError) {
+	c.events.push(BufferNewMessageMsg{
+		Server:    c.serverName,
+		Buffer:    "",
+		Timestamp: time.Now(),
+		From:      "--",
+		Text:      fmt.Sprintf("irc: internal error while handling %s: %v", err.Event.Command, err.Panic),
+		Type:      MessageTypeServer,
+	})
 }

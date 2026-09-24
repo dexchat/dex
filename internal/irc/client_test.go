@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lrstanley/girc"
 	"github.com/dexchat/dex/internal/config"
+	"github.com/lrstanley/girc"
 )
 
 func TestClientRegistersOnlyOneSynchronousHandler(t *testing.T) {
@@ -39,6 +39,27 @@ func TestClientRegistersOnlyOneSynchronousHandler(t *testing.T) {
 	ids := externalHandlerIDs(t, client, girc.ALL_EVENTS)
 	if len(ids) != 1 || strings.HasSuffix(ids[0], ":bg") {
 		t.Fatalf("ALL_EVENTS handlers = %v, want one synchronous handler", ids)
+	}
+}
+
+func TestHandlerPanicIsReportedInsteadOfCrashing(t *testing.T) {
+	client := NewClient("libera", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	})
+	client.Handlers.Add("DEXTEST", func(*girc.Client, girc.Event) {
+		panic("boom")
+	})
+
+	client.RunHandlers(&girc.Event{Command: "DEXTEST"})
+
+	messages := queuedMessages(client)
+	if len(messages) != 1 {
+		t.Fatalf("queued %d messages after a handler panic, want 1", len(messages))
+	}
+	if msg := messages[0]; msg.Buffer != "" || msg.Text != "irc: internal error while handling DEXTEST: boom" {
+		t.Fatalf("panic report = %+v, want it in the server buffer", msg)
 	}
 }
 
