@@ -33,10 +33,9 @@ type Client struct {
 	// pulls from it with Next, so handlers never wait on Bubble Tea.
 	events eventQueue
 
-	// pendingMessages tracks messages sent from dexchat so we can ignore the echo returned by
-	// the server. Since we display the message sent instantly in the UI (before sending to the server),
-	// when the server echoes them back, we skip/ignore the echo to avoid duplicates.
-	pendingMessages sync.Map // Key format: "server:channel:message"
+	// sent tracks messages sent from dex. The UI shows them when they are
+	// sent, so their echoes are stored in history but not shown again.
+	sent sentMessages
 
 	// deferredUserLists holds channels whose user list changed in an event
 	// girc has not applied yet. They are queued once girc reports

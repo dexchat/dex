@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
+	"net"
 	"reflect"
 	"strings"
 	"testing"
@@ -461,55 +463,90 @@ func TestPendingMessageKeyNormalizesServerTargetAndMessage(t *testing.T) {
 	}
 }
 
-func TestPrivmsgFromSelfConsumesPendingMessage(t *testing.T) {
+func TestOwnMessagesFromTheServerArriveAsEchoes(t *testing.T) {
 	client := NewClient("libera", &config.Server{
 		Address:  "irc.example.test",
 		Port:     6697,
 		Nickname: "johnbogle",
 	})
-	client.pendingMessages.Store(pendingMessageKey("libera", "#brasil", "hello from dex"), struct{}{})
+	client.trackSent("#brasil", "hello from dex", true)
+	client.trackSent("alice", "hello alice", true)
 
-	client.onPrivmsg(client.Client, girc.Event{
-		Command: girc.PRIVMSG,
-		Source:  girc.ParseSource("johnbogle!jdex@example.test"),
-		Params:  []string{"#Brasil", "hello from dex"},
-	})
-
-	if _, pending := client.pendingMessages.Load(pendingMessageKey("libera", "#brasil", "hello from dex")); pending {
-		t.Fatal("expected self PRIVMSG to consume the pending message")
+	// girc marks messages from our nickname as echoes in its read loop, so
+	// feed them through a real connection instead of RunHandlers.
+	server := mockServer(t, client)
+	for _, line := range []string{
+		":johnbogle!jdex@example.test PRIVMSG #Brasil :hello from dex",
+		":johnbogle!jdex@example.test PRIVMSG alice :hello alice",
+		":johnbogle!jdex@example.test PRIVMSG #brasil :sent from another client",
+	} {
+		if _, err := io.WriteString(server, line+"\r\n"); err != nil {
+			t.Fatalf("write %q: %v", line, err)
+		}
 	}
+	waitFor(t, "three messages", func() bool { return len(queuedMessages(client)) == 3 })
 
-	if len(queuedMessages(client)) != 1 {
-		t.Fatalf("expected one queued message, got %d", len(queuedMessages(client)))
+	messages := queuedMessages(client)
+	if msg := messages[0]; msg.Buffer != "#Brasil" || !msg.OwnEcho {
+		t.Fatalf("channel echo = %+v, want OwnEcho in #Brasil", msg)
 	}
-	if !queuedMessages(client)[0].OwnEcho {
-		t.Fatal("expected self PRIVMSG matching a pending send to be marked OwnEcho")
+	if msg := messages[1]; msg.Buffer != "alice" || !msg.DirectMessage || !msg.OwnEcho {
+		t.Fatalf("direct echo = %+v, want OwnEcho in the recipient's buffer", msg)
+	}
+	if msg := messages[2]; msg.OwnEcho {
+		t.Fatalf("message from another client = %+v, want it shown", msg)
 	}
 }
 
-func TestDirectPrivmsgFromSelfUsesRecipientBuffer(t *testing.T) {
+func TestRepeatedSendsAreEachRecognized(t *testing.T) {
 	client := NewClient("libera", &config.Server{
 		Address:  "irc.example.test",
 		Port:     6697,
-		Nickname: "johnbogle",
+		Nickname: "tester",
 	})
-	client.pendingMessages.Store(pendingMessageKey("libera", "alice", "hello alice"), struct{}{})
+	client.trackSent("#go", "ok", true)
+	client.trackSent("#go", "ok", true)
 
-	client.onPrivmsg(client.Client, girc.Event{
-		Command: girc.PRIVMSG,
-		Source:  girc.ParseSource("johnbogle!jdex@example.test"),
-		Params:  []string{"alice", "hello alice"},
+	for range 3 {
+		client.onEvent(client.Client, girc.Event{
+			Command: girc.PRIVMSG,
+			Source:  girc.ParseSource("tester!tester@example.test"),
+			Params:  []string{"#go", "ok"},
+			Echo:    true,
+		})
+	}
+
+	var ownEchoes []bool
+	for _, msg := range queuedMessages(client) {
+		ownEchoes = append(ownEchoes, msg.OwnEcho)
+	}
+	if want := []bool{true, true, false}; !reflect.DeepEqual(ownEchoes, want) {
+		t.Fatalf("OwnEcho for three echoes of two sends = %v, want %v", ownEchoes, want)
+	}
+}
+
+func TestSendWithoutEchoMessageQueuesLocalEcho(t *testing.T) {
+	client := NewClient("libera", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
 	})
 
-	if len(queuedMessages(client)) != 1 {
-		t.Fatalf("expected one queued message, got %d", len(queuedMessages(client)))
+	client.trackSent("#go", "hi", false)
+	client.trackSent("alice", "oi", false)
+
+	messages := queuedMessages(client)
+	if len(messages) != 2 {
+		t.Fatalf("queued %d local echoes, want 2", len(messages))
 	}
-	msg := queuedMessages(client)[0]
-	if msg.Buffer != "alice" {
-		t.Fatalf("direct self-echo buffer = %q, want alice", msg.Buffer)
+	if msg := messages[0]; msg.Buffer != "#go" || msg.DirectMessage || !msg.OwnEcho || msg.From != "tester" || msg.Text != "hi" {
+		t.Fatalf("channel local echo = %+v", msg)
 	}
-	if !msg.DirectMessage || !msg.OwnEcho {
-		t.Fatalf("direct self-echo = %+v, want DirectMessage and OwnEcho", msg)
+	if msg := messages[1]; msg.Buffer != "alice" || !msg.DirectMessage || !msg.OwnEcho {
+		t.Fatalf("direct local echo = %+v", msg)
+	}
+	if client.sent.consume(pendingMessageKey("libera", "#go", "hi"), time.Now()) {
+		t.Fatal("a send without echo-message should not wait for an echo")
 	}
 }
 
@@ -588,7 +625,7 @@ func TestEchoMessageIsMarkedAsOwnEcho(t *testing.T) {
 		Port:     6697,
 		Nickname: "tester",
 	})
-	client.pendingMessages.Store(pendingMessageKey("libera", "#go", "hello"), struct{}{})
+	client.trackSent("#go", "hello", true)
 
 	client.onEvent(client.Client, girc.Event{
 		Command: girc.PRIVMSG,
@@ -662,6 +699,25 @@ func changedUserLists(client *Client) []string {
 		}
 	}
 	return channels
+}
+
+// mockServer connects client to an in-memory server and returns the server
+// side. Everything the client sends is discarded. The connection is closed
+// when the test ends.
+func mockServer(t *testing.T, client *Client) net.Conn {
+	t.Helper()
+	server, conn := net.Pipe()
+	done := make(chan struct{})
+	go func() {
+		_ = client.MockConnect(conn)
+		close(done)
+	}()
+	go func() { _, _ = io.Copy(io.Discard, server) }()
+	t.Cleanup(func() {
+		server.Close()
+		<-done
+	})
+	return server
 }
 
 // queuedEvents returns the client's queued events without waiting for the

@@ -219,7 +219,7 @@ func (c *Client) userListSnapshot(channelName string) (UserListMsg, bool) {
 	}, true
 }
 
-func (c *Client) onPrivmsg(client *girc.Client, e girc.Event) {
+func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
 	if len(e.Params) == 0 {
 		return
 	}
@@ -229,10 +229,10 @@ func (c *Client) onPrivmsg(client *girc.Client, e girc.Event) {
 
 	target := e.Params[0]
 	directMessage := !girc.IsValidChannel(target)
-	isSelf := e.Source.ID() == client.GetID()
 
-	// For PMs, use sender nick as the buffer identifier
-	if directMessage && !isSelf {
+	// For PMs, use sender nick as the buffer identifier. Messages from us
+	// arrive as echo events and are handled by onEchoMessage instead.
+	if directMessage {
 		target = e.Source.Name
 	}
 
@@ -240,13 +240,6 @@ func (c *Client) onPrivmsg(client *girc.Client, e girc.Event) {
 	ts := e.Timestamp
 	if ts.IsZero() {
 		ts = time.Now()
-	}
-
-	ownEcho := false
-	if isSelf {
-		if _, pending := c.pendingMessages.LoadAndDelete(pendingMessageKey(c.serverName, target, e.Last())); pending {
-			ownEcho = true
-		}
 	}
 
 	msgID, _ := e.Tags.Get("msgid")
@@ -258,7 +251,6 @@ func (c *Client) onPrivmsg(client *girc.Client, e girc.Event) {
 		From:          e.Source.Name,
 		Text:          e.Last(),
 		MsgID:         msgID,
-		OwnEcho:       ownEcho,
 	})
 }
 
@@ -638,8 +630,10 @@ func (c *Client) onListReply(_ *girc.Client, e girc.Event) {
 	})
 }
 
-// onEchoMessage handles echo-message capability (user's own messages echoed back by the server)
-func (c *Client) onEchoMessage(client *girc.Client, e girc.Event) {
+// onEchoMessage handles our own PRIVMSG and NOTICE. girc marks every message
+// from our nickname as an echo, whether it is an echo-message reply, bouncer
+// playback, or a message sent from another client on the same account.
+func (c *Client) onEchoMessage(_ *girc.Client, e girc.Event) {
 	if e.Command != girc.PRIVMSG && e.Command != girc.NOTICE {
 		return
 	}
@@ -655,20 +649,10 @@ func (c *Client) onEchoMessage(client *girc.Client, e girc.Event) {
 		ts = time.Now()
 	}
 
-	// This filter aims to support displaying the user's own messages in the
-	// ZNC playback history correctly and support multi-client connections,
-	// e.g., sending a message in client X should also display in client Y
-	// if connected to both.
-	// Check if this is an echo of a message we sent from this client
-	// If so, mark it so the UI skips display but still stores it in history
-	ownEcho := false
-	if e.Source.ID() == client.GetID() {
-		key := pendingMessageKey(c.serverName, target, e.Last())
-		if _, pending := c.pendingMessages.LoadAndDelete(key); pending {
-			ownEcho = true
-		}
-		// Not in pending = sent from another client, display it
-	}
+	// A message sent from this client was shown when it was sent, so its echo
+	// is only stored. Anything else, such as playback or a message sent from
+	// another client, is shown.
+	ownEcho := c.sent.consume(pendingMessageKey(c.serverName, target, e.Last()), time.Now())
 
 	msgID, _ := e.Tags.Get("msgid")
 	c.events.push(BufferNewMessageMsg{

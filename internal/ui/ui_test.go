@@ -884,6 +884,32 @@ func TestActiveBufferMessagesAndOwnEchoesDoNotIncrementActivity(t *testing.T) {
 	}
 }
 
+func TestOwnEchoIsStoredWithoutBeingShownAgain(t *testing.T) {
+	m := newActivityTestModel()
+	m.activeBuffer = makeBufferKey("libera", "#go")
+	channel := m.getActiveBuffer()
+	channel.Chat.SetSize(80, 10)
+
+	// The UI shows a sent message immediately, then receives its echo.
+	channel.Chat.AddMessage(chat.Message{Timestamp: time.Now(), Username: "dexuser", Text: "sent once"})
+	_ = updateIRC(m, "libera", irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#go",
+		Timestamp: time.Now(),
+		From:      "dexuser",
+		Text:      "sent once",
+		OwnEcho:   true,
+	})
+	channel.Chat.FlushQueue()
+
+	if got := len(channel.History.Entries()); got != 1 {
+		t.Fatalf("history has %d entries, want the echo stored once", got)
+	}
+	if got := strings.Count(plainText(channel.Chat.View()), "sent once"); got != 1 {
+		t.Fatalf("message shown %d times, want once", got)
+	}
+}
+
 func TestInactiveUserListRendersWhenBufferIsSelected(t *testing.T) {
 	m := newActivityTestModel()
 	_ = updateIRC(m, "libera", irc.UserListMsg{

@@ -62,12 +62,7 @@ func (m *ClientManager) Send(server, channel, message string) error {
 		return fmt.Errorf("irc: not in channel %s", channel)
 	}
 
-	// TrimSpace normalizes whitespace because IRC servers may strip or add
-	// leading/trailing spaces, leading to the message being sent twice as
-	// the echo will differ from what we sent
-	key := pendingMessageKey(server, channel, message)
-	client.pendingMessages.Store(key, struct{}{})
-
+	client.trackSent(channel, message, client.HasCapability("echo-message"))
 	client.Cmd.Message(channel, message)
 	return nil
 }
@@ -146,10 +141,6 @@ func (m *ClientManager) connectedClient(server string) (*Client, error) {
 		return nil, fmt.Errorf("irc: not connected to %s", server)
 	}
 	return client, nil
-}
-
-func pendingMessageKey(server, target, message string) string {
-	return strings.ToLower(server) + ":" + strings.ToLower(target) + ":" + strings.TrimSpace(message)
 }
 
 func (m *ClientManager) DisconnectAll() {

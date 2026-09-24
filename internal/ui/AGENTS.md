@@ -150,7 +150,10 @@ Chat rendering is incremental.
 - History loading is intentionally lazy. Do not start one disk-loading job per
   discovered channel during connection playback.
 - Do not insert an outgoing message into history before the IRC echo arrives;
-  the echo supplies the authoritative server timestamp and message ID.
+  the echo supplies the authoritative server timestamp and message ID. When
+  the server does not support echo-message, the IRC client queues a local
+  `OwnEcho` event instead, so the UI still stores outgoing messages only from
+  echoes.
 - Deduplication, latest-message tracking, unread counts, mentions, and
   notifications are separate responsibilities. Test each affected behavior
   when changing the incoming-message path.
