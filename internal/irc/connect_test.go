@@ -183,7 +183,7 @@ func TestManagerCommandsReportErrorsInsteadOfQueueingThem(t *testing.T) {
 		Port:     6697,
 		Nickname: "tester",
 	}})
-	defer manager.DisconnectAll()
+	defer manager.DisconnectAll("")
 
 	commands := map[string]func(server string) error{
 		"Send": func(server string) error { return manager.Send(server, "#go", "hello") },

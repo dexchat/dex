@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/lrstanley/girc"
 	"github.com/dexchat/dex/internal/config"
@@ -18,7 +20,15 @@ type ClientManager struct {
 	// ctx is canceled by DisconnectAll to release pending Next calls.
 	ctx    context.Context
 	cancel context.CancelFunc
+
+	// loops tracks the connection loops started by ConnectAll, so
+	// DisconnectAll can wait for QUIT to reach the servers.
+	loops sync.WaitGroup
 }
+
+// quitTimeout limits how long DisconnectAll waits for connections to end
+// after sending QUIT.
+const quitTimeout = 2 * time.Second
 
 func NewClientManager(servers []*config.Server) *ClientManager {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -47,7 +57,9 @@ func (m *ClientManager) Next(server string) ([]Event, error) {
 // failures and stop when DisconnectAll is called.
 func (m *ClientManager) ConnectAll() {
 	for _, client := range m.clients {
-		go client.connectLoop(m.ctx, reconnectDelays)
+		m.loops.Go(func() {
+			client.connectLoop(m.ctx, reconnectDelays)
+		})
 	}
 }
 
@@ -143,8 +155,33 @@ func (m *ClientManager) connectedClient(server string) (*Client, error) {
 	return client, nil
 }
 
-func (m *ClientManager) DisconnectAll() {
+// DisconnectAll stops every connection loop. Connected clients send QUIT
+// with reason, and girc closes each connection once its QUIT is written.
+// Connections that have not ended after quitTimeout are closed without it.
+func (m *ClientManager) DisconnectAll(reason string) {
 	m.cancel()
+	for _, client := range m.clients {
+		if !client.IsConnected() {
+			client.Close()
+			continue
+		}
+		// Quit can block while girc's send queue is full, so it must not
+		// hold up the timeout below.
+		go client.Quit(reason)
+	}
+
+	done := make(chan struct{})
+	go func() {
+		m.loops.Wait()
+		close(done)
+	}()
+	timer := time.NewTimer(quitTimeout)
+	defer timer.Stop()
+	select {
+	case <-done:
+	case <-timer.C:
+	}
+
 	for _, client := range m.clients {
 		client.Close()
 	}
