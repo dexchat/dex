@@ -166,6 +166,20 @@ func (m *Model) startPersistence() tea.Cmd {
 	return flushHistoryCmd(snapshot)
 }
 
+// requestShutdown saves pending local data and quits once it is written. A
+// failed save keeps the app open for a retry; see applyPersistenceResult.
+func (m *Model) requestShutdown() tea.Cmd {
+	m.persistence.shutdownRequested = true
+	m.markBufferRead(m.getActiveBuffer())
+	if cmd := m.startPersistence(); cmd != nil {
+		return cmd
+	}
+	if m.persistence.flushInFlight {
+		return nil
+	}
+	return tea.Quit
+}
+
 func flushHistoryCmd(snapshot persistenceSnapshot) tea.Cmd {
 	// The command only uses copied data, so it can perform disk I/O without
 	// reading or mutating the live Bubble Tea model.

@@ -15,7 +15,7 @@ func TestReadStateFlushAndLoad(t *testing.T) {
 
 	want := ReadMarker{ServerTime: 42, MsgID: "abc"}
 	state.MarkRead("Libera", "#Go", want)
-	if err := state.Flush(); err != nil {
+	if err := FlushReadStateSnapshot(*state); err != nil {
 		t.Fatalf("Flush() error = %v", err)
 	}
 
@@ -38,7 +38,7 @@ func TestDirectMessagesFlushAndLoad(t *testing.T) {
 	if directMessages.Add("libera", "alertbot") {
 		t.Fatal("duplicate direct message was added")
 	}
-	if err := directMessages.Flush(); err != nil {
+	if err := FlushDirectMessagesSnapshot(*directMessages); err != nil {
 		t.Fatalf("Flush() error = %v", err)
 	}
 

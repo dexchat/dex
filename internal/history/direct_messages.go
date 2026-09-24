@@ -56,11 +56,6 @@ func (d *DirectMessages) Remove(server, user string) bool {
 	return false
 }
 
-func (d *DirectMessages) Flush() error {
-	snapshot := DirectMessages{Users: append([]DirectMessage(nil), d.Users...)}
-	return FlushDirectMessagesSnapshot(snapshot)
-}
-
 func FlushDirectMessagesSnapshot(d DirectMessages) error {
 	path := directMessagesPath()
 	dir := filepath.Dir(path)

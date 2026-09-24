@@ -1091,7 +1091,7 @@ func TestPersistedDirectMessagesRestoreAfterServerConnects(t *testing.T) {
 	directMessages := &history.DirectMessages{}
 	directMessages.Add("libera", "alice")
 	directMessages.Add("oftc", "bob")
-	if err := directMessages.Flush(); err != nil {
+	if err := history.FlushDirectMessagesSnapshot(*directMessages); err != nil {
 		t.Fatalf("failed to persist direct messages: %v", err)
 	}
 
@@ -1156,16 +1156,25 @@ func TestDiscoveredChannelHistoryLoadsOnlyWhenRequested(t *testing.T) {
 func writeTestHistory(t *testing.T, server, buffer, text string) {
 	t.Helper()
 
-	log := history.NewLog()
-	log.Insert(history.LogEntry{
+	entry := history.LogEntry{
 		ReceivedAt: time.Now().UnixNano(),
 		ServerTime: time.Now().UnixNano(),
 		Username:   "alice",
 		Text:       text,
-	})
-	if err := log.Flush(server, buffer); err != nil {
+	}
+	if err := history.FlushSnapshot(server, buffer, []history.LogEntry{entry}); err != nil {
 		t.Fatalf("failed to write test history: %v", err)
 	}
+}
+
+// persistNow runs the app's persistence command to completion.
+func persistNow(t *testing.T, m *Model) {
+	t.Helper()
+	cmd := m.startPersistence()
+	if cmd == nil {
+		t.Fatal("expected pending local data to persist")
+	}
+	_, _ = m.Update(cmd())
 }
 
 func TestSelectingBufferClearsActivity(t *testing.T) {
@@ -1238,7 +1247,7 @@ func TestReadMarkerSurvivesRestartPlayback(t *testing.T) {
 	key := makeBufferKey("libera", "#random")
 	first.activeBuffer = key
 	first.clearBufferActivity(key)
-	first.flushAllHistory()
+	persistNow(t, first)
 
 	second := newActivityTestModel()
 	_, _ = second.Update(second.loadConfiguredHistory()())
@@ -1281,7 +1290,7 @@ func TestSelectingBufferPersistsReadMarker(t *testing.T) {
 	key := makeBufferKey("libera", "#random")
 	m.activeBuffer = key
 	m.clearBufferActivity(key)
-	m.flushAllHistory()
+	persistNow(t, m)
 
 	state, err := history.LoadReadState()
 	if err != nil {
@@ -1307,7 +1316,19 @@ func TestShutdownPersistsActiveBufferReadMarker(t *testing.T) {
 		From:      "alice",
 		Text:      "hello",
 	})
-	m.flushAllHistory()
+
+	// Run the shutdown the second ctrl+c starts: save, then quit.
+	save := m.requestShutdown()
+	if save == nil {
+		t.Fatal("shutdown with unsaved data should persist before quitting")
+	}
+	_, quit := m.Update(save())
+	if quit == nil {
+		t.Fatal("shutdown did not quit after persisting")
+	}
+	if _, ok := quit().(tea.QuitMsg); !ok {
+		t.Fatal("shutdown did not quit after persisting")
+	}
 
 	state, err := history.LoadReadState()
 	if err != nil {

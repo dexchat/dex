@@ -179,15 +179,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		if msgTyped.String() == "ctrl+c" {
 			if keybindings.QuitHandler() {
-				m.persistence.shutdownRequested = true
-				m.markBufferRead(m.getActiveBuffer())
-				if cmd := m.startPersistence(); cmd != nil {
-					return m, cmd
-				}
-				if m.persistence.flushInFlight {
-					return m, nil
-				}
-				return m, tea.Quit
+				return m, m.requestShutdown()
 			}
 			return m, nil
 		}
@@ -627,37 +619,6 @@ func (m *Model) scheduleHistoryFlush() tea.Cmd {
 	return tea.Tick(5*time.Second, func(_ time.Time) tea.Msg {
 		return historyFlushMsg{}
 	})
-}
-
-// flushAllHistory is retained for synchronous cleanup in tests and legacy
-// callers. Interactive shutdown uses startPersistence instead.
-func (m *Model) flushAllHistory() {
-	m.markBufferRead(m.getActiveBuffer())
-	for _, buf := range m.buffers {
-		_ = buf.History.Flush(buf.Server, buf.Buffer)
-	}
-	m.flushReadState()
-	m.flushDirectMessages()
-}
-
-func (m *Model) flushDirectMessages() {
-	if !m.directMessagesDirty || m.directMessages == nil {
-		return
-	}
-	if err := m.directMessages.Flush(); err != nil {
-		return
-	}
-	m.directMessagesDirty = false
-}
-
-func (m *Model) flushReadState() {
-	if !m.readStateDirty || m.readState == nil {
-		return
-	}
-	if err := m.readState.Flush(); err != nil {
-		return
-	}
-	m.readStateDirty = false
 }
 
 func (m *Model) handleChatSend(buffer *Buffer, text string) tea.Cmd {

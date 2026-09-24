@@ -14,10 +14,9 @@ import (
 )
 
 type Log struct {
-	entries       []LogEntry
-	lastUpdatedAt *time.Time
-	revision      uint64
-	persisted     uint64
+	entries   []LogEntry
+	revision  uint64
+	persisted uint64
 }
 
 // LogSnapshot is an immutable copy of a log at a specific revision.
@@ -40,9 +39,6 @@ func (log *Log) Insert(logEntry LogEntry) {
 
 	log.entries = slices.Insert(log.entries, idx, logEntry)
 	log.revision++
-
-	now := time.Now()
-	log.lastUpdatedAt = &now
 }
 
 // Merge inserts the entries that are not already in the log.
@@ -74,9 +70,6 @@ func (log *Log) Snapshot() (LogSnapshot, bool) {
 func (log *Log) MarkPersisted(revision uint64) {
 	if revision > log.persisted && revision <= log.revision {
 		log.persisted = revision
-		if revision == log.revision {
-			log.lastUpdatedAt = nil
-		}
 	}
 }
 
@@ -195,18 +188,6 @@ func quarantine(path string) (string, error) {
 		return "", err
 	}
 	return target, nil
-}
-
-func (log *Log) Flush(server, buffer string) error {
-	if log.lastUpdatedAt == nil {
-		return nil
-	}
-	if err := FlushSnapshot(server, buffer, log.entries); err != nil {
-		return err
-	}
-	log.persisted = log.revision
-	log.lastUpdatedAt = nil
-	return nil
 }
 
 func FlushSnapshot(server, buffer string, entries []LogEntry) error {
