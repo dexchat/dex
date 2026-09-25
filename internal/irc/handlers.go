@@ -3,6 +3,7 @@ package irc
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -71,6 +72,14 @@ func (c *Client) onEvent(client *girc.Client, e girc.Event) {
 
 	case girc.RPL_LISTSTART, girc.RPL_LIST, girc.RPL_LISTEND, girc.ERR_TOOMANYMATCHES:
 		c.onListReply(client, e)
+
+	case girc.RPL_WHOISUSER, girc.RPL_WHOISSERVER, girc.RPL_WHOISOPERATOR,
+		girc.RPL_WHOISIDLE, girc.RPL_ENDOFWHOIS, girc.RPL_WHOISCHANNELS,
+		girc.RPL_AWAY, girc.RPL_WHOISACCOUNT, girc.RPL_WHOISACTUALLY,
+		girc.RPL_WHOISHOST, girc.RPL_WHOISMODES, girc.RPL_WHOISCERTFP,
+		girc.RPL_WHOISREGNICK, girc.RPL_WHOISSPECIAL, rplWhoisSecure,
+		rplWhoisBot, girc.ERR_NOSUCHNICK:
+		c.onWhoisReply(client, e)
 
 	case girc.UPDATE_STATE:
 		c.queueDeferredUserListChanges()
@@ -616,6 +625,98 @@ func (c *Client) onListReply(_ *girc.Client, e girc.Event) {
 		}
 	case girc.ERR_TOOMANYMATCHES:
 		text = fmt.Sprintf("irc: %s", e.Last())
+	}
+
+	ts := e.Timestamp
+	if ts.IsZero() {
+		ts = time.Now()
+	}
+	c.events.push(BufferNewMessageMsg{
+		Server:    c.serverName,
+		Buffer:    "",
+		Timestamp: ts,
+		From:      "--",
+		Text:      text,
+		Type:      MessageTypeServer,
+	})
+}
+
+// WHOIS numerics that girc has no constants for.
+const (
+	rplWhoisSecure = "671"
+	rplWhoisBot    = "335"
+)
+
+// onWhoisReply shows one WHOIS reply line in the server buffer, like /list.
+// Every reply names the queried nickname as its second parameter. RPL_AWAY
+// and ERR_NOSUCHNICK also answer a message sent to that nickname, and read
+// correctly in both cases.
+func (c *Client) onWhoisReply(_ *girc.Client, e girc.Event) {
+	if len(e.Params) < 2 {
+		return
+	}
+	nick := e.Params[1]
+	// Parameters between the nickname and the trailing text.
+	var middle []string
+	if len(e.Params) > 3 {
+		middle = e.Params[2 : len(e.Params)-1]
+	}
+
+	var text string
+	switch e.Command {
+	case girc.RPL_WHOISUSER:
+		// <me> <nick> <user> <host> * :<realname>
+		if len(e.Params) < 4 {
+			return
+		}
+		text = fmt.Sprintf("%s (%s@%s): %s", nick, e.Params[2], e.Params[3], e.Last())
+	case girc.RPL_WHOISSERVER:
+		// <me> <nick> <server> :<server info>
+		if len(e.Params) < 3 {
+			return
+		}
+		text = fmt.Sprintf("%s is connected to %s", nick, e.Params[2])
+		if len(e.Params) > 3 && e.Last() != "" {
+			text += " (" + e.Last() + ")"
+		}
+	case girc.RPL_WHOISIDLE:
+		// <me> <nick> <seconds> [<signon>] :seconds idle, signon time
+		if len(middle) < 1 {
+			return
+		}
+		idle, err := strconv.ParseInt(middle[0], 10, 64)
+		if err != nil {
+			return
+		}
+		text = fmt.Sprintf("%s has been idle %s", nick, time.Duration(idle)*time.Second)
+		if len(middle) > 1 {
+			if signon, err := strconv.ParseInt(middle[1], 10, 64); err == nil {
+				text += ", signed on " + time.Unix(signon, 0).Format("2006-01-02 15:04")
+			}
+		}
+	case girc.RPL_WHOISCHANNELS:
+		// <me> <nick> :{[prefix]<channel> }
+		text = fmt.Sprintf("%s is on %s", nick, strings.TrimSpace(e.Last()))
+	case girc.RPL_AWAY:
+		// <me> <nick> :<away message>
+		text = fmt.Sprintf("%s is away: %s", nick, e.Last())
+	case girc.RPL_WHOISACCOUNT:
+		// <me> <nick> <account> :is logged in as
+		if len(middle) < 1 {
+			return
+		}
+		text = fmt.Sprintf("%s is logged in as %s", nick, middle[0])
+	case girc.RPL_ENDOFWHOIS:
+		text = fmt.Sprintf("%s: %s", nick, e.Last())
+	case girc.ERR_NOSUCHNICK:
+		text = fmt.Sprintf("irc: %s: %s", nick, e.Last())
+	default:
+		// The remaining replies are "<me> <nick> [<value>...] :<text>",
+		// where the text reads as a predicate of the nickname.
+		text = nick + " " + e.Last()
+		if len(middle) > 0 {
+			text += ": " + strings.Join(middle, " ")
+		}
 	}
 
 	ts := e.Timestamp

@@ -145,6 +145,21 @@ func (m *ClientManager) List(server, channel string) error {
 	return nil
 }
 
+// Whois requests information about nick. The replies arrive as events for
+// the server buffer.
+func (m *ClientManager) Whois(server, nick string) error {
+	client, err := m.connectedClient(server)
+	if err != nil {
+		return err
+	}
+	if nick == "" || girc.IsValidChannel(nick) || strings.ContainsAny(nick, ", ") {
+		return fmt.Errorf("irc: invalid nickname %s", nick)
+	}
+
+	client.Cmd.Whois(nick)
+	return nil
+}
+
 func (m *ClientManager) client(server string) (*Client, error) {
 	client, ok := m.clients[server]
 	if !ok {

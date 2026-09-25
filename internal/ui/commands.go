@@ -28,6 +28,8 @@ func (m *Model) handleCommand(buffer *Buffer, command commands.Command) tea.Cmd 
 		return m.handleMeCommand(buffer, command.Args)
 	case "msg":
 		return m.handleMsgCommand(buffer, command.Args)
+	case "whois":
+		return m.handleWhoisCommand(buffer, command.Args)
 	default:
 		m.addCommandError(buffer, "unknown command: /"+command.Name)
 	}
@@ -156,6 +158,30 @@ func (m *Model) handleMeCommand(buffer *Buffer, args []string) tea.Cmd {
 	server, target := buffer.Server, buffer.Buffer
 	return ircCommand(buffer, func() error {
 		return manager.SendAction(server, target, action)
+	})
+}
+
+// handleWhoisCommand sends WHOIS for the given nickname or, in a private
+// message, for its peer. The replies are shown in the server buffer.
+func (m *Model) handleWhoisCommand(buffer *Buffer, args []string) tea.Cmd {
+	var nick string
+	switch {
+	case len(args) == 1:
+		nick = args[0]
+	case len(args) == 0 && buffer.isValid() && !irc.IsChannel(buffer.Buffer):
+		nick = buffer.Buffer
+	default:
+		m.addCommandError(buffer, "usage: /whois <nick>")
+		return nil
+	}
+
+	manager := m.ircClientManager
+	if manager == nil {
+		return nil
+	}
+	server := buffer.Server
+	return ircCommand(buffer, func() error {
+		return manager.Whois(server, nick)
 	})
 }
 

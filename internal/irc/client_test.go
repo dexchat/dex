@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -268,6 +269,71 @@ func TestListRepliesAreQueuedForServerBuffer(t *testing.T) {
 
 		if got := len(queuedMessages(client)); got != 1 {
 			t.Errorf("LIST numeric %s queued %d messages, want 1", numeric, got)
+		}
+	}
+}
+
+func TestWhoisRepliesAreFormattedForServerBuffer(t *testing.T) {
+	signon := time.Date(2026, 9, 25, 10, 30, 0, 0, time.Local).Unix()
+	tests := []struct {
+		command string
+		params  []string
+		want    string
+	}{
+		{girc.RPL_WHOISUSER, []string{"tester", "alice", "~al", "example.org", "*", "Alice Liddell"}, "alice (~al@example.org): Alice Liddell"},
+		{girc.RPL_WHOISSERVER, []string{"tester", "alice", "irc.example.test", "Example server"}, "alice is connected to irc.example.test (Example server)"},
+		{girc.RPL_WHOISIDLE, []string{"tester", "alice", "3725", strconv.FormatInt(signon, 10), "seconds idle, signon time"}, "alice has been idle 1h2m5s, signed on 2026-09-25 10:30"},
+		{girc.RPL_WHOISIDLE, []string{"tester", "alice", "42", "seconds idle"}, "alice has been idle 42s"},
+		{girc.RPL_WHOISCHANNELS, []string{"tester", "alice", "@#go #rust "}, "alice is on @#go #rust"},
+		{girc.RPL_AWAY, []string{"tester", "alice", "lunch"}, "alice is away: lunch"},
+		{girc.RPL_WHOISACCOUNT, []string{"tester", "alice", "alice_acct", "is logged in as"}, "alice is logged in as alice_acct"},
+		{rplWhoisSecure, []string{"tester", "alice", "is using a secure connection"}, "alice is using a secure connection"},
+		{girc.RPL_WHOISACTUALLY, []string{"tester", "alice", "192.0.2.1", "actually using host"}, "alice actually using host: 192.0.2.1"},
+		{girc.RPL_ENDOFWHOIS, []string{"tester", "alice", "End of /WHOIS list."}, "alice: End of /WHOIS list."},
+		{girc.ERR_NOSUCHNICK, []string{"tester", "bob", "No such nick/channel"}, "irc: bob: No such nick/channel"},
+	}
+	for _, tt := range tests {
+		client := NewClient("testnet", &config.Server{
+			Address:  "irc.example.test",
+			Port:     6697,
+			Nickname: "tester",
+		})
+
+		client.onEvent(client.Client, girc.Event{Command: tt.command, Params: tt.params})
+
+		msgs := queuedMessages(client)
+		if len(msgs) != 1 {
+			t.Errorf("WHOIS numeric %s queued %d messages, want 1", tt.command, len(msgs))
+			continue
+		}
+		if msgs[0].Buffer != "" {
+			t.Errorf("WHOIS numeric %s buffer = %q, want server buffer", tt.command, msgs[0].Buffer)
+		}
+		if msgs[0].Text != tt.want {
+			t.Errorf("WHOIS numeric %s = %q, want %q", tt.command, msgs[0].Text, tt.want)
+		}
+	}
+}
+
+func TestMalformedWhoisRepliesAreDropped(t *testing.T) {
+	for _, tt := range []struct {
+		command string
+		params  []string
+	}{
+		{girc.RPL_WHOISUSER, []string{"tester", "alice"}},
+		{girc.RPL_WHOISIDLE, []string{"tester", "alice", "soon", "seconds idle"}},
+		{girc.RPL_ENDOFWHOIS, []string{"tester"}},
+	} {
+		client := NewClient("testnet", &config.Server{
+			Address:  "irc.example.test",
+			Port:     6697,
+			Nickname: "tester",
+		})
+
+		client.onEvent(client.Client, girc.Event{Command: tt.command, Params: tt.params})
+
+		if got := len(queuedMessages(client)); got != 0 {
+			t.Errorf("malformed WHOIS numeric %s queued %d messages, want 0", tt.command, got)
 		}
 	}
 }
