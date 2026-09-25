@@ -110,7 +110,8 @@ func (log *Log) IsDuplicate(entry LogEntry) bool {
 		// Exact ServerTime + content match
 		if stored.ServerTime == entry.ServerTime &&
 			stored.Username == entry.Username &&
-			stored.Text == entry.Text {
+			stored.Text == entry.Text &&
+			stored.Action == entry.Action {
 			return true
 		}
 	}

@@ -64,6 +64,7 @@ func (m *Model) processIncomingMessage(msg irc.BufferNewMessageMsg) tea.Cmd {
 		MsgID:      msgID,
 		Username:   msg.From,
 		Text:       msg.Text,
+		Action:     msg.Action,
 		Type:       int(msg.Type),
 	}
 	if msg.Type == irc.MessageTypeNormal {
@@ -81,6 +82,7 @@ func (m *Model) processIncomingMessage(msg irc.BufferNewMessageMsg) tea.Cmd {
 			Timestamp: msg.Timestamp,
 			Username:  msg.From,
 			Text:      msg.Text,
+			Action:    msg.Action,
 			Type:      msg.Type,
 		})
 		m.updateActivityForMessage(buf, msg)

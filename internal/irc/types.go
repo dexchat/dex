@@ -38,7 +38,8 @@ type BufferNewMessageMsg struct {
 	DirectMessage bool // True if IRC target is a user
 	Timestamp     time.Time
 	From          string
-	Text          string
+	Text          string // For an ACTION, the text without CTCP framing
+	Action        bool   // True for a CTCP ACTION sent with /me
 	MsgID         string // IRCv3 msgid, nil if the server does not support it
 	OwnEcho       bool   // True if this is the own echo-message of a message sent from this client
 	UserEvent     bool   // True for another user's JOIN, PART, QUIT, or KICK event

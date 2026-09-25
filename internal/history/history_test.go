@@ -37,6 +37,26 @@ func TestFlushSnapshotReplacesHistoryWithoutTemporaryFiles(t *testing.T) {
 	}
 }
 
+func TestActionSurvivesPersistenceAndIsNotADuplicateOfPlainText(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	action := LogEntry{ServerTime: 1, Username: "alice", Text: "waves", Action: true}
+	plain := LogEntry{ServerTime: 1, Username: "alice", Text: "waves"}
+
+	log := NewLog()
+	log.Insert(action)
+	if log.IsDuplicate(plain) {
+		t.Fatal("a plain message should not duplicate an action with the same text")
+	}
+
+	if err := FlushSnapshot("libera", "#go", []LogEntry{action}); err != nil {
+		t.Fatalf("FlushSnapshot() error = %v", err)
+	}
+	loaded := mustLoad(t, "libera", "#go").Entries()
+	if len(loaded) != 1 || !loaded[0].Action || loaded[0].Text != "waves" {
+		t.Fatalf("Load() = %#v, want the action entry", loaded)
+	}
+}
+
 func mustLoad(t *testing.T, server, buffer string) *Log {
 	t.Helper()
 	log, err := Load(server, buffer)

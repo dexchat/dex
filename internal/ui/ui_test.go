@@ -748,6 +748,74 @@ func TestMsgWithoutTargetOrMessageShowsUsage(t *testing.T) {
 	}
 }
 
+func TestMeShowsOwnActionInChannel(t *testing.T) {
+	m := newActivityTestModel()
+	m.activeBuffer = makeBufferKey("libera", "#go")
+	active := m.getActiveBuffer()
+	active.Chat.SetNickname("dexuser")
+	active.Chat.SetSize(80, 10)
+
+	_, _ = submitChat(m, "/me waves at everyone")
+
+	want := "* dexuser waves at everyone"
+	if view := plainText(active.Chat.View()); !strings.Contains(view, want) {
+		t.Fatalf("missing %q in channel:\n%s", want, view)
+	}
+}
+
+func TestMeRejectsServerBufferAndEmptyAction(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{input: "/me waves", want: "error: /me is only available in a channel or private message"},
+		{input: "/me", want: "usage: /me <action>"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			m := newActivityTestModel()
+			m.activeBuffer = makeBufferKey("libera", "")
+			active := m.getActiveBuffer()
+			active.Chat.SetSize(80, 10)
+
+			_, _ = submitChat(m, tt.input)
+
+			view := plainText(active.Chat.View())
+			if !strings.Contains(view, tt.want) {
+				t.Fatalf("missing %q:\n%s", tt.want, view)
+			}
+			if strings.Contains(view, "* ") {
+				t.Fatalf("rejected /me was shown as an action:\n%s", view)
+			}
+		})
+	}
+}
+
+func TestIncomingActionMentionIsHighlightedAndRendered(t *testing.T) {
+	m := newActivityTestModel()
+	m.activeBuffer = makeBufferKey("libera", "#random")
+	channel := m.buffers[makeBufferKey("libera", "#go")]
+	channel.Chat.SetNickname("dexuser")
+	channel.Chat.SetSize(80, 10)
+
+	m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#go",
+		Timestamp: time.Now(),
+		From:      "alice",
+		Text:      "waves at dexuser",
+		Action:    true,
+	})
+
+	if channel.MentionCount != 1 {
+		t.Fatalf("MentionCount = %d, want 1", channel.MentionCount)
+	}
+	channel.Chat.FlushQueue()
+	if view := plainText(channel.Chat.View()); !strings.Contains(view, "* alice waves at dexuser") {
+		t.Fatalf("missing rendered action:\n%s", view)
+	}
+}
+
 func TestPaneForMouseWheelIgnoresNonWheelMouse(t *testing.T) {
 	got := paneForMouseWheel(tea.MouseClickMsg{
 		X:      0,

@@ -24,6 +24,8 @@ func (m *Model) handleCommand(buffer *Buffer, command commands.Command) tea.Cmd 
 		return m.handleCloseCommand(buffer, command.Args)
 	case "list":
 		return m.handleListCommand(buffer, command.Args)
+	case "me":
+		return m.handleMeCommand(buffer, command.Args)
 	case "msg":
 		return m.handleMsgCommand(buffer, command.Args)
 	default:
@@ -126,6 +128,35 @@ func (m *Model) handleMsgCommand(buffer *Buffer, args []string) tea.Cmd {
 		Text:      message,
 	})
 	return m.sendMessageCmd(privateBuffer, message)
+}
+
+func (m *Model) handleMeCommand(buffer *Buffer, args []string) tea.Cmd {
+	if len(args) == 0 {
+		m.addCommandError(buffer, "usage: /me <action>")
+		return nil
+	}
+	if !buffer.isValid() {
+		m.addCommandError(buffer, "error: /me is only available in a channel or private message")
+		return nil
+	}
+
+	action := strings.Join(args, " ")
+	buffer.Chat.AddMessage(chat.Message{
+		Timestamp: time.Now(),
+		Username:  buffer.Chat.Nickname(),
+		Text:      action,
+		Action:    true,
+	})
+
+	manager := m.ircClientManager
+	if manager == nil {
+		return nil
+	}
+	// Persist the server echo with its authoritative timestamp and message ID.
+	server, target := buffer.Server, buffer.Buffer
+	return ircCommand(buffer, func() error {
+		return manager.SendAction(server, target, action)
+	})
 }
 
 // sendMessageCmd sends message to buffer's target. Failures are reported in

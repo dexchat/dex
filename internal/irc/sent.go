@@ -68,21 +68,25 @@ func (s *sentMessages) prune(now time.Time) {
 	}
 }
 
-// trackSent prepares for the echo of a message sent to target. Without
-// echo-message the server sends no echo, so the client queues one itself and
-// the UI stores the message in history as it does for a server echo.
+// trackSent prepares for the echo of a message sent to target. message is the
+// PRIVMSG text as sent, including any CTCP ACTION framing, because the echo
+// carries it too. Without echo-message the server sends no echo, so the
+// client queues one itself and the UI stores the message in history as it
+// does for a server echo.
 func (c *Client) trackSent(target, message string, echoEnabled bool) {
 	if echoEnabled {
 		c.sent.add(pendingMessageKey(c.serverName, target, message), time.Now())
 		return
 	}
+	text, action := decodeAction(message)
 	c.events.push(BufferNewMessageMsg{
 		Server:        c.serverName,
 		Buffer:        target,
 		DirectMessage: !girc.IsValidChannel(target),
 		Timestamp:     time.Now(),
 		From:          c.GetNick(),
-		Text:          message,
+		Text:          text,
+		Action:        action,
 		OwnEcho:       true,
 	})
 }

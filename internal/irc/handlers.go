@@ -242,6 +242,7 @@ func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
 		ts = time.Now()
 	}
 
+	text, action := decodeAction(e.Last())
 	msgID, _ := e.Tags.Get("msgid")
 	c.events.push(BufferNewMessageMsg{
 		Server:        c.serverName,
@@ -249,7 +250,8 @@ func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
 		DirectMessage: directMessage,
 		Timestamp:     ts,
 		From:          e.Source.Name,
-		Text:          e.Last(),
+		Text:          text,
+		Action:        action,
 		MsgID:         msgID,
 	})
 }
@@ -654,6 +656,11 @@ func (c *Client) onEchoMessage(_ *girc.Client, e girc.Event) {
 	// another client, is shown.
 	ownEcho := c.sent.consume(pendingMessageKey(c.serverName, target, e.Last()), time.Now())
 
+	text, action := e.Last(), false
+	if e.Command == girc.PRIVMSG {
+		text, action = decodeAction(text)
+	}
+
 	msgID, _ := e.Tags.Get("msgid")
 	c.events.push(BufferNewMessageMsg{
 		Server:        c.serverName,
@@ -661,7 +668,8 @@ func (c *Client) onEchoMessage(_ *girc.Client, e girc.Event) {
 		DirectMessage: directMessage,
 		Timestamp:     ts,
 		From:          e.Source.Name,
-		Text:          e.Last(),
+		Text:          text,
+		Action:        action,
 		MsgID:         msgID,
 		OwnEcho:       ownEcho,
 	})

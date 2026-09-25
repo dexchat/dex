@@ -17,6 +17,7 @@ type ChannelMembers interface {
 type Message struct {
 	Username  string
 	Text      string
+	Action    bool // A /me message, shown as "* nick text"
 	Timestamp time.Time
 	Type      irc.MessageType
 }
@@ -64,6 +65,9 @@ func (m *Model) renderMessage(msg Message, width int) string {
 		}
 		nickStyle := baseStyle.Foreground(nickColor)
 		styledNick := nickStyle.Render(" " + prefix + msg.Username + " ")
+		if msg.Action {
+			styledNick = baseStyle.Render(" *") + nickStyle.Render(" "+msg.Username+" ")
+		}
 		return baseStyle.Width(width).Render(styledTime + styledNick + styledText)
 	}
 }

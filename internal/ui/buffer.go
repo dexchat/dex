@@ -65,6 +65,7 @@ func (b *Buffer) LoadHistory() {
 			Timestamp: time.Unix(0, entry.ServerTime),
 			Username:  entry.Username,
 			Text:      entry.Text,
+			Action:    entry.Action,
 			Type:      irc.MessageType(entry.Type),
 		})
 	}
