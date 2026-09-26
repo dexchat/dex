@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -754,6 +755,46 @@ func TestNickUpdateUsesNicknameFromEvent(t *testing.T) {
 	}
 	if want := []string{"tester_", "dexter"}; !reflect.DeepEqual(nicks, want) {
 		t.Fatalf("nickname updates = %v, want %v", nicks, want)
+	}
+}
+
+func TestNickChangesAreShownWhereTheUserIsKnown(t *testing.T) {
+	client := NewClient("libera", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	})
+	alice := girc.ParseSource("alice!alice@example.test")
+
+	// Use girc's real dispatch so its state tracking runs alongside onEvent.
+	client.RunHandlers(&girc.Event{Command: girc.JOIN, Source: alice, Params: []string{"#go"}})
+	client.RunHandlers(&girc.Event{Command: girc.JOIN, Source: alice, Params: []string{"#rust"}})
+	client.RunHandlers(&girc.Event{Command: girc.NICK, Source: alice, Params: []string{"alice2"}})
+	client.RunHandlers(&girc.Event{
+		Command: girc.NICK,
+		Source:  girc.ParseSource("tester!tester@example.test"),
+		Params:  []string{"dexter"},
+	})
+
+	type shown struct {
+		buffer    string
+		text      string
+		userEvent bool
+	}
+	var got []shown
+	for _, msg := range queuedMessages(client) {
+		if strings.Contains(msg.Text, "known as") {
+			got = append(got, shown{msg.Buffer, msg.Text, msg.UserEvent})
+		}
+	}
+	sort.Slice(got, func(i, j int) bool { return got[i].buffer < got[j].buffer })
+	want := []shown{
+		{"", "You are now known as dexter", false},
+		{"#go", "alice is now known as alice2", true},
+		{"#rust", "alice is now known as alice2", true},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("nick change messages = %#v, want %#v", got, want)
 	}
 }
 

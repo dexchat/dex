@@ -32,7 +32,7 @@ func (m *Model) renderMessage(msg Message, width int) string {
 	styledTime := timeStyle.Render(msg.Timestamp.Format("15:04"))
 
 	switch {
-	case msg.Username == "-->" || msg.Username == "<--":
+	case msg.Username == "-->" || msg.Username == "<--" || msg.Username == "---":
 		eventStyle := baseStyle.Foreground(m.theme.Colors.Chat.UserEvents)
 		return baseStyle.Width(width).Render(styledTime + eventStyle.Render(" "+msg.Username+" ") + eventStyle.Render(msg.Text))
 

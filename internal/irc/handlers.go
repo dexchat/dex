@@ -51,6 +51,7 @@ func (c *Client) onEvent(client *girc.Client, e girc.Event) {
 		c.onQuit(client, e)
 	case girc.NICK:
 		c.onNickUpdate(client, e)
+		c.onNickChange(client, e)
 		c.onUserListChange(client, e)
 	case girc.MODE, girc.RPL_ENDOFNAMES, girc.RPL_ENDOFWHO:
 		c.onUserListChange(client, e)
@@ -343,6 +344,49 @@ func (c *Client) onNickUpdate(client *girc.Client, e girc.Event) {
 		Server: c.serverName,
 		Nick:   e.Params[0],
 	})
+}
+
+// onNickChange shows a NICK in the chat. Our own change is shown only in the
+// server buffer, where /nick errors appear. Another user's change is shown
+// in the channels shared with them, like QUIT; girc renames the user only
+// after onEvent returns, so the old nickname still finds those channels.
+func (c *Client) onNickChange(client *girc.Client, e girc.Event) {
+	if e.Source == nil || len(e.Params) == 0 {
+		return
+	}
+	newNick := e.Params[0]
+	ts := e.Timestamp
+	if ts.IsZero() {
+		ts = time.Now()
+	}
+
+	if e.Source.ID() == client.GetID() {
+		c.events.push(BufferNewMessageMsg{
+			Server:    c.serverName,
+			Buffer:    "",
+			Timestamp: ts,
+			From:      "--",
+			Text:      "You are now known as " + newNick,
+			Type:      MessageTypeServer,
+		})
+		return
+	}
+
+	user := client.LookupUser(e.Source.Name)
+	if user == nil {
+		return
+	}
+	text := fmt.Sprintf("%s is now known as %s", e.Source.Name, newNick)
+	for _, channelName := range user.ChannelList {
+		c.events.push(BufferNewMessageMsg{
+			Server:    c.serverName,
+			Buffer:    channelName,
+			Timestamp: ts,
+			From:      "---",
+			Text:      text,
+			UserEvent: true,
+		})
+	}
 }
 
 func (c *Client) onQuit(client *girc.Client, e girc.Event) {
