@@ -765,6 +765,22 @@ func TestWhoisWithoutNickOutsidePrivateMessageShowsUsage(t *testing.T) {
 	}
 }
 
+func TestNickRequiresExactlyOneNickname(t *testing.T) {
+	for _, input := range []string{"/nick", "/nick alice bob"} {
+		t.Run(input, func(t *testing.T) {
+			m := newActivityTestModel()
+			active := m.getActiveBuffer()
+			active.Chat.SetSize(80, 10)
+
+			_, _ = submitChat(m, input)
+
+			if view := plainText(active.Chat.View()); !strings.Contains(view, "usage: /nick <nickname>") {
+				t.Fatalf("missing /nick usage error:\n%s", view)
+			}
+		})
+	}
+}
+
 func TestMeShowsOwnActionInChannel(t *testing.T) {
 	m := newActivityTestModel()
 	m.activeBuffer = makeBufferKey("libera", "#go")

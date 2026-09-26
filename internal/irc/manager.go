@@ -160,6 +160,21 @@ func (m *ClientManager) Whois(server, nick string) error {
 	return nil
 }
 
+// Nick requests a nickname change. The server confirms it with a NICK event
+// or rejects it with an error numeric shown in the server buffer.
+func (m *ClientManager) Nick(server, nick string) error {
+	client, err := m.connectedClient(server)
+	if err != nil {
+		return err
+	}
+	if nick == "" || strings.Contains(nick, " ") || strings.HasPrefix(nick, ":") {
+		return fmt.Errorf("irc: invalid nickname %s", nick)
+	}
+
+	client.Cmd.Nick(nick)
+	return nil
+}
+
 func (m *ClientManager) client(server string) (*Client, error) {
 	client, ok := m.clients[server]
 	if !ok {

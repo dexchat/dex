@@ -68,7 +68,11 @@ func (c *Client) onEvent(client *girc.Client, e girc.Event) {
 	case girc.ERR_NOCHANMODES, girc.ERR_INVITEONLYCHAN, girc.ERR_RESTRICTED,
 		girc.ERR_BANNEDFROMCHAN, girc.ERR_CHANNELISFULL, girc.ERR_BADCHANNELKEY,
 		girc.ERR_NOSUCHCHANNEL, girc.ERR_TOOMANYCHANNELS, girc.ERR_BADCHANMASK:
-		c.onJoinError(client, e)
+		c.onErrorReply(client, e)
+
+	case girc.ERR_ERRONEUSNICKNAME, girc.ERR_NICKNAMEINUSE, girc.ERR_NICKCOLLISION,
+		girc.ERR_UNAVAILRESOURCE, errNickTooFast:
+		c.onErrorReply(client, e)
 
 	case girc.RPL_LISTSTART, girc.RPL_LIST, girc.RPL_LISTEND, girc.ERR_TOOMANYMATCHES:
 		c.onListReply(client, e)
@@ -587,14 +591,21 @@ func (c *Client) onDisconnect(client *girc.Client, _ girc.Event) {
 	}
 }
 
-func (c *Client) onJoinError(_ *girc.Client, e girc.Event) {
-	channel := ""
-	if len(e.Params) > 1 {
-		channel = e.Params[1]
+// errNickTooFast is sent by Solanum, UnrealIRCd, and other servers when
+// nickname changes are rate limited. girc has no constant for it.
+const errNickTooFast = "438"
+
+// onErrorReply shows an error numeric of the form
+// "<client> <subject> :<text>" in the server buffer, where subject is the
+// rejected channel or nickname.
+func (c *Client) onErrorReply(_ *girc.Client, e girc.Event) {
+	subject := ""
+	if len(e.Params) > 2 {
+		subject = e.Params[1]
 	}
 	text := fmt.Sprintf("irc: %s", e.Last())
-	if channel != "" {
-		text = fmt.Sprintf("irc: %s: %s", channel, e.Last())
+	if subject != "" {
+		text = fmt.Sprintf("irc: %s: %s", subject, e.Last())
 	}
 	c.events.push(BufferNewMessageMsg{
 		Server:    c.serverName,

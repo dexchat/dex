@@ -86,9 +86,21 @@ func NewClient(serverName string, config *config.Server) *Client {
 		channels:   config.Channels,
 	}
 	client.Config.RecoverFunc = c.onHandlerPanic
+	client.Config.HandleNickCollide = c.onNickCollide
 	c.addHandlers()
 
 	return c
+}
+
+// onNickCollide picks another nickname when the server rejects ours. During
+// registration it appends "_", as girc does by default, so the connection
+// can complete. Afterwards the rejected nickname came from /nick; the
+// current one stays and the server's error is shown instead.
+func (c *Client) onNickCollide(oldNick string) string {
+	if c.registered.Load() {
+		return ""
+	}
+	return oldNick + "_"
 }
 
 // tlsConfig verifies server certificates unless the server explicitly opts

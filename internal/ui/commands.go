@@ -28,6 +28,8 @@ func (m *Model) handleCommand(buffer *Buffer, command commands.Command) tea.Cmd 
 		return m.handleMeCommand(buffer, command.Args)
 	case "msg":
 		return m.handleMsgCommand(buffer, command.Args)
+	case "nick":
+		return m.handleNickCommand(buffer, command.Args)
 	case "whois":
 		return m.handleWhoisCommand(buffer, command.Args)
 	default:
@@ -182,6 +184,24 @@ func (m *Model) handleWhoisCommand(buffer *Buffer, args []string) tea.Cmd {
 	server := buffer.Server
 	return ircCommand(buffer, func() error {
 		return manager.Whois(server, nick)
+	})
+}
+
+// handleNickCommand requests a new nickname. The UI keeps the current one
+// until the server confirms the change with a NICK event.
+func (m *Model) handleNickCommand(buffer *Buffer, args []string) tea.Cmd {
+	if len(args) != 1 {
+		m.addCommandError(buffer, "usage: /nick <nickname>")
+		return nil
+	}
+
+	manager := m.ircClientManager
+	if manager == nil {
+		return nil
+	}
+	server, nick := buffer.Server, args[0]
+	return ircCommand(buffer, func() error {
+		return manager.Nick(server, nick)
 	})
 }
 

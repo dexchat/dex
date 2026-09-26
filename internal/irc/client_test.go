@@ -186,7 +186,7 @@ func TestJoinErrorIsRoutedToServerBuffer(t *testing.T) {
 		Nickname: "tester",
 	})
 
-	client.onJoinError(client.Client, girc.Event{
+	client.onErrorReply(client.Client, girc.Event{
 		Command: girc.ERR_INVITEONLYCHAN,
 		Params:  []string{"tester", "#private", "Cannot join channel (+i)"},
 	})
@@ -227,6 +227,57 @@ func TestJoinErrorsAreQueuedForServerBuffer(t *testing.T) {
 		if got := len(queuedMessages(client)); got != 1 {
 			t.Errorf("JOIN error numeric %s queued %d messages, want 1", numeric, got)
 		}
+	}
+}
+
+func TestNickErrorsNameTheRejectedNickname(t *testing.T) {
+	for _, numeric := range []string{
+		girc.ERR_ERRONEUSNICKNAME,
+		girc.ERR_NICKNAMEINUSE,
+		girc.ERR_NICKCOLLISION,
+		girc.ERR_UNAVAILRESOURCE,
+		errNickTooFast,
+	} {
+		client := NewClient("testnet", &config.Server{
+			Address:  "irc.example.test",
+			Port:     6697,
+			Nickname: "tester",
+		})
+
+		client.onEvent(client.Client, girc.Event{
+			Command: numeric,
+			Params:  []string{"tester", "alice", "Nickname is already in use"},
+		})
+
+		msgs := queuedMessages(client)
+		if len(msgs) != 1 {
+			t.Errorf("nick error numeric %s queued %d messages, want 1", numeric, len(msgs))
+			continue
+		}
+		if want := "irc: alice: Nickname is already in use"; msgs[0].Buffer != "" || msgs[0].Text != want {
+			t.Errorf("nick error numeric %s = %q in buffer %q, want %q in server buffer", numeric, msgs[0].Text, msgs[0].Buffer, want)
+		}
+	}
+}
+
+func TestNickCollisionRenamesOnlyDuringRegistration(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	})
+
+	if got, want := client.onNickCollide("tester"), "tester_"; got != want {
+		t.Fatalf("collision before RPL_WELCOME picked %q, want %q", got, want)
+	}
+
+	client.onEvent(client.Client, girc.Event{
+		Command: girc.RPL_WELCOME,
+		Params:  []string{"tester", "Welcome"},
+	})
+
+	if got := client.onNickCollide("tester"); got != "" {
+		t.Fatalf("collision after RPL_WELCOME picked %q, want no rename", got)
 	}
 }
 
