@@ -90,7 +90,7 @@ func (m *Model) processIncomingMessage(msg irc.BufferNewMessageMsg) tea.Cmd {
 		attentionPulseCmd := m.startAttentionPulse(buf, msg)
 
 		var notificationCmd tea.Cmd
-		if m.shouldSoundNotification(buf, msg) {
+		if m.config.Notifications.Sound && m.shouldNotify(buf, msg) {
 			notificationCmd = m.soundNotificationCmd()
 		}
 		return tea.Batch(notificationCmd, notificationNoticeCmd, attentionPulseCmd)
@@ -259,11 +259,7 @@ func messageMentionsNick(message, nick string) bool {
 	return chat.MessageMentionsNick(message, nick)
 }
 
-func (m *Model) shouldSoundNotification(buf *Buffer, msg irc.BufferNewMessageMsg) bool {
-	if !m.config.Notifications.Sound {
-		return false
-	}
-
+func (m *Model) shouldNotify(buf *Buffer, msg irc.BufferNewMessageMsg) bool {
 	if msg.Type != irc.MessageTypeNormal {
 		return false
 	}

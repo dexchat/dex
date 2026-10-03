@@ -221,7 +221,13 @@ func renderIRCFormattedMessageWithMentions(text, nickname string, baseStyle, men
 // MessageMentionsNick reports whether the visible IRC message text contains a
 // complete nickname, ignoring formatting control sequences.
 func MessageMentionsNick(text, nickname string) bool {
-	return len(findNickMentions(visibleIRCText(parseIRCFormat(text, lipgloss.NewStyle())), nickname)) > 0
+	return len(findNickMentions(PlainText(text), nickname)) > 0
+}
+
+// PlainText returns the visible IRC message text with formatting control
+// sequences and their color arguments removed.
+func PlainText(text string) string {
+	return visibleIRCText(parseIRCFormat(text, lipgloss.NewStyle()))
 }
 
 func visibleIRCText(segments []styledSegment) string {

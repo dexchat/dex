@@ -1714,7 +1714,7 @@ func TestMentionDetectionRequiresWholeNickToken(t *testing.T) {
 	}
 }
 
-func TestShouldSoundNotification(t *testing.T) {
+func TestShouldNotify(t *testing.T) {
 	tests := []struct {
 		name      string
 		configure func(*Model, *Buffer, *irc.BufferNewMessageMsg)
@@ -1766,13 +1766,6 @@ func TestShouldSoundNotification(t *testing.T) {
 			name: "server message",
 			configure: func(_ *Model, _ *Buffer, msg *irc.BufferNewMessageMsg) {
 				msg.Type = irc.MessageTypeServer
-			},
-			want: false,
-		},
-		{
-			name: "sound disabled",
-			configure: func(m *Model, _ *Buffer, _ *irc.BufferNewMessageMsg) {
-				m.config.Notifications.Sound = false
 			},
 			want: false,
 		},
@@ -1837,8 +1830,8 @@ func TestShouldSoundNotification(t *testing.T) {
 				tt.configure(m, buf, &msg)
 			}
 
-			if got := m.shouldSoundNotification(buf, msg); got != tt.want {
-				t.Fatalf("shouldSoundNotification() = %v, want %v", got, tt.want)
+			if got := m.shouldNotify(buf, msg); got != tt.want {
+				t.Fatalf("shouldNotify() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -1937,6 +1930,29 @@ func TestProcessIncomingOldMentionDoesNotReturnBell(t *testing.T) {
 
 	if cmd != nil {
 		t.Fatal("processIncomingMessage() returned a command for old playback mention")
+	}
+}
+
+func TestProcessIncomingMentionWithSoundDisabledDoesNotReturnBell(t *testing.T) {
+	m := newActivityTestModel()
+	m.config.Notifications.Sound = false
+
+	now := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)
+	m.now = func() time.Time {
+		return now
+	}
+
+	cmd := m.processIncomingMessage(irc.BufferNewMessageMsg{
+		Server:    "libera",
+		Buffer:    "#random",
+		Timestamp: now,
+		From:      "alice",
+		Text:      "dexuser: ping",
+		Type:      irc.MessageTypeNormal,
+	})
+
+	if commandContainsBell(cmd) {
+		t.Fatal("processIncomingMessage() returned a bell with sound disabled")
 	}
 }
 
