@@ -8,6 +8,7 @@ import (
 	"github.com/dexchat/dex/internal/config"
 	"github.com/dexchat/dex/internal/history"
 	"github.com/dexchat/dex/internal/irc"
+	"github.com/dexchat/dex/internal/notify"
 	"github.com/dexchat/dex/internal/ui/styles"
 
 	tea "charm.land/bubbletea/v2"
@@ -47,6 +48,7 @@ type (
 type Model struct {
 	config           *config.Config
 	ircClientManager *irc.ClientManager
+	notifier         notify.Notifier
 
 	width          int
 	height         int
@@ -71,6 +73,8 @@ type Model struct {
 
 	terminalFocused           bool
 	lastSoundAt               time.Time
+	lastDesktopNotifiedAt     map[BufferKey]time.Time
+	desktopErrorReported      bool
 	notificationNoticeVersion uint64
 	editKeyPending            bool
 	now                       func() time.Time
@@ -104,6 +108,8 @@ func New(cfg *config.Config) *Model {
 		theme:           theme,
 		terminalFocused: true,
 		now:             time.Now,
+
+		lastDesktopNotifiedAt: make(map[BufferKey]time.Time),
 		persistence: persistenceState{
 			detachedHistory: make(map[BufferKey]detachedHistory),
 		},
@@ -246,6 +252,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ircCommandFailedMsg:
 		m.showIRCCommandError(msgTyped)
+
+	case desktopNotificationResultMsg:
+		m.applyDesktopNotificationResult(msgTyped)
 
 	case historyFlushMsg:
 		if cmd := m.startPersistence(); cmd != nil {

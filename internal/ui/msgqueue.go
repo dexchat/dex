@@ -89,11 +89,16 @@ func (m *Model) processIncomingMessage(msg irc.BufferNewMessageMsg) tea.Cmd {
 		notificationNoticeCmd := m.showNotificationNotice(buf, msg)
 		attentionPulseCmd := m.startAttentionPulse(buf, msg)
 
-		var notificationCmd tea.Cmd
-		if m.config.Notifications.Sound && m.shouldNotify(buf, msg) {
-			notificationCmd = m.soundNotificationCmd()
+		var soundCmd, desktopCmd tea.Cmd
+		if m.shouldNotify(buf, msg) {
+			if m.config.Notifications.Sound {
+				soundCmd = m.soundNotificationCmd()
+			}
+			if m.notifier != nil && m.desktopCooldownElapsed(buf.Key) {
+				desktopCmd = m.desktopNotificationCmd(buf, msg)
+			}
 		}
-		return tea.Batch(notificationCmd, notificationNoticeCmd, attentionPulseCmd)
+		return tea.Batch(soundCmd, desktopCmd, notificationNoticeCmd, attentionPulseCmd)
 	}
 
 	return nil

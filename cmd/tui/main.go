@@ -9,6 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/dexchat/dex/internal/config"
 	"github.com/dexchat/dex/internal/irc"
+	"github.com/dexchat/dex/internal/notify"
 	"github.com/dexchat/dex/internal/ui"
 )
 
@@ -29,6 +30,13 @@ func main() {
 	defer ircClientManager.DisconnectAll(quitMessage())
 
 	tui.SetManager(ircClientManager)
+
+	// With desktop notifications off, dex never touches D-Bus.
+	if cfg.Notifications.Desktop {
+		notifier := notify.NewDBus()
+		defer notifier.Close()
+		tui.SetNotifier(notifier)
+	}
 
 	if _, err := p.Run(); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error running app: %v\n", err)
