@@ -188,6 +188,26 @@ func (m *ClientManager) SetTopic(server, channel, topic string) error {
 	return nil
 }
 
+// Op gives channel operator status to each nick. The server announces each
+// change to the channel with a MODE event or rejects it with an error numeric.
+func (m *ClientManager) Op(server, channel string, nicks []string) error {
+	client, err := m.connectedClient(server)
+	if err != nil {
+		return err
+	}
+	for _, nick := range nicks {
+		if nick == "" || girc.IsValidChannel(nick) || strings.ContainsAny(nick, ", ") {
+			return fmt.Errorf("irc: invalid nickname %s", nick)
+		}
+	}
+
+	// One MODE per nick stays within the server's MODES limit.
+	for _, nick := range nicks {
+		client.Cmd.Mode(channel, "+o", nick)
+	}
+	return nil
+}
+
 func (m *ClientManager) client(server string) (*Client, error) {
 	client, ok := m.clients[server]
 	if !ok {

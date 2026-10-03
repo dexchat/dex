@@ -781,6 +781,32 @@ func TestNickRequiresExactlyOneNickname(t *testing.T) {
 	}
 }
 
+func TestOpIsOnlyAvailableInAChannel(t *testing.T) {
+	m := newActivityTestModel()
+	m.activeBuffer = makeBufferKey("libera", "")
+	active := m.getActiveBuffer()
+	active.Chat.SetSize(80, 10)
+
+	_, _ = submitChat(m, "/op alice")
+
+	if view := plainText(active.Chat.View()); !strings.Contains(view, "error: /op is only available in a channel") {
+		t.Fatalf("missing /op error:\n%s", view)
+	}
+}
+
+func TestOpRequiresANick(t *testing.T) {
+	m := newActivityTestModel()
+	m.activeBuffer = makeBufferKey("libera", "#go")
+	active := m.getActiveBuffer()
+	active.Chat.SetSize(80, 10)
+
+	_, _ = submitChat(m, "/op")
+
+	if view := plainText(active.Chat.View()); !strings.Contains(view, "usage: /op <nick> [nick...]") {
+		t.Fatalf("missing /op usage error:\n%s", view)
+	}
+}
+
 func TestTopicIsOnlyAvailableInAChannel(t *testing.T) {
 	m := newActivityTestModel()
 	m.activeBuffer = makeBufferKey("libera", "")

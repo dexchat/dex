@@ -215,6 +215,7 @@ func TestChannelErrorsAreQueuedForServerBuffer(t *testing.T) {
 		girc.ERR_BADCHANMASK,
 		girc.ERR_NOTONCHANNEL,
 		girc.ERR_CHANOPRIVSNEEDED,
+		girc.ERR_USERNOTINCHANNEL,
 	} {
 		client := NewClient("testnet", &config.Server{
 			Address:  "irc.example.test",

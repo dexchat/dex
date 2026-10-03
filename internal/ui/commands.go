@@ -31,6 +31,8 @@ func (m *Model) handleCommand(buffer *Buffer, command commands.Command) tea.Cmd 
 		return m.handleMsgCommand(buffer, command.Args)
 	case "nick":
 		return m.handleNickCommand(buffer, command.Args)
+	case "op":
+		return m.handleOpCommand(buffer, command.Args)
 	case "topic":
 		return m.handleTopicCommand(buffer, command.Args)
 	case "whois":
@@ -205,6 +207,29 @@ func (m *Model) handleNickCommand(buffer *Buffer, args []string) tea.Cmd {
 	server, nick := buffer.Server, args[0]
 	return ircCommand(buffer, func() error {
 		return manager.Nick(server, nick)
+	})
+}
+
+// handleOpCommand gives channel operator status to one or more nicks. Only
+// a channel operator can do it; the server rejects it otherwise.
+func (m *Model) handleOpCommand(buffer *Buffer, args []string) tea.Cmd {
+	if !buffer.isValid() || !irc.IsChannel(buffer.Buffer) {
+		m.addCommandError(buffer, "error: /op is only available in a channel")
+		return nil
+	}
+	if len(args) == 0 {
+		m.addCommandError(buffer, "usage: /op <nick> [nick...]")
+		return nil
+	}
+
+	manager := m.ircClientManager
+	if manager == nil {
+		return nil
+	}
+	server, channel := buffer.Server, buffer.Buffer
+	nicks := args
+	return ircCommand(buffer, func() error {
+		return manager.Op(server, channel, nicks)
 	})
 }
 
