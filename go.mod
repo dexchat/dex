@@ -7,6 +7,7 @@ require (
 	charm.land/bubbletea/v2 v2.0.8
 	charm.land/lipgloss/v2 v2.0.5
 	github.com/BurntSushi/toml v1.6.0
+	github.com/godbus/dbus/v5 v5.2.2
 	github.com/lrstanley/girc v1.1.2
 )
 
