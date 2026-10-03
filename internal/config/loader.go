@@ -106,6 +106,12 @@ func loadFromBytes(data []byte) (*Config, error) {
 	if raw.Notifications.Sound != nil {
 		cfg.Notifications.Sound = *raw.Notifications.Sound
 	}
+	if raw.Notifications.Desktop != nil {
+		cfg.Notifications.Desktop = *raw.Notifications.Desktop
+	}
+	if raw.Notifications.ShowBody != nil {
+		cfg.Notifications.ShowBody = *raw.Notifications.ShowBody
+	}
 	if raw.Notifications.Events != nil {
 		cfg.Notifications.Events = make(map[string]bool, len(raw.Notifications.Events))
 		for _, event := range raw.Notifications.Events {
@@ -142,7 +148,7 @@ func loadFromBytes(data []byte) (*Config, error) {
 func defaultValues() *Config {
 	return &Config{
 		UI:            UI{Theme: ThemeRosePine, UnreadBadges: true, MentionBadges: true, UnreadOnUserEvents: true},
-		Notifications: Notifications{Sound: true, Events: map[string]bool{NotificationMention: true, NotificationDirectMessage: true}, Cooldown: 2 * time.Second},
+		Notifications: Notifications{Sound: true, Desktop: false, ShowBody: true, Events: map[string]bool{NotificationMention: true, NotificationDirectMessage: true}, Cooldown: 2 * time.Second},
 	}
 }
 

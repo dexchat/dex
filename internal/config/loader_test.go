@@ -236,6 +236,12 @@ channels = ["#go"]
 	if !cfg.Notifications.Sound {
 		t.Fatal("Notifications.Sound = false, want true")
 	}
+	if cfg.Notifications.Desktop {
+		t.Fatal("Notifications.Desktop = true, want false")
+	}
+	if !cfg.Notifications.ShowBody {
+		t.Fatal("Notifications.ShowBody = false, want true")
+	}
 	if !cfg.Notifications.Events[NotificationMention] {
 		t.Fatal("mention notifications disabled by default, want enabled")
 	}
@@ -251,6 +257,8 @@ func TestLoadParsesNotifications(t *testing.T) {
 	cfg, err := loadFromBytes([]byte(`
 [notifications]
 sound = false
+desktop = true
+show_body = false
 events = ["mention"]
 cooldown = "5s"
 
@@ -266,6 +274,12 @@ channels = ["#go"]
 
 	if cfg.Notifications.Sound {
 		t.Fatal("Notifications.Sound = true, want false")
+	}
+	if !cfg.Notifications.Desktop {
+		t.Fatal("Notifications.Desktop = false, want true")
+	}
+	if cfg.Notifications.ShowBody {
+		t.Fatal("Notifications.ShowBody = true, want false")
 	}
 	if !cfg.Notifications.Events[NotificationMention] {
 		t.Fatal("mention notifications disabled, want enabled")
@@ -310,6 +324,22 @@ channels = ["#go"]
 `))
 	if err == nil || !strings.Contains(err.Error(), `unknown notification event "mentoin"`) {
 		t.Fatalf("expected unknown notification event error, got %v", err)
+	}
+}
+
+func TestLoadRejectsUnknownNotificationField(t *testing.T) {
+	_, err := loadFromBytes([]byte(`
+[notifications]
+desktp = true
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+	if err == nil || !strings.Contains(err.Error(), "notifications.desktp") {
+		t.Fatalf("expected unknown notifications field error, got %v", err)
 	}
 }
 

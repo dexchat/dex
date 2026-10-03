@@ -36,12 +36,16 @@ type Config struct {
 
 type rawNotifications struct {
 	Sound    *bool    `toml:"sound"`
+	Desktop  *bool    `toml:"desktop"`
+	ShowBody *bool    `toml:"show_body"`
 	Events   []string `toml:"events"`
 	Cooldown string   `toml:"cooldown"`
 }
 
 type Notifications struct {
 	Sound    bool
+	Desktop  bool
+	ShowBody bool
 	Events   map[string]bool
 	Cooldown time.Duration
 }

@@ -36,6 +36,10 @@ notify_channels = []
 
 [notifications]
 sound = true
+# Send desktop notifications through D-Bus (dunst, mako, GNOME, KDE).
+desktop = false
+# Include the message text in desktop notifications.
+show_body = true
 events = ["mention", "direct_message"]
 cooldown = "2s"
 
