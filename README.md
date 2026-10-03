@@ -27,7 +27,8 @@
 - **Command palette:** access common actions from a searchable command menu
 - **Fuzzy channel search:** Find channels without iteracting through all of them
 - **Persistent history:** Preserve your conversations between sessions locally
-- **Notifications:** Get notified about mentions and direct messages
+- **Notifications:** Get notified about mentions and direct messages with a
+  terminal bell or desktop notifications (dunst, mako, GNOME, KDE)
 
 ## Installation
 Use a package manager:
@@ -77,6 +78,24 @@ wget -O "$HOME/.config/dex/config.toml" \
 
 Edit the config file with your IRC server settings and preferences for the app. See
 [`config.example.toml`](./config.example.toml) for all available options.
+
+### Desktop notifications
+
+Set `desktop = true` in `[notifications]` to send desktop notifications
+through D-Bus (`org.freedesktop.Notifications`), supported by dunst, mako,
+GNOME, KDE, and other notification daemons. They follow the same events as
+the terminal bell, with the `cooldown` applied per buffer, and
+`show_body = false` hides the message text. Without a session bus, such as
+on macOS or over SSH, dex reports the error once and the terminal bell keeps
+working.
+
+Notifications use the app name `dex`, so daemon rules can match it. For
+example, to keep them on screen longer in mako:
+
+```ini
+[app-name=dex]
+default-timeout=10000
+```
 
 ## Contributing
 If you have any ideas, sugestions, issues or would like to contribute to dex, see the [contributing guide](https://github.com/dexchat/dex?tab=contributing-ov-file#contributing).
