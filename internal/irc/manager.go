@@ -175,6 +175,19 @@ func (m *ClientManager) Nick(server, nick string) error {
 	return nil
 }
 
+// SetTopic changes channel's topic; an empty topic clears it. The server
+// announces the change to the channel with a TOPIC event or rejects it with
+// an error numeric.
+func (m *ClientManager) SetTopic(server, channel, topic string) error {
+	client, err := m.connectedClient(server)
+	if err != nil {
+		return err
+	}
+
+	client.Cmd.Topic(channel, topic)
+	return nil
+}
+
 func (m *ClientManager) client(server string) (*Client, error) {
 	client, ok := m.clients[server]
 	if !ok {

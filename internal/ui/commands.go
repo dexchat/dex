@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -30,6 +31,8 @@ func (m *Model) handleCommand(buffer *Buffer, command commands.Command) tea.Cmd 
 		return m.handleMsgCommand(buffer, command.Args)
 	case "nick":
 		return m.handleNickCommand(buffer, command.Args)
+	case "topic":
+		return m.handleTopicCommand(buffer, command.Args)
 	case "whois":
 		return m.handleWhoisCommand(buffer, command.Args)
 	default:
@@ -203,6 +206,48 @@ func (m *Model) handleNickCommand(buffer *Buffer, args []string) tea.Cmd {
 	return ircCommand(buffer, func() error {
 		return manager.Nick(server, nick)
 	})
+}
+
+// handleTopicCommand shows the channel's topic or, with text, changes it.
+// The topic and its setter arrive when joining and with every change, so
+// showing it needs no request to the server.
+func (m *Model) handleTopicCommand(buffer *Buffer, args []string) tea.Cmd {
+	if !buffer.isValid() || !irc.IsChannel(buffer.Buffer) {
+		m.addCommandError(buffer, "error: /topic is only available in a channel")
+		return nil
+	}
+
+	if len(args) == 0 {
+		m.showTopic(buffer)
+		return nil
+	}
+
+	manager := m.ircClientManager
+	if manager == nil {
+		return nil
+	}
+	server, channel := buffer.Server, buffer.Buffer
+	topic := strings.Join(args, " ")
+	return ircCommand(buffer, func() error {
+		return manager.SetTopic(server, channel, topic)
+	})
+}
+
+func (m *Model) showTopic(buffer *Buffer) {
+	topic := buffer.Chat.Topic()
+	if topic == "" {
+		m.addCommandError(buffer, "No topic is set for "+buffer.Buffer)
+		return
+	}
+	m.addCommandError(buffer, fmt.Sprintf("Topic for %s: %s", buffer.Buffer, topic))
+	if buffer.topicSetBy == "" {
+		return
+	}
+	setBy := "Topic set by " + buffer.topicSetBy
+	if !buffer.topicSetAt.IsZero() {
+		setBy += " on " + buffer.topicSetAt.Format("2006-01-02 15:04")
+	}
+	m.addCommandError(buffer, setBy)
 }
 
 // sendMessageCmd sends message to buffer's target. Failures are reported in

@@ -781,6 +781,92 @@ func TestNickRequiresExactlyOneNickname(t *testing.T) {
 	}
 }
 
+func TestTopicIsOnlyAvailableInAChannel(t *testing.T) {
+	m := newActivityTestModel()
+	m.activeBuffer = makeBufferKey("libera", "")
+	active := m.getActiveBuffer()
+	active.Chat.SetSize(80, 10)
+
+	_, _ = submitChat(m, "/topic new topic")
+
+	if view := plainText(active.Chat.View()); !strings.Contains(view, "error: /topic is only available in a channel") {
+		t.Fatalf("missing /topic error:\n%s", view)
+	}
+}
+
+func TestTopicShowsTheLatestTopicAndSetter(t *testing.T) {
+	setAt := time.Date(2026, 9, 25, 10, 30, 0, 0, time.Local)
+	tests := []struct {
+		name   string
+		events []irc.Event
+		want   []string
+		absent string
+	}{
+		{
+			name: "joined",
+			events: []irc.Event{
+				irc.ChannelTopicMsg{Server: "libera", Channel: "#go", Topic: "Go talk"},
+				irc.ChannelTopicSetByMsg{Server: "libera", Channel: "#go", SetBy: "alice", SetAt: setAt},
+			},
+			want: []string{"Topic for #go: Go talk", "Topic set by alice on 2026-09-25 10:30"},
+		},
+		{
+			name: "changed",
+			events: []irc.Event{
+				irc.ChannelTopicMsg{Server: "libera", Channel: "#go", Topic: "Go talk"},
+				irc.ChannelTopicSetByMsg{Server: "libera", Channel: "#go", SetBy: "alice", SetAt: setAt},
+				irc.ChannelTopicMsg{Server: "libera", Channel: "#go", Topic: "Go 1.30", SetBy: "bob", SetAt: setAt.Add(time.Hour)},
+			},
+			want:   []string{"Topic for #go: Go 1.30", "Topic set by bob on 2026-09-25 11:30"},
+			absent: "alice",
+		},
+		{
+			name: "joined again without RPL_TOPICWHOTIME",
+			events: []irc.Event{
+				irc.ChannelTopicMsg{Server: "libera", Channel: "#go", Topic: "Go talk", SetBy: "bob", SetAt: setAt},
+				irc.ChannelTopicMsg{Server: "libera", Channel: "#go", Topic: "Go talk"},
+			},
+			want:   []string{"Topic for #go: Go talk"},
+			absent: "Topic set by",
+		},
+		{
+			name: "cleared",
+			events: []irc.Event{
+				irc.ChannelTopicMsg{Server: "libera", Channel: "#go", Topic: "Go talk"},
+				irc.ChannelTopicMsg{Server: "libera", Channel: "#go", SetBy: "bob", SetAt: setAt},
+			},
+			want:   []string{"No topic is set for #go"},
+			absent: "Topic set by",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newActivityTestModel()
+			m.activeBuffer = makeBufferKey("libera", "#go")
+			active := m.getActiveBuffer()
+			active.Chat.SetSize(80, 10)
+			_ = updateIRC(m, "libera", tt.events...)
+
+			_, cmd := submitChat(m, "/topic")
+
+			if cmd != nil {
+				if msg := cmd(); msg != nil {
+					t.Fatalf("/topic scheduled %#v, want no IRC command", msg)
+				}
+			}
+			view := plainText(active.Chat.View())
+			for _, want := range tt.want {
+				if !strings.Contains(view, want) {
+					t.Errorf("missing %q:\n%s", want, view)
+				}
+			}
+			if tt.absent != "" && strings.Contains(view, tt.absent) {
+				t.Errorf("unexpected %q:\n%s", tt.absent, view)
+			}
+		})
+	}
+}
+
 func TestMeShowsOwnActionInChannel(t *testing.T) {
 	m := newActivityTestModel()
 	m.activeBuffer = makeBufferKey("libera", "#go")

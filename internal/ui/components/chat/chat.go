@@ -258,6 +258,10 @@ func (m *Model) SetTopic(topic string) {
 	m.topic = topic
 }
 
+func (m *Model) Topic() string {
+	return m.topic
+}
+
 func (m *Model) SetNickname(nickname string) {
 	if m.nickname == nickname {
 		return

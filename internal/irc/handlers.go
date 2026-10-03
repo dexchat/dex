@@ -56,7 +56,7 @@ func (c *Client) onEvent(client *girc.Client, e girc.Event) {
 	case girc.MODE, girc.RPL_ENDOFNAMES, girc.RPL_ENDOFWHO:
 		c.onUserListChange(client, e)
 
-	case girc.TOPIC, girc.RPL_TOPIC:
+	case girc.TOPIC, girc.RPL_TOPIC, girc.RPL_TOPICWHOTIME:
 		c.onTopic(client, e)
 
 	case girc.RPL_WELCOME:
@@ -68,7 +68,8 @@ func (c *Client) onEvent(client *girc.Client, e girc.Event) {
 
 	case girc.ERR_NOCHANMODES, girc.ERR_INVITEONLYCHAN, girc.ERR_RESTRICTED,
 		girc.ERR_BANNEDFROMCHAN, girc.ERR_CHANNELISFULL, girc.ERR_BADCHANNELKEY,
-		girc.ERR_NOSUCHCHANNEL, girc.ERR_TOOMANYCHANNELS, girc.ERR_BADCHANMASK:
+		girc.ERR_NOSUCHCHANNEL, girc.ERR_TOOMANYCHANNELS, girc.ERR_BADCHANMASK,
+		girc.ERR_NOTONCHANNEL, girc.ERR_CHANOPRIVSNEEDED:
 		c.onErrorReply(client, e)
 
 	case girc.ERR_ERRONEUSNICKNAME, girc.ERR_NICKNAMEINUSE, girc.ERR_NICKCOLLISION,
@@ -270,28 +271,75 @@ func (c *Client) onPrivmsg(_ *girc.Client, e girc.Event) {
 	})
 }
 
+// onTopic reports channel topics. RPL_TOPIC (332) and RPL_TOPICWHOTIME (333)
+// are sent when joining a channel with a topic; a TOPIC change is sent to
+// everyone in the channel. The UI keeps them, so /topic needs no query.
 func (c *Client) onTopic(_ *girc.Client, e girc.Event) {
-	if len(e.Params) == 0 {
-		return
+	ts := e.Timestamp
+	if ts.IsZero() {
+		ts = time.Now()
 	}
 
-	var channelName string
-	if e.Command == girc.RPL_TOPIC {
-		// RPL_TOPIC (332): <nick> <channelName> :<topic>
-		if len(e.Params) < 2 {
+	switch e.Command {
+	case girc.TOPIC:
+		// TOPIC: <channel> :<topic>. An empty topic clears it.
+		if len(e.Params) == 0 {
 			return
 		}
-		channelName = e.Params[1]
-	} else {
-		// TOPIC: <channelName> :<topic>
-		channelName = e.Params[0]
-	}
+		channelName, topic := e.Params[0], ""
+		if len(e.Params) > 1 {
+			topic = e.Last()
+		}
+		setter := c.serverName
+		if e.Source != nil {
+			setter = e.Source.Name
+		}
+		c.events.push(ChannelTopicMsg{
+			Server:  c.serverName,
+			Channel: channelName,
+			Topic:   topic,
+			SetBy:   setter,
+			SetAt:   ts,
+		})
 
-	c.events.push(ChannelTopicMsg{
-		Server:  c.serverName,
-		Channel: channelName,
-		Topic:   e.Last(),
-	})
+		text := fmt.Sprintf("%s changed the topic to: %s", setter, topic)
+		if topic == "" {
+			text = setter + " cleared the topic"
+		}
+		c.events.push(BufferNewMessageMsg{
+			Server:    c.serverName,
+			Buffer:    channelName,
+			Timestamp: ts,
+			From:      "---",
+			Text:      text,
+			UserEvent: true,
+		})
+
+	case girc.RPL_TOPIC:
+		// <client> <channel> :<topic>
+		if len(e.Params) < 3 {
+			return
+		}
+		c.events.push(ChannelTopicMsg{Server: c.serverName, Channel: e.Params[1], Topic: e.Last()})
+
+	case girc.RPL_TOPICWHOTIME:
+		// <client> <channel> <nick> <setat>. Some servers, such as Ergo,
+		// send nick!user@host instead of <nick>.
+		if len(e.Params) < 4 {
+			return
+		}
+		setter, _, _ := strings.Cut(e.Params[2], "!")
+		var setAt time.Time
+		if unix, err := strconv.ParseInt(e.Params[3], 10, 64); err == nil {
+			setAt = time.Unix(unix, 0)
+		}
+		c.events.push(ChannelTopicSetByMsg{
+			Server:  c.serverName,
+			Channel: e.Params[1],
+			SetBy:   setter,
+			SetAt:   setAt,
+		})
+	}
 }
 
 func (c *Client) onServerMessage(client *girc.Client, e girc.Event) {

@@ -81,11 +81,19 @@ func (m *Model) applyIRCEvent(event irc.Event) tea.Cmd {
 		buf := m.getOrCreateBuffer(event.Server, event.Channel)
 		if buf != nil {
 			buf.Chat.SetTopic(event.Topic)
+			buf.topicSetBy, buf.topicSetAt = event.SetBy, event.SetAt
 			// In case the channel topic is more than one line, resize only the
 			// visible buffer. Inactive buffers are resized when selected.
 			if buf.Key == m.activeBuffer {
 				buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 			}
+		}
+		return nil
+
+	case irc.ChannelTopicSetByMsg:
+		// It follows RPL_TOPIC, which created the buffer if needed.
+		if buf := m.buffers[makeBufferKey(event.Server, event.Channel)]; buf != nil {
+			buf.topicSetBy, buf.topicSetAt = event.SetBy, event.SetAt
 		}
 		return nil
 

@@ -204,7 +204,7 @@ func TestJoinErrorIsRoutedToServerBuffer(t *testing.T) {
 	}
 }
 
-func TestJoinErrorsAreQueuedForServerBuffer(t *testing.T) {
+func TestChannelErrorsAreQueuedForServerBuffer(t *testing.T) {
 	for _, numeric := range []string{
 		girc.ERR_NOSUCHCHANNEL,
 		girc.ERR_TOOMANYCHANNELS,
@@ -213,6 +213,8 @@ func TestJoinErrorsAreQueuedForServerBuffer(t *testing.T) {
 		girc.ERR_CHANNELISFULL,
 		girc.ERR_INVITEONLYCHAN,
 		girc.ERR_BADCHANMASK,
+		girc.ERR_NOTONCHANNEL,
+		girc.ERR_CHANOPRIVSNEEDED,
 	} {
 		client := NewClient("testnet", &config.Server{
 			Address:  "irc.example.test",
@@ -228,6 +230,66 @@ func TestJoinErrorsAreQueuedForServerBuffer(t *testing.T) {
 		if got := len(queuedMessages(client)); got != 1 {
 			t.Errorf("JOIN error numeric %s queued %d messages, want 1", numeric, got)
 		}
+	}
+}
+
+func TestTopicRepliesReportTopicAndSetter(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	})
+	setAt := time.Date(2026, 9, 25, 10, 30, 0, 0, time.Local)
+
+	client.onEvent(client.Client, girc.Event{Command: girc.RPL_TOPIC, Params: []string{"tester", "#go", "Go talk"}})
+	client.onEvent(client.Client, girc.Event{Command: girc.RPL_TOPICWHOTIME, Params: []string{"tester", "#go", "alice!~alice@example.test", strconv.FormatInt(setAt.Unix(), 10)}})
+	client.onEvent(client.Client, girc.Event{Command: girc.RPL_TOPICWHOTIME, Params: []string{"tester", "#go", "alice", "soon"}})
+
+	want := []Event{
+		ChannelTopicMsg{Server: "testnet", Channel: "#go", Topic: "Go talk"},
+		ChannelTopicSetByMsg{Server: "testnet", Channel: "#go", SetBy: "alice", SetAt: setAt},
+		ChannelTopicSetByMsg{Server: "testnet", Channel: "#go", SetBy: "alice"},
+	}
+	if got := queuedEvents(client); !reflect.DeepEqual(got, want) {
+		t.Fatalf("queued %#v, want %#v", got, want)
+	}
+}
+
+func TestTopicChangesAreShownInTheChannel(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	})
+	alice := girc.ParseSource("alice!alice@example.test")
+	at := time.Date(2026, 9, 25, 10, 30, 0, 0, time.UTC)
+
+	client.onEvent(client.Client, girc.Event{Command: girc.TOPIC, Source: alice, Timestamp: at, Params: []string{"#go", "Go 1.30 is out"}})
+	client.onEvent(client.Client, girc.Event{Command: girc.TOPIC, Source: alice, Timestamp: at, Params: []string{"#go", ""}})
+
+	var topics []ChannelTopicMsg
+	for _, event := range queuedEvents(client) {
+		if topic, ok := event.(ChannelTopicMsg); ok {
+			topics = append(topics, topic)
+		}
+	}
+	want := []ChannelTopicMsg{
+		{Server: "testnet", Channel: "#go", Topic: "Go 1.30 is out", SetBy: "alice", SetAt: at},
+		{Server: "testnet", Channel: "#go", Topic: "", SetBy: "alice", SetAt: at},
+	}
+	if !reflect.DeepEqual(topics, want) {
+		t.Fatalf("topic updates = %#v, want %#v", topics, want)
+	}
+
+	var shown []string
+	for _, msg := range queuedMessages(client) {
+		if msg.Buffer != "#go" || !msg.UserEvent {
+			t.Errorf("topic change %q in buffer %q with UserEvent %v, want a user event in #go", msg.Text, msg.Buffer, msg.UserEvent)
+		}
+		shown = append(shown, msg.Text)
+	}
+	if want := []string{"alice changed the topic to: Go 1.30 is out", "alice cleared the topic"}; !reflect.DeepEqual(shown, want) {
+		t.Fatalf("topic changes shown = %q, want %q", shown, want)
 	}
 }
 

@@ -49,6 +49,11 @@ type Buffer struct {
 	historyState  historyState
 	latestMessage history.ReadMarker
 
+	// topicSetBy and topicSetAt describe the channel's current topic, from
+	// the TOPIC change or RPL_TOPICWHOTIME. /topic shows them.
+	topicSetBy string
+	topicSetAt time.Time
+
 	UnreadCount       int
 	NotificationCount int
 	MentionCount      int

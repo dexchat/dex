@@ -11,6 +11,7 @@ type Event interface {
 func (UserListMsg) ircEvent()          {}
 func (BufferNewMessageMsg) ircEvent()  {}
 func (ChannelTopicMsg) ircEvent()      {}
+func (ChannelTopicSetByMsg) ircEvent() {}
 func (NickUpdateMsg) ircEvent()        {}
 func (ChannelNameUpdateMsg) ircEvent() {}
 func (ChannelJoinedMsg) ircEvent()     {}
@@ -46,10 +47,23 @@ type BufferNewMessageMsg struct {
 	Type          MessageType
 }
 
+// ChannelTopicMsg reports a channel's topic. A TOPIC change also reports who
+// set it and when; RPL_TOPIC does not, and ChannelTopicSetByMsg follows it.
 type ChannelTopicMsg struct {
 	Server  string
 	Channel string
 	Topic   string
+	SetBy   string
+	SetAt   time.Time
+}
+
+// ChannelTopicSetByMsg reports who set a channel's current topic and when,
+// from RPL_TOPICWHOTIME. SetAt is zero if the server sent no valid time.
+type ChannelTopicSetByMsg struct {
+	Server  string
+	Channel string
+	SetBy   string
+	SetAt   time.Time
 }
 
 type NickUpdateMsg struct {
