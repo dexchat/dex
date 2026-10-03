@@ -32,7 +32,7 @@ func main() {
 	tui.SetManager(ircClientManager)
 
 	// With desktop notifications off, dex never touches D-Bus.
-	if cfg.Notifications.Desktop {
+	if cfg.Notifications.Desktop != config.DesktopOff {
 		notifier := notify.NewDBus()
 		defer notifier.Close()
 		tui.SetNotifier(notifier)

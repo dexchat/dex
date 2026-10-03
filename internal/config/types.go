@@ -15,6 +15,19 @@ const (
 	ThemeSolarizedLight       = "solarized-light"
 )
 
+// DesktopMode controls desktop notifications.
+type DesktopMode int
+
+const (
+	// DesktopOff never touches D-Bus.
+	DesktopOff DesktopMode = iota
+	// DesktopAuto is the default: notify when a session bus exists and turn
+	// off silently when it does not, such as on macOS or over SSH.
+	DesktopAuto
+	// DesktopOn is set explicitly and reports a missing session bus.
+	DesktopOn
+)
+
 // rawConfig stores the config file as it is
 type rawConfig struct {
 	UI            rawUI              `toml:"ui"`
@@ -44,7 +57,7 @@ type rawNotifications struct {
 
 type Notifications struct {
 	Sound    bool
-	Desktop  bool
+	Desktop  DesktopMode
 	ShowBody bool
 	Events   map[string]bool
 	Cooldown time.Duration

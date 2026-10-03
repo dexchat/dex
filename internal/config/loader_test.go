@@ -236,8 +236,8 @@ channels = ["#go"]
 	if !cfg.Notifications.Sound {
 		t.Fatal("Notifications.Sound = false, want true")
 	}
-	if cfg.Notifications.Desktop {
-		t.Fatal("Notifications.Desktop = true, want false")
+	if got, want := cfg.Notifications.Desktop, DesktopAuto; got != want {
+		t.Fatalf("Notifications.Desktop = %v, want %v", got, want)
 	}
 	if !cfg.Notifications.ShowBody {
 		t.Fatal("Notifications.ShowBody = false, want true")
@@ -275,8 +275,8 @@ channels = ["#go"]
 	if cfg.Notifications.Sound {
 		t.Fatal("Notifications.Sound = true, want false")
 	}
-	if !cfg.Notifications.Desktop {
-		t.Fatal("Notifications.Desktop = false, want true")
+	if got, want := cfg.Notifications.Desktop, DesktopOn; got != want {
+		t.Fatalf("Notifications.Desktop = %v, want %v", got, want)
 	}
 	if cfg.Notifications.ShowBody {
 		t.Fatal("Notifications.ShowBody = true, want false")
@@ -289,6 +289,25 @@ channels = ["#go"]
 	}
 	if got, want := cfg.Notifications.Cooldown, 5*time.Second; got != want {
 		t.Fatalf("Notifications.Cooldown = %v, want %v", got, want)
+	}
+}
+
+func TestLoadDesktopFalseTurnsDesktopNotificationsOff(t *testing.T) {
+	cfg, err := loadFromBytes([]byte(`
+[notifications]
+desktop = false
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+	if err != nil {
+		t.Fatalf("loadFromBytes() error = %v", err)
+	}
+	if got, want := cfg.Notifications.Desktop, DesktopOff; got != want {
+		t.Fatalf("Notifications.Desktop = %v, want %v", got, want)
 	}
 }
 

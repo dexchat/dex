@@ -36,8 +36,10 @@ notify_channels = []
 
 [notifications]
 sound = true
-# Send desktop notifications through D-Bus (dunst, mako, GNOME, KDE).
-desktop = false
+# Desktop notifications through D-Bus (dunst, mako, GNOME, KDE) are on by
+# default and stay silent when they cannot be delivered, such as on macOS or
+# over SSH. Set true to see those errors, or false to turn them off.
+# desktop = true
 # Include the message text in desktop notifications.
 show_body = true
 events = ["mention", "direct_message"]

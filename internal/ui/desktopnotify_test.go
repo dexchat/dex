@@ -58,6 +58,7 @@ func countBells(msgs []tea.Msg) int {
 func newDesktopTestModel(t *testing.T) (*Model, *fakeNotifier, *time.Time) {
 	t.Helper()
 	m := newActivityTestModel()
+	m.config.Notifications.Desktop = config.DesktopOn
 	m.config.Notifications.ShowBody = true
 	fake := &fakeNotifier{}
 	m.SetNotifier(fake)
@@ -234,6 +235,7 @@ func TestDesktopCooldownIsPerBufferWhileBellIsGlobal(t *testing.T) {
 func TestDesktopUnavailableErrorDisablesNotifications(t *testing.T) {
 	cfg := &config.Config{
 		Notifications: config.Notifications{
+			Desktop:  config.DesktopOn,
 			Events:   map[string]bool{config.NotificationMention: true},
 			Cooldown: 2 * time.Second,
 		},
@@ -289,5 +291,33 @@ func TestDesktopCallErrorIsReportedOncePerFailureStreak(t *testing.T) {
 	_, _ = m.Update(failed)
 	if got := strings.Count(plainText(server.Chat.View()), "daemon gone"); got != 2 {
 		t.Fatalf("error after a success reported %d times in total, want 2", got)
+	}
+}
+
+func TestDefaultDesktopModeHidesErrors(t *testing.T) {
+	m, fake, now := newDesktopTestModel(t)
+	m.config.Notifications.Desktop = config.DesktopAuto
+	server := m.buffers[makeBufferKey("libera", "")]
+	server.Chat.SetSize(80, 10)
+
+	// A bus without a notification daemon, as in many SSH sessions, keeps
+	// trying silently, so a daemon started later still works.
+	_, _ = m.Update(desktopNotificationResultMsg{server: "libera", err: errors.New("send desktop notification: no daemon")})
+	runCmd(m.processIncomingMessage(mentionIn("#random", *now)))
+	if got := len(fake.calls); got != 1 {
+		t.Fatalf("Notify calls after a call error = %d, want 1", got)
+	}
+
+	// No session bus at all turns desktop notifications off silently.
+	unavailable := fmt.Errorf("%w: connect to session bus: no bus", notify.ErrUnavailable)
+	_, _ = m.Update(desktopNotificationResultMsg{server: "libera", err: unavailable})
+	*now = now.Add(m.config.Notifications.Cooldown)
+	runCmd(m.processIncomingMessage(mentionIn("#random", *now)))
+	if got := len(fake.calls); got != 1 {
+		t.Fatalf("Notify calls after the bus was unavailable = %d, want 1", got)
+	}
+
+	if view := plainText(server.Chat.View()); strings.Contains(view, "desktop notification") {
+		t.Fatalf("default desktop mode reported an error:\n%s", view)
 	}
 }

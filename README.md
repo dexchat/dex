@@ -81,13 +81,16 @@ Edit the config file with your IRC server settings and preferences for the app. 
 
 ### Desktop notifications
 
-Set `desktop = true` in `[notifications]` to send desktop notifications
-through D-Bus (`org.freedesktop.Notifications`), supported by dunst, mako,
-GNOME, KDE, and other notification daemons. They follow the same events as
-the terminal bell, with the `cooldown` applied per buffer, and
-`show_body = false` hides the message text. Without a session bus, such as
-on macOS or over SSH, dex reports the error once and the terminal bell keeps
-working.
+dexchat sends desktop notifications through D-Bus
+(`org.freedesktop.Notifications`), supported by dunst, mako, GNOME, KDE, and
+other notification daemons. They follow the same events as the terminal bell,
+with the `cooldown` applied per buffer, and `show_body = false` hides the
+message text.
+
+They are on by default and stay silent when they cannot be delivered, such as
+on macOS or over SSH without a notification daemon; the terminal bell keeps
+working. Set `desktop = true` in `[notifications]` to see these errors in the
+server buffer, or `desktop = false` to turn desktop notifications off.
 
 Notifications use the app name `dex`, so daemon rules can match it. For
 example, to keep them on screen longer in mako:

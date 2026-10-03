@@ -6,6 +6,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/dexchat/dex/internal/config"
 	"github.com/dexchat/dex/internal/irc"
 	"github.com/dexchat/dex/internal/notify"
 	"github.com/dexchat/dex/internal/ui/components/chat"
@@ -67,8 +68,10 @@ func desktopNotification(msg irc.BufferNewMessageMsg, showBody bool) notify.Noti
 }
 
 // applyDesktopNotificationResult disables desktop notifications when the
-// session bus is unavailable. Other failures, such as a daemon that is not
-// running, are reported once until a notification succeeds again.
+// session bus is unavailable. Errors are shown only when desktop
+// notifications were enabled explicitly: the default is best effort, because
+// many sessions, such as SSH, have no bus or no notification daemon. Other
+// failures are reported once until a notification succeeds again.
 func (m *Model) applyDesktopNotificationResult(msg desktopNotificationResultMsg) {
 	// Results of commands started before notifications were disabled.
 	if m.notifier == nil {
@@ -79,9 +82,16 @@ func (m *Model) applyDesktopNotificationResult(msg desktopNotificationResultMsg)
 		return
 	}
 
-	text := msg.err.Error()
-	if errors.Is(msg.err, notify.ErrUnavailable) {
+	unavailable := errors.Is(msg.err, notify.ErrUnavailable)
+	if unavailable {
 		m.notifier = nil
+	}
+	if m.config.Notifications.Desktop != config.DesktopOn {
+		return
+	}
+
+	text := msg.err.Error()
+	if unavailable {
 		text += "; disabled until dex restarts"
 	} else if m.desktopErrorReported {
 		return
