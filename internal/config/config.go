@@ -10,34 +10,26 @@ func (s *Server) UseSSL() bool {
 	return *s.SSL
 }
 
-// isZNC returns true if the nickname contains a "/" indicating ZNC format (user/network)
-func (s *Server) isZNC() bool {
+// isBouncer reports whether the nickname uses the bouncer login format
+// "user/network". A client name may be added as "user/network@client" for
+// soju or "user@client/network" for ZNC. Nicknames cannot contain "/", so
+// this cannot match a real nickname.
+func (s *Server) isBouncer() bool {
 	return strings.Contains(s.Nickname, "/")
 }
 
 // ConnectionNickname returns the nickname to use for display and connection
-// For ZNC users, it derives the nick from the part before "/"
+// For bouncer logins, it is the user part before the network or client.
 func (s *Server) ConnectionNickname() string {
-	if s.isZNC() {
-		return strings.Split(s.Nickname, "/")[0]
+	if s.isBouncer() {
+		return s.Nickname[:strings.IndexAny(s.Nickname, "/@")]
 	}
 	return s.Nickname
 }
 
-// usesSASL reports whether the username carries a bouncer network or client
-// suffix, as in soju's "user/network@client". Such names are not valid
-// idents, so they are sent with SASL PLAIN and USER gets the bare username.
-func (s *Server) usesSASL() bool {
-	return strings.ContainsAny(s.Username, "/@")
-}
-
 // ConnectionUsername returns the username to use for connection
 // Defaults to ConnectionNickname() if not set
-// For bouncer usernames, it is the part before the network or client suffix.
 func (s *Server) ConnectionUsername() string {
-	if s.usesSASL() {
-		return s.Username[:strings.IndexAny(s.Username, "/@")]
-	}
 	if s.Username != "" {
 		return s.Username
 	}
@@ -45,23 +37,20 @@ func (s *Server) ConnectionUsername() string {
 }
 
 // ConnectionPassword returns the server password to use for authentication
-// For ZNC users, it constructs "nickname:password" format.
-// It is empty when the password is sent with SASL.
+// For bouncer logins, it is "login:password", the format ZNC reads from PASS.
 func (s *Server) ConnectionPassword() string {
-	if s.usesSASL() {
-		return ""
-	}
-	if s.isZNC() {
+	if s.isBouncer() {
 		return s.Nickname + ":" + s.Password
 	}
 	return s.Password
 }
 
-// SASLCredentials returns the SASL PLAIN username and password. ok is false
-// when the server authenticates with PASS.
+// SASLCredentials returns the SASL PLAIN username and password for bouncer
+// logins, which soju requires: it reads the password from PASS as is. When
+// SASL succeeds, soju ignores PASS; ZNC without SASL support uses PASS.
 func (s *Server) SASLCredentials() (username, password string, ok bool) {
-	if !s.usesSASL() {
+	if !s.isBouncer() {
 		return "", "", false
 	}
-	return s.Username, s.Password, true
+	return s.Nickname, s.Password, true
 }

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -143,10 +144,12 @@ func TestConnectLoopStopsAfterClose(t *testing.T) {
 	}
 }
 
-// TestBouncerSASLIsSentOnlyDuringRegistration covers soju, which announces
-// the upstream network's SASL with CAP NEW after registration. The bouncer
-// credentials must not be sent there, yet every reconnect must authenticate.
-func TestBouncerSASLIsSentOnlyDuringRegistration(t *testing.T) {
+// TestBouncerLoginWorksWithZNCAndSoju covers the "user/network" nickname
+// login. ZNC reads it from PASS and soju from SASL, so both are sent. soju
+// announces the upstream network's SASL with CAP NEW after registration;
+// the bouncer credentials must not be sent there, yet every reconnect must
+// authenticate.
+func TestBouncerLoginWorksWithZNCAndSoju(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("listen: %v", err)
@@ -175,8 +178,7 @@ func TestBouncerSASLIsSentOnlyDuringRegistration(t *testing.T) {
 		Address:  "127.0.0.1",
 		Port:     listener.Addr().(*net.TCPAddr).Port,
 		SSL:      &ssl,
-		Nickname: "alice",
-		Username: "alice/libera@dex",
+		Nickname: "alice/libera@dex",
 		Password: "secret",
 	})
 	ctx, cancel := context.WithCancel(context.Background())
@@ -192,6 +194,13 @@ func TestBouncerSASLIsSentOnlyDuringRegistration(t *testing.T) {
 	}()
 
 	first := nextBouncerRegistration(t, registrations)
+	for _, want := range []string{"PASS alice/libera@dex:secret", "NICK alice", "USER alice "} {
+		if !slices.ContainsFunc(first.beforeWelcome, func(line string) bool {
+			return strings.HasPrefix(line, want)
+		}) {
+			t.Fatalf("registration %q is missing %q", first.beforeWelcome, want)
+		}
+	}
 	payload, err := base64.StdEncoding.DecodeString(first.saslPayload)
 	if err != nil {
 		t.Fatalf("SASL payload %q is not base64: %v", first.saslPayload, err)
@@ -213,8 +222,9 @@ func TestBouncerSASLIsSentOnlyDuringRegistration(t *testing.T) {
 
 // bouncerRegistration records what a client sent to serveBouncerRegistration.
 type bouncerRegistration struct {
-	saslPayload  string
-	afterWelcome []string
+	beforeWelcome []string
+	saslPayload   string
+	afterWelcome  []string
 }
 
 // serveBouncerRegistration registers a client with SASL PLAIN the way soju
@@ -234,6 +244,8 @@ func serveBouncerRegistration(conn net.Conn) bouncerRegistration {
 		line := scanner.Text()
 		if welcomed {
 			reg.afterWelcome = append(reg.afterWelcome, line)
+		} else {
+			reg.beforeWelcome = append(reg.beforeWelcome, line)
 		}
 		fields := strings.Fields(line)
 		if len(fields) < 2 {

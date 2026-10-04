@@ -18,35 +18,24 @@ mention_badges = true
 ignore_direct_messages_from = []
 notify_channels = []
 
-# ZNC example:
-# The nickname uses the ZNC format "username/network". Dex then sends
-# "username:password" as the connection password automatically.
-# There is no need to add channels as it automatically gets from
-# the server.
+# Bouncer example (ZNC or soju):
+# The nickname uses the bouncer format "username/network". Dex connects
+# with the nick before "/" and logs in with "username/network" and the
+# password; ZNC reads them from PASS and soju through SASL PLAIN. Add a
+# client name to keep a separate backlog for Dex: "username/network@dex"
+# for soju or "username@dex/network" for ZNC. Use one server entry per
+# bouncer network. There is no need to add channels as it automatically
+# gets them from the server.
 #
-# [servers.libera_znc]
-# address = "znc.example.com"
+# [servers.libera_bouncer]
+# address = "bouncer.example.com"
 # port = 6697
 # ssl = true
 # Skip TLS certificate verification. Only enable this for a server you
 # trust that uses a self-signed certificate; it allows MITM attacks.
 # ssl_skip_verify = true
-# nickname = "your-znc-username/znc-server-name"
-# password = "your-znc-password"
-
-# soju example:
-# The username uses the soju format "username/network@client". Dex sends
-# it with the password through SASL PLAIN, because IRC usernames cannot
-# contain "/" or "@". Use one server entry per soju network. The client
-# suffix is optional; it gives Dex its own backlog in soju.
-#
-# [servers.libera_soju]
-# address = "soju.example.com"
-# port = 6697
-# ssl = true
-# nickname = "your-nickname"
-# username = "your-soju-username/libera@dex"
-# password = "your-soju-password"
+# nickname = "your-bouncer-username/libera"
+# password = "your-bouncer-password"
 
 [notifications]
 sound = true
