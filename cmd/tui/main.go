@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"runtime/debug"
@@ -17,6 +18,13 @@ import (
 var version string
 
 func main() {
+	showVersion := flag.Bool("version", false, "print the dex version and exit")
+	flag.Parse()
+	if *showVersion {
+		fmt.Println(versionString())
+		return
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load config: %v\n", err)
@@ -51,6 +59,15 @@ func quitMessage() string {
 		return "dexchat " + v + " - https://dexchat.org"
 	}
 	return "dexchat - https://dexchat.org"
+}
+
+// versionString is the output of --version, e.g. "dex 1.1.0", or
+// "dex (devel)" for builds without version information.
+func versionString() string {
+	if v := buildVersion(); v != "" {
+		return "dex " + v
+	}
+	return "dex (devel)"
 }
 
 // buildVersion returns the version set at link time, or the module version
