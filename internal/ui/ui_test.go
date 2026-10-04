@@ -105,7 +105,7 @@ func TestLastBufferKeybindingTogglesBetweenRecentBuffers(t *testing.T) {
 	}
 }
 
-func TestSelfPartRemovesActiveChannelAndSelectsServer(t *testing.T) {
+func TestSelfPartRemovesActiveChannelAndSelectsNextBuffer(t *testing.T) {
 	m := newActivityTestModel()
 	channelKey := makeBufferKey("libera", "#go")
 	m.activeBuffer = channelKey
@@ -115,8 +115,11 @@ func TestSelfPartRemovesActiveChannelAndSelectsServer(t *testing.T) {
 	if _, exists := m.buffers[channelKey]; exists {
 		t.Fatal("self-PART should remove the channel buffer")
 	}
-	if got, want := m.activeBuffer, makeBufferKey("libera", ""); got != want {
+	if got, want := m.activeBuffer, makeBufferKey("libera", "#random"); got != want {
 		t.Fatalf("activeBuffer = %q, want %q", got, want)
+	}
+	if m.lastBuffer == channelKey {
+		t.Fatal("the removed channel must not become the last buffer")
 	}
 	if content := plainText(m.channels.View(channelsPanelMaxWidth, 20)); strings.Contains(content, "#go") {
 		t.Fatalf("self-PART should remove the channel from the sidebar:\n%s", content)
@@ -264,7 +267,7 @@ func TestSelfPartQueuesDirtyHistoryForPersistence(t *testing.T) {
 		t.Fatal("removed channel history should remain queued for persistence")
 	}
 
-	_, _ = m.Update(cmd())
+	_, _ = m.Update(persistenceResult(t, cmd))
 	if _, pending := m.persistence.detachedHistory[key]; pending {
 		t.Fatal("persisted channel history should leave the queue")
 	}
@@ -339,7 +342,7 @@ func TestPartIsAliasForLeave(t *testing.T) {
 	}
 }
 
-func TestCloseRemovesPrivateBufferAndSelectsServer(t *testing.T) {
+func TestCloseRemovesPrivateBufferAndSelectsPreviousBuffer(t *testing.T) {
 	m := newActivityTestModel()
 	m.getOrCreateBuffer("libera", "alice")
 	m.directMessages.Add("libera", "alice")
@@ -350,7 +353,7 @@ func TestCloseRemovesPrivateBufferAndSelectsServer(t *testing.T) {
 	if _, exists := m.buffers[makeBufferKey("libera", "alice")]; exists {
 		t.Fatal("/close should remove the private buffer")
 	}
-	if got, want := m.activeBuffer, makeBufferKey("libera", ""); got != want {
+	if got, want := m.activeBuffer, makeBufferKey("libera", "#random"); got != want {
 		t.Fatalf("activeBuffer = %q, want %q", got, want)
 	}
 	for _, directMessage := range m.directMessages.Users {
@@ -360,38 +363,38 @@ func TestCloseRemovesPrivateBufferAndSelectsServer(t *testing.T) {
 	}
 }
 
-func TestCloseResizesServerBufferAfterStaleWindowSize(t *testing.T) {
+func TestCloseResizesNeighborBufferAfterStaleWindowSize(t *testing.T) {
 	m := newActivityTestModel()
 	m.getOrCreateBuffer("libera", "alice")
 	m.directMessages.Add("libera", "alice")
 
 	// Resizing while the DM is active only resizes the DM's chat (per
-	// WindowSizeMsg handling), leaving the server buffer's chat sized from
+	// WindowSizeMsg handling), leaving the neighbor buffer's chat sized from
 	// whatever it last had (its zero value here, since it was never active).
 	m.activeBuffer = makeBufferKey("libera", "alice")
 	_, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
 
 	_, _ = submitChat(m, "/close")
 
-	if got, want := m.activeBuffer, makeBufferKey("libera", ""); got != want {
+	if got, want := m.activeBuffer, makeBufferKey("libera", "#random"); got != want {
 		t.Fatalf("activeBuffer = %q, want %q", got, want)
 	}
 
 	// A chat freshly sized to the model's current dimensions is the ground
-	// truth for what the (now active) server buffer should look like.
+	// truth for what the (now active) neighbor buffer should look like.
 	want := chat.New(m.theme, m.usernameColors)
 	want.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
 	wantView := want.View()
 
 	got := m.getActiveBuffer().Chat.View()
 	if lipgloss.Height(got) != lipgloss.Height(wantView) {
-		t.Fatalf("server buffer chat height after /close = %d, want %d", lipgloss.Height(got), lipgloss.Height(wantView))
+		t.Fatalf("neighbor buffer chat height after /close = %d, want %d", lipgloss.Height(got), lipgloss.Height(wantView))
 	}
 	gotLines := strings.Split(got, "\n")
 	wantLines := strings.Split(wantView, "\n")
 	for i := range gotLines {
 		if lipgloss.Width(gotLines[i]) != lipgloss.Width(wantLines[i]) {
-			t.Fatalf("server buffer chat line %d width after /close = %d, want %d", i, lipgloss.Width(gotLines[i]), lipgloss.Width(wantLines[i]))
+			t.Fatalf("neighbor buffer chat line %d width after /close = %d, want %d", i, lipgloss.Width(gotLines[i]), lipgloss.Width(wantLines[i]))
 		}
 	}
 }
@@ -451,7 +454,7 @@ func TestCloseQueuesDirtyPrivateHistoryForPersistence(t *testing.T) {
 		t.Fatal("closed private history should remain queued for persistence")
 	}
 
-	_, _ = m.Update(cmd())
+	_, _ = m.Update(persistenceResult(t, cmd))
 	if _, pending := m.persistence.detachedHistory[key]; pending {
 		t.Fatal("persisted private history should leave the queue")
 	}
@@ -512,11 +515,11 @@ func TestReopenedBufferKeepsDetachedHistoryWhilePersistenceRuns(t *testing.T) {
 		t.Fatal("second close should queue behind the in-flight persistence")
 	}
 
-	_, secondFlush := m.Update(firstFlush())
+	_, secondFlush := m.Update(persistenceResult(t, firstFlush))
 	if secondFlush == nil {
 		t.Fatal("newer detached history should trigger a second flush")
 	}
-	_, _ = m.Update(secondFlush())
+	_, _ = m.Update(persistenceResult(t, secondFlush))
 	if _, pending := m.persistence.detachedHistory[key]; pending {
 		t.Fatal("latest detached history should leave the queue after persistence")
 	}
@@ -1476,6 +1479,19 @@ func writeTestHistory(t *testing.T, server, buffer, text string) {
 	if err := history.FlushSnapshot(server, buffer, []history.LogEntry{entry}); err != nil {
 		t.Fatalf("failed to write test history: %v", err)
 	}
+}
+
+// persistenceResult runs cmd, including batched commands, and returns the
+// persistence result it produced.
+func persistenceResult(t *testing.T, cmd tea.Cmd) historyFlushFinishedMsg {
+	t.Helper()
+	for _, msg := range runCmd(cmd) {
+		if result, ok := msg.(historyFlushFinishedMsg); ok {
+			return result
+		}
+	}
+	t.Fatal("command did not produce a persistence result")
+	return historyFlushFinishedMsg{}
 }
 
 // persistNow runs the app's persistence command to completion.

@@ -96,24 +96,64 @@ func TestChannelPaneRendersRequestedHeight(t *testing.T) {
 	}
 }
 
-func TestRemoveBufferSelectsItsServer(t *testing.T) {
-	m := New(styles.AyuDarkTheme(), []*config.Server{{
-		Name:     "libera",
-		Channels: []string{"#go", "#random"},
-	}})
-	m = m.MoveDown()
-
-	m, _ = m.Update(RemoveBufferMsg{
-		Server:       "libera",
-		Buffer:       "#go",
-		SelectServer: true,
-	})
-
-	if got := m.Selected(); got != (ChannelSelectionMsg{Server: "libera"}) {
-		t.Fatalf("Selected() = %#v, want libera server", got)
+func TestRemoveBufferSelectsNeighborWithinServer(t *testing.T) {
+	tests := []struct {
+		name    string
+		servers []*config.Server
+		server  string
+		remove  string
+		want    ChannelSelectionMsg
+	}{
+		{
+			name:    "next buffer",
+			servers: []*config.Server{{Name: "libera", Channels: []string{"#go", "#random", "#rust"}}},
+			server:  "libera",
+			remove:  "#random",
+			want:    ChannelSelectionMsg{Server: "libera", Channel: "#rust"},
+		},
+		{
+			name:    "previous buffer when last",
+			servers: []*config.Server{{Name: "libera", Channels: []string{"#go", "#random"}}},
+			server:  "libera",
+			remove:  "#random",
+			want:    ChannelSelectionMsg{Server: "libera", Channel: "#go"},
+		},
+		{
+			name:    "server when only buffer",
+			servers: []*config.Server{{Name: "libera", Channels: []string{"#go"}}},
+			server:  "libera",
+			remove:  "#go",
+			want:    ChannelSelectionMsg{Server: "libera"},
+		},
+		{
+			name: "stays within server",
+			servers: []*config.Server{
+				{Name: "libera", Channels: []string{"#go", "#random"}},
+				{Name: "oftc", Channels: []string{"#debian"}},
+			},
+			server: "libera",
+			remove: "#random",
+			want:   ChannelSelectionMsg{Server: "libera", Channel: "#go"},
+		},
 	}
-	if view := m.View(25, 10); strings.Contains(view, "#go") {
-		t.Fatalf("removed channel is still visible:\n%s", view)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := New(styles.AyuDarkTheme(), tt.servers)
+			m, _ = m.Select(tt.server, tt.remove)
+
+			m, _ = m.Update(RemoveBufferMsg{
+				Server:       tt.server,
+				Buffer:       tt.remove,
+				SelectServer: true,
+			})
+
+			if got := m.Selected(); got != tt.want {
+				t.Fatalf("Selected() = %#v, want %#v", got, tt.want)
+			}
+			if view := m.View(25, 10); strings.Contains(view, tt.remove) {
+				t.Fatalf("removed buffer is still visible:\n%s", view)
+			}
+		})
 	}
 }
 

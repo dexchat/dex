@@ -228,14 +228,6 @@ func (m *Model) removeBuffer(buffer *Buffer, forgetDirectMessage bool) tea.Cmd {
 	wasActive := m.activeBuffer == key
 	if wasActive {
 		m.markBufferRead(buffer)
-		m.activeBuffer = makeBufferKey(buffer.Server, "")
-		// The new active buffer may not have been resized since it last lost
-		// focus (WindowSizeMsg only resizes the currently active buffer), so
-		// bring it up to date the way selectBuffer does on a normal switch.
-		if newActive, ok := m.buffers[m.activeBuffer]; ok {
-			newActive.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
-			newActive.Users = newActive.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
-		}
 	}
 	if _, dirty := buffer.History.Snapshot(); dirty && buffer.historyState != historyUnreadable {
 		m.persistence.detachedHistory[key] = detachedHistory{
@@ -254,7 +246,24 @@ func (m *Model) removeBuffer(buffer *Buffer, forgetDirectMessage bool) tea.Cmd {
 		Buffer:       buffer.Buffer,
 		SelectServer: wasActive,
 	})
-	return m.startPersistence()
+	var cmds []tea.Cmd
+	if wasActive {
+		m.selectRemovedBufferNeighbor(buffer.Server, &cmds)
+	}
+	return tea.Batch(append(cmds, m.startPersistence())...)
+}
+
+// selectRemovedBufferNeighbor activates the sidebar entry chosen after the
+// active buffer was removed, falling back to the server buffer. The removed
+// buffer never becomes the last buffer.
+func (m *Model) selectRemovedBufferNeighbor(server string, cmds *[]tea.Cmd) {
+	lastBuffer := m.lastBuffer
+	next := m.channels.Selected()
+	if _, ok := m.buffers[makeBufferKey(next.Server, next.Channel)]; !ok {
+		next = channels.ChannelSelectionMsg{Server: server}
+	}
+	m.selectBuffer(next.Server, next.Channel, cmds)
+	m.lastBuffer = lastBuffer
 }
 
 func (m *Model) applyPersistenceResult(msg historyFlushFinishedMsg) tea.Cmd {

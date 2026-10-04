@@ -51,6 +51,10 @@ type NewBufferMsg struct {
 	Buffer string
 }
 
+// RemoveBufferMsg removes a buffer entry from the sidebar. SelectServer
+// moves the cursor to the entry below the removed one when it belongs to the
+// same server, otherwise to the entry above it, which is either another
+// buffer of that server or the server itself.
 type RemoveBufferMsg struct {
 	Server       string
 	Buffer       string
@@ -195,21 +199,22 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				break
 			}
 		}
-		if removeIdx >= 0 {
-			m.nodes = append(m.nodes[:removeIdx], m.nodes[removeIdx+1:]...)
-			if m.cursor > removeIdx {
-				m.cursor--
-			} else if m.cursor >= len(m.nodes) {
-				m.cursor = len(m.nodes) - 1
-			}
+		if removeIdx < 0 {
+			return m.updateContent(), nil
 		}
-		if msg.SelectServer {
-			for i, existingNode := range m.nodes {
-				if existingNode.isServer && strings.EqualFold(existingNode.name, msg.Server) {
-					m.cursor = i
-					break
+		m.nodes = append(m.nodes[:removeIdx], m.nodes[removeIdx+1:]...)
+		switch {
+		case msg.SelectServer:
+			m.cursor = removeIdx - 1
+			if removeIdx < len(m.nodes) {
+				if next := m.nodes[removeIdx]; !next.isServer && strings.EqualFold(next.parent, msg.Server) {
+					m.cursor = removeIdx
 				}
 			}
+		case m.cursor > removeIdx:
+			m.cursor--
+		case m.cursor >= len(m.nodes):
+			m.cursor = len(m.nodes) - 1
 		}
 		return m.updateContent(), nil
 	case tea.MouseWheelMsg:
