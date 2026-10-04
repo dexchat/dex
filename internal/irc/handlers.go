@@ -61,6 +61,9 @@ func (c *Client) onEvent(client *girc.Client, e girc.Event) {
 
 	case girc.RPL_WELCOME:
 		c.registered.Store(true)
+		// Registration is complete. girc reads the config only from the
+		// handler sequence this runs in, after this handler returns.
+		c.Config.SASL = nil
 		c.onServerMessage(client, e)
 		c.onNickUpdate(client, e)
 	case girc.RPL_MOTDSTART, girc.RPL_MOTD, girc.RPL_ENDOFMOTD:

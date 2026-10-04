@@ -34,6 +34,20 @@ notify_channels = []
 # nickname = "your-znc-username/znc-server-name"
 # password = "your-znc-password"
 
+# soju example:
+# The username uses the soju format "username/network@client". Dex sends
+# it with the password through SASL PLAIN, because IRC usernames cannot
+# contain "/" or "@". Use one server entry per soju network. The client
+# suffix is optional; it gives Dex its own backlog in soju.
+#
+# [servers.libera_soju]
+# address = "soju.example.com"
+# port = 6697
+# ssl = true
+# nickname = "your-nickname"
+# username = "your-soju-username/libera@dex"
+# password = "your-soju-password"
+
 [notifications]
 sound = true
 # Desktop notifications through D-Bus (dunst, mako, GNOME, KDE) are on by

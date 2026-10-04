@@ -41,6 +41,9 @@ func (c *Client) connectLoop(ctx context.Context, delays []time.Duration) {
 	retry := backoff{delays: delays}
 	for {
 		c.registered.Store(false)
+		// The previous connection's handlers have finished, so this does not
+		// race with onEvent clearing SASL after registration.
+		c.Config.SASL = c.sasl
 		err := c.Connect()
 		// girc returns nil only after Close, which dex calls when shutting
 		// down; ctx is canceled first.

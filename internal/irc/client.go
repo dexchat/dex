@@ -44,6 +44,13 @@ type Client struct {
 	// UPDATE_STATE, which it sends after applying the change.
 	deferredUserListsMu sync.Mutex
 	deferredUserLists   []string
+
+	// sasl authenticates each connection during registration. connectLoop
+	// enables it before connecting and onEvent disables it at RPL_WELCOME:
+	// soju announces the upstream network's SASL with CAP NEW after
+	// registration, and girc would answer it by sending the bouncer
+	// credentials to the upstream network.
+	sasl girc.SASLMech
 }
 
 func NewClient(serverName string, config *config.Server) *Client {
@@ -84,6 +91,9 @@ func NewClient(serverName string, config *config.Server) *Client {
 		Client:     client,
 		serverName: serverName,
 		channels:   config.Channels,
+	}
+	if username, password, ok := config.SASLCredentials(); ok {
+		c.sasl = &girc.SASLPlain{User: username, Pass: password}
 	}
 	client.Config.RecoverFunc = c.onHandlerPanic
 	client.Config.HandleNickCollide = c.onNickCollide

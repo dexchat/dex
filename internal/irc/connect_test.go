@@ -1,7 +1,9 @@
 package irc
 
 import (
+	"bufio"
 	"context"
+	"encoding/base64"
 	"io"
 	"net"
 	"reflect"
@@ -138,6 +140,140 @@ func TestConnectLoopStopsAfterClose(t *testing.T) {
 		if strings.Contains(msg.Text, "reconnecting") {
 			t.Fatalf("connect loop scheduled a reconnect after Close: %q", msg.Text)
 		}
+	}
+}
+
+// TestBouncerSASLIsSentOnlyDuringRegistration covers soju, which announces
+// the upstream network's SASL with CAP NEW after registration. The bouncer
+// credentials must not be sent there, yet every reconnect must authenticate.
+func TestBouncerSASLIsSentOnlyDuringRegistration(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	defer listener.Close()
+
+	registrations := make(chan bouncerRegistration, 2)
+	go func() {
+		for i := range 2 {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			defer conn.Close()
+			registrations <- serveBouncerRegistration(conn)
+			if i == 0 {
+				// Drop the first connection so the client reconnects.
+				conn.Close()
+			}
+		}
+		<-t.Context().Done()
+	}()
+
+	ssl := false
+	client := NewClient("soju", &config.Server{
+		Address:  "127.0.0.1",
+		Port:     listener.Addr().(*net.TCPAddr).Port,
+		SSL:      &ssl,
+		Nickname: "alice",
+		Username: "alice/libera@dex",
+		Password: "secret",
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		client.connectLoop(ctx, []time.Duration{time.Millisecond})
+		close(done)
+	}()
+	defer func() {
+		cancel()
+		client.Close()
+		<-done
+	}()
+
+	first := nextBouncerRegistration(t, registrations)
+	payload, err := base64.StdEncoding.DecodeString(first.saslPayload)
+	if err != nil {
+		t.Fatalf("SASL payload %q is not base64: %v", first.saslPayload, err)
+	}
+	if fields := strings.Split(string(payload), "\x00"); len(fields) != 3 ||
+		fields[1] != "alice/libera@dex" || fields[2] != "secret" {
+		t.Fatalf("SASL PLAIN payload = %q, want the bouncer username and password", payload)
+	}
+	for _, line := range first.afterWelcome {
+		if strings.HasPrefix(line, "AUTHENTICATE") {
+			t.Fatalf("client sent %q after registration", line)
+		}
+	}
+
+	if second := nextBouncerRegistration(t, registrations); second.saslPayload == "" {
+		t.Fatal("reconnect did not authenticate with SASL")
+	}
+}
+
+// bouncerRegistration records what a client sent to serveBouncerRegistration.
+type bouncerRegistration struct {
+	saslPayload  string
+	afterWelcome []string
+}
+
+// serveBouncerRegistration registers a client with SASL PLAIN the way soju
+// does, then announces and acknowledges SASL again, as soju does when it
+// binds the connection to an upstream network. It returns after the client
+// answers a PING sent after those messages.
+func serveBouncerRegistration(conn net.Conn) bouncerRegistration {
+	var reg bouncerRegistration
+	send := func(lines ...string) {
+		for _, line := range lines {
+			_, _ = io.WriteString(conn, line+"\r\n")
+		}
+	}
+	welcomed := false
+	scanner := bufio.NewScanner(conn)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if welcomed {
+			reg.afterWelcome = append(reg.afterWelcome, line)
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		arg := strings.TrimPrefix(fields[len(fields)-1], ":")
+		switch {
+		case welcomed && fields[0] == "PONG" && arg == "sync":
+			return reg
+		case welcomed:
+		case fields[0] == "CAP" && fields[1] == "LS":
+			send(":bnc CAP * LS :sasl=PLAIN")
+		case fields[0] == "CAP" && fields[1] == "REQ":
+			send(":bnc CAP * ACK :sasl")
+		case fields[0] == "AUTHENTICATE" && arg == "PLAIN":
+			send("AUTHENTICATE +")
+		case fields[0] == "AUTHENTICATE":
+			reg.saslPayload = arg
+			send(":bnc 903 alice :SASL authentication successful")
+		case fields[0] == "CAP" && fields[1] == "END":
+			welcomed = true
+			send(
+				":bnc 001 alice :Welcome",
+				":bnc CAP alice NEW :sasl=PLAIN,ANONYMOUS",
+				":bnc CAP alice ACK :sasl",
+				"PING :sync",
+			)
+		}
+	}
+	return reg
+}
+
+func nextBouncerRegistration(t *testing.T, registrations <-chan bouncerRegistration) bouncerRegistration {
+	t.Helper()
+	select {
+	case reg := <-registrations:
+		return reg
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for the client to register")
+		return bouncerRegistration{}
 	}
 }
 

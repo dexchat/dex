@@ -24,9 +24,20 @@ func (s *Server) ConnectionNickname() string {
 	return s.Nickname
 }
 
+// usesSASL reports whether the username carries a bouncer network or client
+// suffix, as in soju's "user/network@client". Such names are not valid
+// idents, so they are sent with SASL PLAIN and USER gets the bare username.
+func (s *Server) usesSASL() bool {
+	return strings.ContainsAny(s.Username, "/@")
+}
+
 // ConnectionUsername returns the username to use for connection
 // Defaults to ConnectionNickname() if not set
+// For bouncer usernames, it is the part before the network or client suffix.
 func (s *Server) ConnectionUsername() string {
+	if s.usesSASL() {
+		return s.Username[:strings.IndexAny(s.Username, "/@")]
+	}
 	if s.Username != "" {
 		return s.Username
 	}
@@ -35,9 +46,22 @@ func (s *Server) ConnectionUsername() string {
 
 // ConnectionPassword returns the server password to use for authentication
 // For ZNC users, it constructs "nickname:password" format.
+// It is empty when the password is sent with SASL.
 func (s *Server) ConnectionPassword() string {
+	if s.usesSASL() {
+		return ""
+	}
 	if s.isZNC() {
 		return s.Nickname + ":" + s.Password
 	}
 	return s.Password
+}
+
+// SASLCredentials returns the SASL PLAIN username and password. ok is false
+// when the server authenticates with PASS.
+func (s *Server) SASLCredentials() (username, password string, ok bool) {
+	if !s.usesSASL() {
+		return "", "", false
+	}
+	return s.Username, s.Password, true
 }
