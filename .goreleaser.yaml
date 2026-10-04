@@ -10,7 +10,7 @@ before:
 
 builds:
   - id: dex
-    main: ./cmd/tui
+    main: ./cmd/dex
     binary: dex
     goos:
       - linux

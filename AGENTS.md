@@ -9,7 +9,7 @@ remain **dex**.
 
 ## Repository map
 
-- `cmd/tui/`: application entrypoint
+- `cmd/dex/`: application entrypoint
 - `internal/commands/`: command parsing and definitions
 - `internal/config/`: configuration types and loading
 - `internal/history/`: persisted messages, direct messages, and read state
@@ -56,7 +56,7 @@ three-pane terminal UI
 ## Code Style Guidelines
 
 - **Packages**: Keep packages under `internal/`; the executable entrypoint is
-  `./cmd/tui`.
+  `./cmd/dex`.
 - **Concurrency**: Avoid blocking work in IRC socket handlers.
 - **Boundaries**: Preserve ordering and ownership boundaries between IRC
   handlers, message queues, UI updates, and persisted history.
@@ -85,7 +85,7 @@ For Go changes, run:
 ```sh
 env GOCACHE=/tmp/dex-go-build go test ./...
 go vet ./...
-go build ./cmd/tui
+go build ./cmd/dex
 git diff --check
 ```
 

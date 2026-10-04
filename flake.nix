@@ -25,13 +25,9 @@
             src = ./.;
             vendorHash = "sha256-lor5WtPMd0ea09ICchAv648K8DzUg2aouTizFZbbpnM=";
 
-            subPackages = [ "cmd/tui" ];
+            subPackages = [ "cmd/dex" ];
             ldflags = [ "-s" "-w" ];
             env.CGO_ENABLED = 0;
-
-            postInstall = ''
-              mv "$out/bin/tui" "$out/bin/dex"
-            '';
 
             meta = {
               description = "A modern and fast terminal IRC client";

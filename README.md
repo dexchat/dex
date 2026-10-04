@@ -56,7 +56,7 @@ Until we add support for more package managers:
 
 You can also install it with Go:
 ```bash
-go install github.com/dexchat/dex/cmd/tui@latest
+go install github.com/dexchat/dex/cmd/dex@latest
 ```
 
 Or, if you want test it before actually downloading dex, you can run its docker image and take a look at it:

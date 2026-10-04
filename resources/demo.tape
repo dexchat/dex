@@ -68,7 +68,7 @@ Set Margin 0
 Set Padding 0
 
 Hide
-Type "go run ../cmd/tui/main.go"
+Type "go run ../cmd/dex/main.go"
 Enter
 Show
 
