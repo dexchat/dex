@@ -27,8 +27,6 @@
 - **Command palette:** access common actions from a searchable command menu
 - **Fuzzy channel search:** Find channels without iteracting through all of them
 - **Persistent history:** Preserve your conversations between sessions locally
-- **Notifications:** Get notified about mentions and direct messages with a
-  terminal bell or desktop notifications (dunst, mako, GNOME, KDE)
 
 ## Installation
 Use a package manager:
@@ -64,6 +62,11 @@ Or, if you want test it before actually downloading dex, you can run its docker 
 docker run --rm -it ghcr.io/dexchat/dex:latest
 ```
 
+To check which version is installed:
+```bash
+dex --version
+```
+
 ## Configuration
 
 `dexchat` reads its configuration from `$XDG_CONFIG_HOME/dex/config.toml`, or
@@ -77,28 +80,32 @@ wget -O "$HOME/.config/dex/config.toml" \
 ```
 
 Edit the config file with your IRC server settings and preferences for the app. See
-[`config.example.toml`](./config.example.toml) for all available options.
+[`config.example.toml`](./config.example.toml) for all available options and default values.
 
-### Desktop notifications
+### Bouncers
 
-dexchat sends desktop notifications through D-Bus
-(`org.freedesktop.Notifications`), supported by dunst, mako, GNOME, KDE, and
-other notification daemons. They follow the same events as the terminal bell,
-with the `cooldown` applied per buffer, and `show_body = false` hides the
-message text.
+dexchat supports both [ZNC](https://znc.in/) and [soju](https://soju.im/):
 
-They are on by default and stay silent when they cannot be delivered, such as
-on macOS or over SSH without a notification daemon; the terminal bell keeps
-working. Set `desktop = true` in `[notifications]` to see these errors in the
-server buffer, or `desktop = false` to turn desktop notifications off.
-
-Notifications use the app name `dex`, so daemon rules can match it. For
-example, to keep them on screen longer in mako:
-
-```ini
-[app-name=dex]
-default-timeout=10000
+```toml
+[servers.your_server_name]
+address = "bouncer.example.com"
+port = 6697
+nickname = "your-bouncer-username/your-server-name"
+password = "your-bouncer-password"
 ```
+
+If the bouncer uses a self-signed certificate (most likely), set `ssl_skip_verify = true` for
+the server.
+
+### Notifications
+
+dexchat sends desktop notifications through D-Bus, supported by dunst, mako, GNOME, KDE, and
+other notification daemons. Optionally, you can set `show_body = false` in the `[notifications]` config section to hide the
+message text from the notification.
+
+The desktop notifications are on by default, but it does not notify when they can't be delivered, such as
+on macOS or over SSH; the terminal bell is on by default to cover this case (to disable it, set `sound = false`).
+Set `desktop = false` to turn desktop notifications off.
 
 ## Contributing
 If you have any ideas, sugestions, issues or would like to contribute to dex, see the [contributing guide](https://github.com/dexchat/dex?tab=contributing-ov-file#contributing).
