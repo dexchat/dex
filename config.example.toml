@@ -19,14 +19,6 @@ ignore_direct_messages_from = []
 notify_channels = []
 
 # Bouncer example (ZNC or soju):
-# The nickname uses the bouncer format "username/network". Dex connects
-# with the nick before "/" and logs in with "username/network" and the
-# password; ZNC reads them from PASS and soju through SASL PLAIN. Add a
-# client name to keep a separate backlog for Dex: "username/network@dex"
-# for soju or "username@dex/network" for ZNC. Use one server entry per
-# bouncer network. There is no need to add channels as it automatically
-# gets them from the server.
-#
 # [servers.libera_bouncer]
 # address = "bouncer.example.com"
 # port = 6697
