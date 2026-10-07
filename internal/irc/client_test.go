@@ -234,6 +234,41 @@ func TestChannelErrorsAreQueuedForServerBuffer(t *testing.T) {
 	}
 }
 
+func TestStandardRepliesAreShownInServerBuffer(t *testing.T) {
+	sent := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
+	for _, tc := range []struct {
+		command string
+		params  []string
+		want    string
+	}{
+		{"FAIL", []string{"*", "ACCOUNT_REQUIRED", "Authentication required"},
+			"irc: FAIL ACCOUNT_REQUIRED: Authentication required"},
+		{"FAIL", []string{"CHATHISTORY", "INVALID_TARGET", "LATEST", "#go", "Messages could not be retrieved"},
+			"irc: FAIL CHATHISTORY INVALID_TARGET: Messages could not be retrieved"},
+		{"WARN", []string{"REHASH", "CERTS_EXPIRED", "Certificate has expired"},
+			"irc: WARN REHASH CERTS_EXPIRED: Certificate has expired"},
+		{"NOTE", []string{"*", "OPER_MESSAGE", "Registrations are disabled"},
+			"irc: NOTE OPER_MESSAGE: Registrations are disabled"},
+	} {
+		client := NewClient("testnet", &config.Server{
+			Address:  "irc.example.test",
+			Port:     6697,
+			Nickname: "tester",
+		})
+
+		client.onEvent(client.Client, girc.Event{Command: tc.command, Params: tc.params, Timestamp: sent})
+
+		messages := queuedMessages(client)
+		if len(messages) != 1 {
+			t.Fatalf("%s %v queued %d messages, want 1", tc.command, tc.params, len(messages))
+		}
+		msg := messages[0]
+		if msg.Buffer != "" || msg.Text != tc.want || !msg.Timestamp.Equal(sent) {
+			t.Errorf("%s %v = %+v, want %q in the server buffer at the server time", tc.command, tc.params, msg, tc.want)
+		}
+	}
+}
+
 func TestTopicRepliesReportTopicAndSetter(t *testing.T) {
 	client := NewClient("testnet", &config.Server{
 		Address:  "irc.example.test",

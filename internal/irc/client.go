@@ -79,6 +79,10 @@ func NewClient(serverName string, config *config.Server) *Client {
 			// Not using this capability would make the playback messages
 			// to display with the current timestamp
 			"server-time": {},
+			// standard-replies tells the server that FAIL, WARN, and NOTE
+			// are shown, so it may send them for any command instead of
+			// vendor-specific numerics or notices.
+			"standard-replies": {},
 		},
 	}
 

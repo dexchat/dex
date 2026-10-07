@@ -79,6 +79,9 @@ func (c *Client) onEvent(client *girc.Client, e girc.Event) {
 		girc.ERR_UNAVAILRESOURCE, errNickTooFast:
 		c.onErrorReply(client, e)
 
+	case standardReplyFail, standardReplyWarn, standardReplyNote:
+		c.onStandardReply(client, e)
+
 	case girc.RPL_LISTSTART, girc.RPL_LIST, girc.RPL_LISTEND, girc.ERR_TOOMANYMATCHES:
 		c.onListReply(client, e)
 
@@ -708,6 +711,42 @@ func (c *Client) onErrorReply(_ *girc.Client, e girc.Event) {
 		Timestamp: time.Now(),
 		From:      "--",
 		Text:      text,
+		Type:      MessageTypeServer,
+	})
+}
+
+// IRCv3 standard replies. girc has no constants for them.
+const (
+	standardReplyFail = "FAIL"
+	standardReplyWarn = "WARN"
+	standardReplyNote = "NOTE"
+)
+
+// onStandardReply shows an IRCv3 standard reply of the form
+// "<type> <command> <code> [<context>...] :<description>" in the server
+// buffer. The context parameters are meant for developers, so only the
+// command, code, and description are shown. command is "*" when the reply
+// is not about a particular command.
+func (c *Client) onStandardReply(_ *girc.Client, e girc.Event) {
+	if len(e.Params) < 3 {
+		return
+	}
+	label := e.Command
+	if command := e.Params[0]; command != "*" {
+		label += " " + command
+	}
+	label += " " + e.Params[1]
+
+	ts := e.Timestamp
+	if ts.IsZero() {
+		ts = time.Now()
+	}
+	c.events.push(BufferNewMessageMsg{
+		Server:    c.serverName,
+		Buffer:    "",
+		Timestamp: ts,
+		From:      "--",
+		Text:      fmt.Sprintf("irc: %s: %s", label, e.Last()),
 		Type:      MessageTypeServer,
 	})
 }
