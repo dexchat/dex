@@ -23,7 +23,7 @@
             version = "0.1.1-dev";
 
             src = ./.;
-            vendorHash = "sha256-lor5WtPMd0ea09ICchAv648K8DzUg2aouTizFZbbpnM=";
+            vendorHash = "sha256-YNhdPQ6XYiNJyTxz52sFM7eZ93Z9DDMp3EyyVHikWCM=";
 
             subPackages = [ "cmd/dex" ];
             ldflags = [ "-s" "-w" ];
