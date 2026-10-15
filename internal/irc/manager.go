@@ -66,15 +66,17 @@ func (m *ClientManager) ConnectAll() {
 // Send sends a message to a channel or nickname. The returned error describes
 // why it could not be sent; errors from the server arrive as events instead.
 func (m *ClientManager) Send(server, target, message string) error {
-	return m.sendPrivmsg(server, target, message)
+	return m.sendPrivmsg(server, target, message, false)
 }
 
 // SendAction sends a CTCP ACTION, the /me message, to a channel or nickname.
 func (m *ClientManager) SendAction(server, target, action string) error {
-	return m.sendPrivmsg(server, target, encodeAction(action))
+	return m.sendPrivmsg(server, target, action, true)
 }
 
-func (m *ClientManager) sendPrivmsg(server, target, text string) error {
+// sendPrivmsg sends text in as many PRIVMSGs as its length requires. A long
+// action is sent as several actions.
+func (m *ClientManager) sendPrivmsg(server, target, text string, action bool) error {
 	client, err := m.connectedClient(server)
 	if err != nil {
 		return err
@@ -83,8 +85,14 @@ func (m *ClientManager) sendPrivmsg(server, target, text string) error {
 		return fmt.Errorf("irc: not in channel %s", target)
 	}
 
-	client.trackSent(target, text, client.HasCapability("echo-message"))
-	client.Cmd.Message(target, text)
+	echo := client.HasCapability("echo-message")
+	for _, part := range splitMessage(text, client.maxMessageBytes(target, action)) {
+		if action {
+			part = encodeAction(part)
+		}
+		client.trackSent(target, part, echo)
+		client.Cmd.Message(target, part)
+	}
 	return nil
 }
 
