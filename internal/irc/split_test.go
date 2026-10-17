@@ -49,6 +49,9 @@ func TestLongMessagesAreSentInPartsGircKeepsWhole(t *testing.T) {
 				Nickname: "tester",
 			}})
 			client := manager.clients["libera"]
+			// This test checks splitting, not pacing; girc's flood
+			// limiter would make it wait seconds between parts.
+			client.Config.AllowFlood = true
 			lines := sentLines(t, client)
 			waitFor(t, "the connection", client.IsConnected)
 
