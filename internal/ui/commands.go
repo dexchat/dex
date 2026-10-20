@@ -289,6 +289,35 @@ func (m *Model) sendMessageCmd(buffer *Buffer, message string) tea.Cmd {
 	})
 }
 
+// sendPastedLines shows lines in buffer and sends them to its target as
+// messages. Lines that start with a slash are text, not commands. girc
+// paces them to the server's flood limits, so the last ones can arrive
+// long after they are shown; a failure reports how many were not sent.
+func (m *Model) sendPastedLines(buffer *Buffer, lines []string) tea.Cmd {
+	manager := m.ircClientManager
+	if manager == nil || !buffer.isValid() {
+		return nil
+	}
+	now := time.Now()
+	for _, line := range lines {
+		buffer.Chat.QueueMessage(chat.Message{
+			Timestamp: now,
+			Username:  buffer.Chat.Nickname(),
+			Text:      line,
+		})
+	}
+	buffer.Chat.FlushQueue()
+
+	server, target := buffer.Server, buffer.Buffer
+	return ircCommand(buffer, func() error {
+		sent, err := manager.SendLines(server, target, lines)
+		if err != nil {
+			return fmt.Errorf("%w; %d pasted lines were not sent", err, len(lines)-sent)
+		}
+		return nil
+	})
+}
+
 // ircCommandFailedMsg reports that an IRC command could not be sent. It
 // carries the buffer that issued the command, so the error is shown where the
 // user typed it even if another buffer is active by then.

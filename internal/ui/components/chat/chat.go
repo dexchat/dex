@@ -13,9 +13,12 @@ import (
 	"github.com/dexchat/dex/internal/ui/styles"
 )
 
-// SendAction is a synchronous request handled by the owning UI model.
+// SendAction is a synchronous request handled by the owning UI model. Text
+// is a typed line, which may be a command. Pasted holds the lines of a
+// multi-line paste, which are sent as messages.
 type SendAction struct {
-	Text string
+	Text   string
+	Pasted []string
 }
 
 type Model struct {
@@ -34,6 +37,11 @@ type Model struct {
 
 	channelMembers ChannelMembers
 	completion     nicknameCompletion
+
+	// pastedLines holds a multi-line paste until Enter sends it or Esc
+	// drops it. The input row shows a summary in its place, so the layout
+	// keeps its height. The typed draft is kept underneath.
+	pastedLines []string
 
 	usernameColors styles.UsernameColors
 	theme          styles.Theme
@@ -85,9 +93,23 @@ func (m *Model) Update(msg tea.Msg) (Model, *SendAction, tea.Cmd) {
 	)
 
 	switch msg := msg.(type) {
+	case tea.PasteMsg:
+		lines := splitPastedLines(msg.Content)
+		if len(m.pastedLines) == 0 && len(lines) < 2 {
+			if len(lines) == 1 {
+				m.input, cmd = m.input.Update(tea.PasteMsg{Content: lines[0]})
+			}
+			return *m, nil, cmd
+		}
+		m.pastedLines = append(m.pastedLines, lines...)
+		return *m, nil, nil
+
 	case tea.KeyPressMsg:
 		if m.input.Focused() {
 			keyMap := keybindings.DefaultKeyMap()
+			if len(m.pastedLines) > 0 {
+				return m.updatePastedLines(msg, keyMap)
+			}
 			if key.Matches(msg, keyMap.Autocomplete) {
 				m.completeNickname()
 				return *m, nil, nil

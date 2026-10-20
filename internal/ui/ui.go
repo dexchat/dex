@@ -329,10 +329,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// If palette or help was open, consume keyboard input so it doesn't leak into chat/channels
-	if paletteWasVisible || helpWasVisible {
-		if _, isKeyMsg := msg.(tea.KeyPressMsg); isKeyMsg {
-			return m, tea.Batch(cmds...)
-		}
+	if (paletteWasVisible || helpWasVisible) && isKeyboardInput(msg) {
+		return m, tea.Batch(cmds...)
 	}
 
 	// Update layout components, blocking keyboard input when the palette or help is open
@@ -342,7 +340,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	buf.Chat, action, cmd = buf.Chat.Update(msg)
 	cmds = append(cmds, cmd)
 	if action != nil {
-		cmds = append(cmds, m.handleChatSend(buf, action.Text))
+		cmds = append(cmds, m.handleChatSend(buf, *action))
 		return m, tea.Batch(cmds...)
 	}
 
@@ -416,7 +414,7 @@ func (m *Model) filterOutKeyMsgs(msg tea.Msg) tea.Msg {
 	}
 
 	// If palette or help is visible, block keyboard input to layout components
-	if _, isKeyMsg := msg.(tea.KeyPressMsg); isKeyMsg {
+	if isKeyboardInput(msg) {
 		return nil
 	}
 
@@ -623,7 +621,21 @@ func (m *Model) scheduleHistoryFlush() tea.Cmd {
 	})
 }
 
-func (m *Model) handleChatSend(buffer *Buffer, text string) tea.Cmd {
+// isKeyboardInput reports whether msg is typed or pasted text, which a
+// visible overlay consumes.
+func isKeyboardInput(msg tea.Msg) bool {
+	switch msg.(type) {
+	case tea.KeyPressMsg, tea.PasteMsg:
+		return true
+	}
+	return false
+}
+
+func (m *Model) handleChatSend(buffer *Buffer, action chat.SendAction) tea.Cmd {
+	if len(action.Pasted) > 0 {
+		return m.sendPastedLines(buffer, action.Pasted)
+	}
+	text := action.Text
 	if command, ok := commands.Parse(text); ok {
 		return m.handleCommand(buffer, command)
 	}

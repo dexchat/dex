@@ -39,6 +39,10 @@ type Client struct {
 	// sent, so their echoes are stored in history but not shown again.
 	sent sentMessages
 
+	// linesMu keeps the lines of one SendLines call together. girc delays
+	// each line on its own, so lines of concurrent calls would interleave.
+	linesMu sync.Mutex
+
 	// deferredUserLists holds channels whose user list changed in an event
 	// girc has not applied yet. They are queued once girc reports
 	// UPDATE_STATE, which it sends after applying the change.

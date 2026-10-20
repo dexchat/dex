@@ -74,6 +74,25 @@ func (m *ClientManager) SendAction(server, target, action string) error {
 	return m.sendPrivmsg(server, target, action, true)
 }
 
+// SendLines sends lines to a channel or nickname as separate messages, in
+// order. Lines of another SendLines call to the same server are not mixed
+// in; other messages may be. girc paces the lines, so SendLines blocks until
+// the last one is sent. It returns how many lines were sent before an error.
+func (m *ClientManager) SendLines(server, target string, lines []string) (int, error) {
+	client, err := m.client(server)
+	if err != nil {
+		return 0, err
+	}
+	client.linesMu.Lock()
+	defer client.linesMu.Unlock()
+	for i, line := range lines {
+		if err := m.sendPrivmsg(server, target, line, false); err != nil {
+			return i, err
+		}
+	}
+	return len(lines), nil
+}
+
 // sendPrivmsg sends text in as many PRIVMSGs as its length requires. A long
 // action is sent as several actions.
 func (m *ClientManager) sendPrivmsg(server, target, text string, action bool) error {

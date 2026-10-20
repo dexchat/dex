@@ -30,7 +30,11 @@ func (m *Model) renderInputBox() string {
 		Background(m.theme.Colors.Base.Surface).
 		Render(" | ")
 
-	inputView := nicknamePrefix + separator + m.input.View()
+	inputView := m.input.View()
+	if len(m.pastedLines) > 0 {
+		inputView = m.renderPastedLines()
+	}
+	inputView = nicknamePrefix + separator + inputView
 
 	inputBox := m.theme.Styles.InputField.
 		Margin(0, InputBoxMargin, 0, InputBoxMargin).
