@@ -19,7 +19,7 @@
   <a href="https://github.com/dexchat/dex/actions/workflows/release.yml"><img src="https://github.com/dexchat/dex/actions/workflows/release.yml/badge.svg" alt="Release Status"></a>
 </p>
 
-![preview](./resources/demo.gif)
+![dex-preview](./resources/demo.gif)
 
 ## Features
 
