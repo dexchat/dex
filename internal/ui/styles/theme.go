@@ -23,6 +23,8 @@ type Colors struct {
 		Error      Color
 		Dimmed     Color
 		Subtle     Color
+		OnAccent   Color
+		Divider    Color
 	}
 
 	Sidebar struct {
@@ -62,4 +64,20 @@ type Styles struct {
 	ServerItem    lipgloss.Style
 	ChatArea      lipgloss.Style
 	InputField    lipgloss.Style
+}
+
+// LeftDividerBorder draws a vertical line on the left side only. The other
+// sides are blank, so they show the border background.
+func LeftDividerBorder() lipgloss.Border {
+	border := lipgloss.HiddenBorder()
+	border.Left = lipgloss.NormalBorder().Left
+	return border
+}
+
+// RightDividerBorder draws a vertical line on the right side only. The other
+// sides are blank, so they show the border background.
+func RightDividerBorder() lipgloss.Border {
+	border := lipgloss.HiddenBorder()
+	border.Right = lipgloss.NormalBorder().Right
+	return border
 }

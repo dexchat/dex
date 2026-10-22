@@ -39,9 +39,8 @@ func (m *Model) renderInputBox() string {
 	inputBox := m.theme.Styles.InputField.
 		Margin(0, InputBoxMargin, 0, InputBoxMargin).
 		MarginBackground(m.theme.Colors.Base.Background).
-		Border(lipgloss.NormalBorder()).
+		Border(lipgloss.HiddenBorder()).
 		BorderBackground(m.theme.Colors.Base.Surface).
-		BorderForeground(m.theme.Colors.Base.Surface).
 		MarginTop(InputBoxPaddingTop).
 		Render(inputView)
 

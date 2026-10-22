@@ -325,7 +325,7 @@ func (m Model) renderActivityBadge(node node) string {
 
 func (m Model) notificationBadge(text string) string {
 	return lipgloss.NewStyle().
-		Foreground(m.theme.Colors.Base.Background).
+		Foreground(m.theme.Colors.Base.OnAccent).
 		Background(m.theme.Colors.Sidebar.Notification).
 		Bold(true).
 		PaddingLeft(1).
@@ -436,7 +436,8 @@ func (m Model) View(width, height int) string {
 	)
 
 	return m.theme.Styles.Sidebar.
-		BorderRightForeground(m.theme.Colors.Base.Surface).
+		BorderStyle(styles.RightDividerBorder()).
+		BorderRightForeground(m.theme.Colors.Base.Divider).
 		Height(height).
 		Render(body)
 }

@@ -322,9 +322,9 @@ func (m *Model) renderCommandLine(index int, cmd action, width int) string {
 	keyColor := m.theme.Colors.Base.Dimmed
 	if highlight {
 		backgroundColor = m.theme.Colors.Palette.Highlight
-		textColor = m.theme.Colors.Base.Background
-		nameColor = m.theme.Colors.Base.Background
-		keyColor = m.theme.Colors.Base.Background
+		textColor = m.theme.Colors.Base.OnAccent
+		nameColor = m.theme.Colors.Base.OnAccent
+		keyColor = m.theme.Colors.Base.OnAccent
 	}
 
 	descWidth := width - commandPaletteBoxPaddingSize*2 - nameMaxLen - actionLinePaddingSize*2 - keyMaxLen
@@ -362,8 +362,8 @@ func (m *Model) renderChannelLine(index int, channel action, width int) string {
 	serverColor := m.theme.Colors.Base.Dimmed
 	if highlight {
 		backgroundColor = m.theme.Colors.Palette.Highlight
-		channelColor = m.theme.Colors.Base.Background
-		serverColor = m.theme.Colors.Base.Background
+		channelColor = m.theme.Colors.Base.OnAccent
+		serverColor = m.theme.Colors.Base.OnAccent
 	}
 
 	serverWidth := width - commandPaletteBoxPaddingSize*2 - scrollbarWidth - actionLinePaddingSize*2 - channelNameWidth - channelServerGapWidth

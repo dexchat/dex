@@ -43,7 +43,7 @@ func TestThemeTextContrast(t *testing.T) {
 				}
 			}
 
-			if ratio := contrastRatio(theme.Colors.Base.Background, theme.Colors.Palette.Highlight); ratio < 4.5 {
+			if ratio := contrastRatio(theme.Colors.Base.OnAccent, theme.Colors.Palette.Highlight); ratio < 4.5 {
 				t.Errorf("palette selection has contrast %.2f:1, want at least 4.5:1", ratio)
 			}
 		})

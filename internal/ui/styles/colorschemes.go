@@ -13,6 +13,8 @@ func AyuDarkTheme() Theme {
 	theme.Colors.Base.Error = lipgloss.Color("#FF3333")
 	theme.Colors.Base.Dimmed = lipgloss.Color("#89919B")
 	theme.Colors.Base.Subtle = lipgloss.Color("#75808A")
+	theme.Colors.Base.OnAccent = lipgloss.Color("#0D1017")
+	theme.Colors.Base.Divider = lipgloss.Color("#131721")
 
 	theme.Colors.Sidebar.Server = lipgloss.Color("#59C2FF")
 	theme.Colors.Sidebar.Unread = lipgloss.Color("#73D0FF")
@@ -51,8 +53,7 @@ func AyuDarkTheme() Theme {
 	theme.Styles.Sidebar = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Background).
 		Foreground(theme.Colors.Base.Foreground).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(theme.Colors.Base.Background).
+		BorderStyle(lipgloss.HiddenBorder()).
 		BorderBackground(theme.Colors.Base.Background)
 
 	theme.Styles.UnreadItem = lipgloss.NewStyle().
@@ -77,9 +78,8 @@ func AyuDarkTheme() Theme {
 	theme.Styles.ChatArea = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Background).
 		Foreground(theme.Colors.Base.Foreground).
-		BorderForeground(theme.Colors.Base.Background).
 		BorderBackground(theme.Colors.Base.Background).
-		Border(lipgloss.NormalBorder())
+		Border(lipgloss.HiddenBorder())
 
 	theme.Styles.InputField = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Surface).
@@ -99,6 +99,8 @@ func DraculaTheme() Theme {
 	theme.Colors.Base.Error = lipgloss.Color("#FF5555")
 	theme.Colors.Base.Dimmed = lipgloss.Color("#B8B8C2")
 	theme.Colors.Base.Subtle = lipgloss.Color("#B8B8C2")
+	theme.Colors.Base.OnAccent = lipgloss.Color("#282A36")
+	theme.Colors.Base.Divider = lipgloss.Color("#343746")
 
 	theme.Colors.Sidebar.Server = lipgloss.Color("#8BE9FD")
 	theme.Colors.Sidebar.Unread = lipgloss.Color("#D6ACFF")
@@ -136,8 +138,7 @@ func DraculaTheme() Theme {
 	theme.Styles.Sidebar = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Background).
 		Foreground(theme.Colors.Base.Foreground).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(theme.Colors.Base.Background).
+		BorderStyle(lipgloss.HiddenBorder()).
 		BorderBackground(theme.Colors.Base.Background)
 
 	theme.Styles.UnreadItem = lipgloss.NewStyle().
@@ -162,9 +163,8 @@ func DraculaTheme() Theme {
 	theme.Styles.ChatArea = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Background).
 		Foreground(theme.Colors.Base.Foreground).
-		BorderForeground(theme.Colors.Base.Background).
 		BorderBackground(theme.Colors.Base.Background).
-		Border(lipgloss.NormalBorder())
+		Border(lipgloss.HiddenBorder())
 
 	theme.Styles.InputField = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Surface).
@@ -184,6 +184,8 @@ func GruvboxDarkTheme() Theme {
 	theme.Colors.Base.Error = lipgloss.Color("#FB4934")
 	theme.Colors.Base.Dimmed = lipgloss.Color("#A89984")
 	theme.Colors.Base.Subtle = lipgloss.Color("#A89984")
+	theme.Colors.Base.OnAccent = lipgloss.Color("#1D2021")
+	theme.Colors.Base.Divider = lipgloss.Color("#282828")
 
 	theme.Colors.Sidebar.Server = lipgloss.Color("#8EC07C")
 	theme.Colors.Sidebar.Unread = lipgloss.Color("#83A598")
@@ -221,8 +223,7 @@ func GruvboxDarkTheme() Theme {
 	theme.Styles.Sidebar = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Background).
 		Foreground(theme.Colors.Base.Foreground).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(theme.Colors.Base.Background).
+		BorderStyle(lipgloss.HiddenBorder()).
 		BorderBackground(theme.Colors.Base.Background)
 
 	theme.Styles.UnreadItem = lipgloss.NewStyle().
@@ -247,9 +248,8 @@ func GruvboxDarkTheme() Theme {
 	theme.Styles.ChatArea = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Background).
 		Foreground(theme.Colors.Base.Foreground).
-		BorderForeground(theme.Colors.Base.Background).
 		BorderBackground(theme.Colors.Base.Background).
-		Border(lipgloss.NormalBorder())
+		Border(lipgloss.HiddenBorder())
 
 	theme.Styles.InputField = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Surface).
@@ -269,6 +269,8 @@ func RosePineTheme() Theme {
 	theme.Colors.Base.Error = lipgloss.Color("#EB6F92")
 	theme.Colors.Base.Dimmed = lipgloss.Color("#908CAA")
 	theme.Colors.Base.Subtle = lipgloss.Color("#908CAA")
+	theme.Colors.Base.OnAccent = lipgloss.Color("#191724")
+	theme.Colors.Base.Divider = lipgloss.Color("#26233A")
 
 	theme.Colors.Sidebar.Server = lipgloss.Color("#C4A7E7")
 	theme.Colors.Sidebar.Unread = lipgloss.Color("#F6C177")
@@ -305,8 +307,7 @@ func RosePineTheme() Theme {
 	theme.Styles.Sidebar = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Background).
 		Foreground(theme.Colors.Base.Foreground).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(theme.Colors.Base.Background).
+		BorderStyle(lipgloss.HiddenBorder()).
 		BorderBackground(theme.Colors.Base.Background)
 
 	theme.Styles.UnreadItem = lipgloss.NewStyle().
@@ -331,9 +332,8 @@ func RosePineTheme() Theme {
 	theme.Styles.ChatArea = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Background).
 		Foreground(theme.Colors.Base.Foreground).
-		BorderForeground(theme.Colors.Base.Background).
 		BorderBackground(theme.Colors.Base.Background).
-		Border(lipgloss.NormalBorder())
+		Border(lipgloss.HiddenBorder())
 
 	theme.Styles.InputField = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Surface).
@@ -353,6 +353,8 @@ func SolarizedLightTheme() Theme {
 	theme.Colors.Base.Error = lipgloss.Color("#C23130")
 	theme.Colors.Base.Dimmed = lipgloss.Color("#556B72")
 	theme.Colors.Base.Subtle = lipgloss.Color("#556B72")
+	theme.Colors.Base.OnAccent = lipgloss.Color("#FDF6E3")
+	theme.Colors.Base.Divider = lipgloss.Color("#EEE8D5")
 
 	theme.Colors.Sidebar.Server = lipgloss.Color("#1A7473")
 	theme.Colors.Sidebar.Unread = lipgloss.Color("#1B6EA3")
@@ -391,8 +393,7 @@ func SolarizedLightTheme() Theme {
 	theme.Styles.Sidebar = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Background).
 		Foreground(theme.Colors.Base.Foreground).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(theme.Colors.Base.Background).
+		BorderStyle(lipgloss.HiddenBorder()).
 		BorderBackground(theme.Colors.Base.Background)
 
 	theme.Styles.UnreadItem = lipgloss.NewStyle().
@@ -417,9 +418,8 @@ func SolarizedLightTheme() Theme {
 	theme.Styles.ChatArea = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Background).
 		Foreground(theme.Colors.Base.Foreground).
-		BorderForeground(theme.Colors.Base.Background).
 		BorderBackground(theme.Colors.Base.Background).
-		Border(lipgloss.NormalBorder())
+		Border(lipgloss.HiddenBorder())
 
 	theme.Styles.InputField = lipgloss.NewStyle().
 		Background(theme.Colors.Base.Surface).

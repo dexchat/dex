@@ -163,7 +163,7 @@ func (m Model) View(width, height int) string {
 			Render(memberCount)
 
 		divider := lipgloss.NewStyle().
-			Foreground(m.theme.Colors.Base.Surface).
+			Foreground(m.theme.Colors.Base.Divider).
 			Render(strings.Repeat("─", contentWidth))
 
 		body = memberHeader + "\n" + divider + "\n" + m.viewport.View()
@@ -173,6 +173,7 @@ func (m Model) View(width, height int) string {
 
 	return m.theme.Styles.Sidebar.
 		Height(height).
-		BorderLeftForeground(m.theme.Colors.Base.Surface).
+		BorderStyle(styles.LeftDividerBorder()).
+		BorderLeftForeground(m.theme.Colors.Base.Divider).
 		Render(body)
 }
