@@ -1,0 +1,43 @@
+name: Chocolatey
+
+# Release drafts are only downloadable after they are published, so the
+# package built by the Release workflow is pushed here instead of there.
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  push:
+    name: Push Chocolatey package
+    runs-on: windows-latest
+
+    steps:
+      - name: Download package from the release run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          run_id=$(gh run list --workflow release.yml --branch "$RELEASE_TAG" \
+            --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          if [ -z "$run_id" ]; then
+            echo "No successful Release run found for $RELEASE_TAG" >&2
+            exit 1
+          fi
+          gh run download "$run_id" --name chocolatey-package --dir packages
+
+      - name: Push to Chocolatey
+        shell: bash
+        env:
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+        run: |
+          for package in packages/*.nupkg; do
+            choco push "$package" --source https://push.chocolatey.org/ \
+              --api-key "$CHOCOLATEY_API_KEY"
+          done

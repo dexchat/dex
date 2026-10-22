@@ -75,6 +75,31 @@ homebrew_casks:
 
     commit_msg_template: "chore: update dex to {{ .Tag }}"
 
+chocolateys:
+  - name: dexchat
+    title: dexchat
+    owners: dexchat
+    authors: Leonardo Essia
+    project_url: https://dexchat.org
+    project_source_url: https://github.com/dexchat/dex
+    package_source_url: https://github.com/dexchat/dex
+    docs_url: https://github.com/dexchat/dex/blob/main/README.md
+    bug_tracker_url: https://github.com/dexchat/dex/issues
+    license_url: https://github.com/dexchat/dex/blob/main/LICENSE
+    copyright: 2025 Leonardo Essia
+    require_license_acceptance: false
+    tags: "irc chat terminal tui cli"
+    summary: A modern and fast terminal IRC client
+    description: |
+      dexchat is a modern and fast TUI IRC client with quick channel jumping, command palettes, and more.
+
+      The package installs the `dex` executable.
+    release_notes: "https://github.com/dexchat/dex/releases/tag/{{ .Tag }}"
+    # Releases are created as drafts, so the download URLs in the package
+    # only work after the draft is published. The Chocolatey workflow pushes
+    # the package when that happens.
+    skip_publish: true
+
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
 
