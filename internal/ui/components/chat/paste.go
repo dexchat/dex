@@ -7,6 +7,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/atotto/clipboard"
 	"github.com/dexchat/dex/internal/ui/components/keybindings"
 )
 
@@ -22,6 +23,18 @@ func splitPastedLines(text string) []string {
 		}
 	}
 	return lines
+}
+
+// readClipboard reads the clipboard for ctrl+v as textinput would, but
+// returns it as a paste, because textinput joins its lines. Terminals that
+// paste on ctrl+v themselves send a tea.PasteMsg instead. Like textinput, a
+// clipboard that cannot be read pastes nothing.
+func readClipboard() tea.Msg {
+	text, err := clipboard.ReadAll()
+	if err != nil {
+		return nil
+	}
+	return tea.PasteMsg{Content: text}
 }
 
 // updatePastedLines handles keys while a multi-line paste waits. Typing is

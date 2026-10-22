@@ -107,6 +107,9 @@ func (m *Model) Update(msg tea.Msg) (Model, *SendAction, tea.Cmd) {
 	case tea.KeyPressMsg:
 		if m.input.Focused() {
 			keyMap := keybindings.DefaultKeyMap()
+			if key.Matches(msg, m.input.KeyMap.Paste) {
+				return *m, nil, readClipboard
+			}
 			if len(m.pastedLines) > 0 {
 				return m.updatePastedLines(msg, keyMap)
 			}
