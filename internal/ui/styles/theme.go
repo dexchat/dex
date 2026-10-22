@@ -81,3 +81,10 @@ func RightDividerBorder() lipgloss.Border {
 	border.Right = lipgloss.NormalBorder().Right
 	return border
 }
+
+// HasBackground reports whether the theme paints its own background. Without
+// one, the terminal's default background shows through.
+func (t Theme) HasBackground() bool {
+	_, isNoColor := t.Colors.Base.Background.(lipgloss.NoColor)
+	return t.Colors.Base.Background != nil && !isNoColor
+}

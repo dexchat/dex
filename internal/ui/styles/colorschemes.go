@@ -427,3 +427,93 @@ func SolarizedLightTheme() Theme {
 
 	return theme
 }
+
+// NoneTheme paints no background and uses the terminal's ANSI palette, so the
+// terminal's own color scheme and transparency show through.
+func NoneTheme() Theme {
+	theme := Theme{}
+
+	theme.Colors.Base.Background = lipgloss.NoColor{}
+	theme.Colors.Base.Foreground = lipgloss.NoColor{}
+	theme.Colors.Base.Surface = lipgloss.NoColor{}
+	theme.Colors.Base.Border = lipgloss.Color("8")
+	theme.Colors.Base.Accent = lipgloss.Color("4")
+	theme.Colors.Base.Error = lipgloss.Color("1")
+	theme.Colors.Base.Dimmed = lipgloss.Color("8")
+	theme.Colors.Base.Subtle = lipgloss.Color("8")
+	theme.Colors.Base.OnAccent = lipgloss.Color("0")
+	theme.Colors.Base.Divider = lipgloss.Color("8")
+
+	theme.Colors.Sidebar.Server = lipgloss.Color("4")
+	theme.Colors.Sidebar.Unread = lipgloss.Color("6")
+	theme.Colors.Sidebar.Notification = lipgloss.Color("3")
+	theme.Colors.Sidebar.Mention = lipgloss.Color("1")
+	theme.Colors.Sidebar.Selection = lipgloss.NoColor{}
+
+	theme.Colors.Chat.Nickname = lipgloss.Color("4")
+	theme.Colors.Chat.InactiveNickname = lipgloss.Color("8")
+	theme.Colors.Chat.Mention = lipgloss.Color("1")
+	theme.Colors.Chat.Separator = lipgloss.Color("8")
+	theme.Colors.Chat.Self = lipgloss.Color("2")
+	theme.Colors.Chat.Connected = lipgloss.Color("2")
+	theme.Colors.Chat.Disconnected = lipgloss.Color("1")
+	theme.Colors.Chat.UserEvents = lipgloss.Color("8")
+	theme.Colors.Chat.ServerMessage = lipgloss.Color("3")
+
+	theme.Colors.Palette.Border = lipgloss.Color("4")
+	theme.Colors.Palette.Highlight = lipgloss.Color("4")
+
+	theme.Colors.Nicknames = []Color{
+		lipgloss.Color("2"),
+		lipgloss.Color("3"),
+		lipgloss.Color("4"),
+		lipgloss.Color("5"),
+		lipgloss.Color("6"),
+		lipgloss.Color("10"),
+		lipgloss.Color("11"),
+		lipgloss.Color("12"),
+		lipgloss.Color("13"),
+		lipgloss.Color("14"),
+	}
+
+	theme.Styles.App = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground)
+
+	theme.Styles.Sidebar = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground).
+		BorderStyle(lipgloss.HiddenBorder()).
+		BorderBackground(theme.Colors.Base.Background)
+
+	theme.Styles.UnreadItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Unread)
+
+	theme.Styles.NotifiedItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Notification).
+		Bold(true)
+
+	theme.Styles.MentionedItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Mention).
+		Bold(true)
+
+	theme.Styles.ServerItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Server).
+		Bold(true)
+
+	theme.Styles.ChatArea = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground).
+		BorderBackground(theme.Colors.Base.Background).
+		Border(lipgloss.HiddenBorder())
+
+	theme.Styles.InputField = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Surface).
+		Foreground(theme.Colors.Base.Foreground)
+
+	return theme
+}

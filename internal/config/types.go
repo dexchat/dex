@@ -13,6 +13,7 @@ const (
 	ThemeDracula              = "dracula"
 	ThemeGruvboxDark          = "gruvbox-dark"
 	ThemeSolarizedLight       = "solarized-light"
+	ThemeNone                 = "none"
 )
 
 // DesktopMode controls desktop notifications.

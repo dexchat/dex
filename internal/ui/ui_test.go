@@ -1357,6 +1357,7 @@ func TestNewUsesConfiguredTheme(t *testing.T) {
 		{name: "Dracula", configured: config.ThemeDracula, want: styles.DraculaTheme()},
 		{name: "Gruvbox Dark", configured: config.ThemeGruvboxDark, want: styles.GruvboxDarkTheme()},
 		{name: "Solarized Light", configured: config.ThemeSolarizedLight, want: styles.SolarizedLightTheme()},
+		{name: "None", configured: config.ThemeNone, want: styles.NoneTheme()},
 	}
 
 	for _, tt := range tests {
@@ -1368,6 +1369,21 @@ func TestNewUsesConfiguredTheme(t *testing.T) {
 				t.Fatalf("theme background = %#v, want %#v", m.theme.Colors.Base.Background, tt.want.Colors.Base.Background)
 			}
 		})
+	}
+}
+
+func TestViewBackgroundFollowsTheme(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+
+	m := newActivityTestModel()
+	m.activeBuffer = makeBufferKey("libera", "#go")
+	if got := m.View().BackgroundColor; got == nil {
+		t.Fatal("themed view background = nil, want theme background")
+	}
+
+	m.theme = styles.NoneTheme()
+	if got := m.View().BackgroundColor; got != nil {
+		t.Fatalf("none theme view background = %#v, want nil", got)
 	}
 }
 

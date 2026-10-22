@@ -42,7 +42,8 @@ cooldown = "2s"
 
 [ui]
 # Available themes: "rose-pine", "ayu-dark", "dracula",
-# "gruvbox-dark", "solarized-light".
+# "gruvbox-dark", "solarized-light", "none". The "none" theme uses the
+# terminal's own background and color palette.
 theme = "rose-pine"
 unread_badges = true
 mention_badges = true

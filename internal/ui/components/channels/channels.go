@@ -273,7 +273,13 @@ func (m Model) updateContent() Model {
 		}
 
 		if i == m.cursor {
-			itemStyle = itemStyle.Background(m.theme.Colors.Sidebar.Selection)
+			// Without a selection color, swap the terminal's own colors so
+			// the selection stays readable with any palette.
+			if _, ok := m.theme.Colors.Sidebar.Selection.(lipgloss.NoColor); ok {
+				itemStyle = itemStyle.Reverse(true)
+			} else {
+				itemStyle = itemStyle.Background(m.theme.Colors.Sidebar.Selection)
+			}
 		}
 
 		itemStyle = itemStyle.Width(m.viewport.Width())

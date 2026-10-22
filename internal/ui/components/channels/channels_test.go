@@ -2,6 +2,7 @@ package channels
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -361,4 +362,14 @@ func newScrollableChannelsModel() Model {
 		},
 	})
 	return m.SetSize(25, 10)
+}
+
+func TestNoneThemeSelectionReversesTerminalColors(t *testing.T) {
+	m := New(styles.NoneTheme(), []*config.Server{{Name: "libera", Channels: []string{"#go"}}})
+	m = m.SetSize(30, 10)
+
+	reverse := regexp.MustCompile(`\x1b\[(?:\d+;)*7[;m]`)
+	if view := m.View(30, 10); !reverse.MatchString(view) {
+		t.Fatalf("expected selected row to use reverse video, got %q", view)
+	}
 }

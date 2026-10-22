@@ -98,6 +98,8 @@ func New(cfg *config.Config) *Model {
 		theme = styles.GruvboxDarkTheme()
 	case config.ThemeSolarizedLight:
 		theme = styles.SolarizedLightTheme()
+	case config.ThemeNone:
+		theme = styles.NoneTheme()
 	}
 	m := Model{
 		config:          cfg,
@@ -402,7 +404,11 @@ func (m *Model) View() tea.View {
 	view.AltScreen = true
 	view.ReportFocus = true
 	view.MouseMode = tea.MouseModeCellMotion
-	view.BackgroundColor = m.theme.Colors.Base.Background
+	// Setting a background color changes the terminal's own background, so
+	// leave it unset when the theme should follow the terminal.
+	if m.theme.HasBackground() {
+		view.BackgroundColor = m.theme.Colors.Base.Background
+	}
 	return view
 }
 
