@@ -269,6 +269,36 @@ func TestStandardRepliesAreShownInServerBuffer(t *testing.T) {
 	}
 }
 
+func TestNoticesFromTheServerAreShownInServerBuffer(t *testing.T) {
+	client := NewClient("testnet", &config.Server{
+		Address:  "irc.example.test",
+		Port:     6697,
+		Nickname: "tester",
+	})
+
+	client.onEvent(client.Client, girc.Event{
+		Command: girc.NOTICE,
+		Source:  girc.ParseSource("zinc.libera.chat"),
+		Params:  []string{"*", "*** Looking up your hostname..."},
+	})
+	client.onEvent(client.Client, girc.Event{
+		Command: girc.NOTICE,
+		Source:  girc.ParseSource("NickServ!NickServ@services.libera.chat"),
+		Params:  []string{"tester", "You are now identified."},
+	})
+
+	messages := queuedMessages(client)
+	if len(messages) != 2 {
+		t.Fatalf("queued %d messages, want 2", len(messages))
+	}
+	if msg := messages[0]; msg.Buffer != "" || msg.DirectMessage || msg.Text != "*** Looking up your hostname..." {
+		t.Errorf("server notice = %+v, want it in the server buffer", msg)
+	}
+	if msg := messages[1]; msg.Buffer != "NickServ" || !msg.DirectMessage {
+		t.Errorf("NickServ notice = %+v, want a NickServ query", msg)
+	}
+}
+
 func TestTopicRepliesReportTopicAndSetter(t *testing.T) {
 	client := NewClient("testnet", &config.Server{
 		Address:  "irc.example.test",

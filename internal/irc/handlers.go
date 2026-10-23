@@ -353,9 +353,11 @@ func (c *Client) onServerMessage(client *girc.Client, e girc.Event) {
 		return
 	}
 
-	// A NOTICE sent directly to us (e.g. from NickServ) is a private
-	// message, not a server notice, so route it like a PM/query.
-	if e.Command == girc.NOTICE && e.Source != nil && len(e.Params) > 0 && !girc.IsValidChannel(e.Params[0]) {
+	// A NOTICE sent directly to us by a user (e.g. NickServ) is a private
+	// message, so route it like a PM/query. A NOTICE from the server itself,
+	// has no user@host and belongs in the server buffer; otherwise each
+	// server name becomes a query.
+	if e.Command == girc.NOTICE && e.Source != nil && !e.Source.IsServer() && len(e.Params) > 0 && !girc.IsValidChannel(e.Params[0]) {
 		c.onPrivmsg(client, e)
 		return
 	}
