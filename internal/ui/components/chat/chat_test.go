@@ -265,6 +265,36 @@ func TestSetNicknameInvalidatesRenderedContent(t *testing.T) {
 	}
 }
 
+func TestSetThemeInvalidatesRenderedContent(t *testing.T) {
+	theme := styles.RosePineTheme()
+	colors := styles.NewUsernameColors(theme.Colors.Nicknames)
+	m := New(theme, colors)
+	m.SetSize(80, 12)
+	msg := Message{Timestamp: time.Now(), Username: "alice", Text: "hello"}
+	m.AddMessage(msg)
+	before := strings.Join(m.renderedLines, "\n")
+
+	light := styles.SolarizedLightTheme()
+	m.SetTheme(light, colors.WithPalette(light.Colors.Nicknames))
+
+	if !m.needsRender {
+		t.Fatal("expected theme change to require rendering")
+	}
+	if got := m.renderedMessages; got != 0 {
+		t.Fatalf("rendered messages = %d, want 0", got)
+	}
+
+	m.FlushQueue()
+
+	got := strings.Join(m.renderedLines, "\n")
+	if want := m.renderMessage(msg, 80); got != want {
+		t.Fatalf("rendered after theme change = %q, want %q", got, want)
+	}
+	if got == before {
+		t.Fatal("expected rendered lines to change with the theme")
+	}
+}
+
 func TestMentionedMessageHighlightsOnlyExactNickname(t *testing.T) {
 	theme := styles.RosePineTheme()
 	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))

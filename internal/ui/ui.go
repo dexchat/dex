@@ -235,15 +235,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msgTyped.Width
 		m.height = msgTyped.Height
-
-		paletteWidth := min(commandPaletteWidth, max(1, msgTyped.Width-paletteScreenMargin))
-		m.palette.SetSize(paletteWidth, m.calculateChatHeight())
-		m.help.SetSize(paletteWidth, m.calculateChatHeight())
-
-		buf := m.getActiveBuffer()
-		buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
-		buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
-		m.channels = m.channels.SetSize(channelsPanelMaxWidth, m.calculateChatHeight())
+		m.resizeComponents()
 
 	case ircEventsMsg:
 		m.ircPending[msgTyped.server] = append(m.ircPending[msgTyped.server], msgTyped.events...)
@@ -434,6 +426,40 @@ func (m *Model) getActiveBuffer() *Buffer {
 		panic("active buffer not found: " + string(m.activeBuffer))
 	}
 	return buf
+}
+
+// resizeComponents lays out the visible components for the current terminal
+// size, re-rendering any whose content is stale.
+func (m *Model) resizeComponents() {
+	paletteWidth := min(commandPaletteWidth, max(1, m.width-paletteScreenMargin))
+	m.palette.SetSize(paletteWidth, m.calculateChatHeight())
+	m.help.SetSize(paletteWidth, m.calculateChatHeight())
+
+	buf := m.getActiveBuffer()
+	buf.Chat.SetSize(m.calculateChatWidth(), m.calculateChatHeight())
+	buf.Users = buf.Users.SetSize(usersPanelMaxWidth, m.calculateChatHeight())
+	m.channels = m.channels.SetSize(channelsPanelMaxWidth, m.calculateChatHeight())
+}
+
+// setTheme switches every component to theme while the program runs. Only
+// the visible panes are re-rendered now; inactive chats stay stale until
+// they are selected, so the switch costs the same as a resize.
+func (m *Model) setTheme(theme styles.Theme) {
+	m.theme = theme
+	m.usernameColors = m.usernameColors.WithPalette(theme.Colors.Nicknames)
+
+	m.channels = m.channels.SetTheme(theme)
+	m.palette.SetTheme(theme)
+	m.help.SetTheme(theme)
+	for _, buf := range m.buffers {
+		buf.Chat.SetTheme(theme, m.usernameColors)
+		buf.Users = buf.Users.SetTheme(theme, m.usernameColors)
+	}
+
+	// Before the first WindowSizeMsg there is nothing to lay out yet.
+	if m.width > 0 && m.height > 0 {
+		m.resizeComponents()
+	}
 }
 
 func (m *Model) selectBuffer(server, channel string, cmds *[]tea.Cmd) {

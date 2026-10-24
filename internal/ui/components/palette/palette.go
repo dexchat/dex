@@ -44,6 +44,19 @@ type Model struct {
 func New(theme styles.Theme) *Model {
 	input := textinput.New()
 	input.Prompt = "> "
+	setInputStyles(&input, theme)
+
+	return &Model{
+		theme:   theme,
+		actions: defaultActions(),
+		visible: false,
+		cursor:  0,
+		input:   input,
+		keyMap:  keybindings.DefaultKeyMap(),
+	}
+}
+
+func setInputStyles(input *textinput.Model, theme styles.Theme) {
 	inputStyle := lipgloss.NewStyle().
 		Background(theme.Colors.Base.Background).
 		Foreground(theme.Colors.Base.Foreground)
@@ -54,15 +67,13 @@ func New(theme styles.Theme) *Model {
 	inputStyles.Focused.Placeholder = placeholderStyle
 	inputStyles.Blurred.Placeholder = placeholderStyle
 	input.SetStyles(inputStyles)
+}
 
-	return &Model{
-		theme:   theme,
-		actions: defaultActions(),
-		visible: false,
-		cursor:  0,
-		input:   input,
-		keyMap:  keybindings.DefaultKeyMap(),
-	}
+// SetTheme switches the palette to theme. It renders from the theme on every
+// View, so only the input styles need updating.
+func (m *Model) SetTheme(theme styles.Theme) {
+	m.theme = theme
+	setInputStyles(&m.input, theme)
 }
 
 func (m *Model) Init() tea.Cmd {

@@ -122,6 +122,14 @@ func New(theme styles.Theme, servers []*config.Server) Model {
 	}
 }
 
+// SetTheme switches the sidebar to theme. The list is re-rendered by the
+// next SetSize.
+func (m Model) SetTheme(theme styles.Theme) Model {
+	m.theme = theme
+	m.viewport.Style = m.viewport.Style.Background(theme.Colors.Base.Background)
+	return m
+}
+
 func (m Model) Init() tea.Cmd {
 	return nil
 }

@@ -5,25 +5,36 @@ import (
 	"strings"
 )
 
+// UsernameColors assigns each nickname a slot in the theme's nickname
+// palette. Copies share the assignments, so every component sees the same
+// color for a nickname.
 type UsernameColors struct {
-	colors  map[string]Color
+	slots   map[string]int
 	palette []Color
 }
 
 func NewUsernameColors(palette []Color) UsernameColors {
 	return UsernameColors{
-		colors:  map[string]Color{},
+		slots:   map[string]int{},
 		palette: palette,
 	}
 }
 
+// WithPalette returns a copy that reads colors from palette while keeping
+// the existing assignments, so a theme switch moves each nickname to the
+// same slot of the new palette instead of picking a new random one.
+func (u UsernameColors) WithPalette(palette []Color) UsernameColors {
+	u.palette = palette
+	return u
+}
+
 func (u *UsernameColors) GetColor(username string) Color {
 	key := strings.ToLower(username)
-	if color, exists := u.colors[key]; exists {
-		return color
+	slot, exists := u.slots[key]
+	if !exists {
+		slot = rand.Intn(len(u.palette))
+		u.slots[key] = slot
 	}
-	color := u.palette[rand.Intn(len(u.palette))]
-	u.colors[key] = color
 
-	return color
+	return u.palette[slot%len(u.palette)]
 }

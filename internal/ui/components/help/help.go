@@ -69,6 +69,12 @@ func New(theme styles.Theme) *Model {
 	return m
 }
 
+// SetTheme switches the help overlay to theme and re-renders its shortcuts.
+func (m *Model) SetTheme(theme styles.Theme) {
+	m.theme = theme
+	m.updateViewportContent()
+}
+
 func (m *Model) Init() tea.Cmd {
 	return nil
 }

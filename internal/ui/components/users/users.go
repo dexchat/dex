@@ -44,6 +44,16 @@ func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 	}
 }
 
+// SetTheme switches the user list to theme. The list is re-rendered by the
+// next SetSize or UserListMsg, which the parent sends when the buffer is
+// shown.
+func (m Model) SetTheme(theme styles.Theme, usernameColors styles.UsernameColors) Model {
+	m.theme = theme
+	m.usernameColors = usernameColors
+	m.viewport.Style = m.viewport.Style.Background(theme.Colors.Base.Background)
+	return m
+}
+
 func (m Model) Init() tea.Cmd {
 	return nil
 }

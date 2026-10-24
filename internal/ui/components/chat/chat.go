@@ -53,12 +53,7 @@ func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 	input.Focus()
 	input.Prompt = ""
 	input.Placeholder = "Send message..."
-	inputStyles := input.Styles()
-	inputStyles.Focused.Placeholder = theme.Styles.InputField
-	inputStyles.Focused.Text = theme.Styles.InputField
-	inputStyles.Blurred.Placeholder = theme.Styles.InputField
-	inputStyles.Blurred.Text = theme.Styles.InputField
-	input.SetStyles(inputStyles)
+	setInputStyles(&input, theme)
 
 	m := Model{
 		messages:       make([]Message, 0),
@@ -71,6 +66,24 @@ func New(theme styles.Theme, usernameColors styles.UsernameColors) Model {
 	}
 
 	return m
+}
+
+func setInputStyles(input *textinput.Model, theme styles.Theme) {
+	inputStyles := input.Styles()
+	inputStyles.Focused.Placeholder = theme.Styles.InputField
+	inputStyles.Focused.Text = theme.Styles.InputField
+	inputStyles.Blurred.Placeholder = theme.Styles.InputField
+	inputStyles.Blurred.Text = theme.Styles.InputField
+	input.SetStyles(inputStyles)
+}
+
+// SetTheme switches the chat to theme. Rendered lines keep the old colors,
+// so the cache is invalidated and rebuilt by the next SetSize or FlushQueue.
+func (m *Model) SetTheme(theme styles.Theme, usernameColors styles.UsernameColors) {
+	m.theme = theme
+	m.usernameColors = usernameColors
+	setInputStyles(&m.input, theme)
+	m.invalidateRenderedContent()
 }
 
 func (m *Model) Init() tea.Cmd {
