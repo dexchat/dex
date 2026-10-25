@@ -14,6 +14,8 @@ const (
 	ThemeGruvboxDark          = "gruvbox-dark"
 	ThemeSolarizedLight       = "solarized-light"
 	ThemeNone                 = "none"
+	// ThemeAuto picks ThemeLight or ThemeDark from the system appearance.
+	ThemeAuto = "auto"
 )
 
 // DesktopMode controls desktop notifications.
@@ -66,6 +68,8 @@ type Notifications struct {
 
 type rawUI struct {
 	Theme              string `toml:"theme"`
+	ThemeLight         string `toml:"theme_light"`
+	ThemeDark          string `toml:"theme_dark"`
 	UnreadBadges       *bool  `toml:"unread_badges"`
 	MentionBadges      *bool  `toml:"mention_badges"`
 	UnreadOnUserEvents *bool  `toml:"unread_on_user_events"`
@@ -73,6 +77,8 @@ type rawUI struct {
 
 type UI struct {
 	Theme              string
+	ThemeLight         string
+	ThemeDark          string
 	UnreadBadges       bool
 	MentionBadges      bool
 	UnreadOnUserEvents bool

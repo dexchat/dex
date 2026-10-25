@@ -44,7 +44,13 @@ cooldown = "2s"
 # Available themes: "rose-pine", "ayu-dark", "dracula",
 # "gruvbox-dark", "solarized-light", "none". The "none" theme uses the
 # terminal's own background and color palette.
+#
+# Set theme = "auto" to pick theme_light or theme_dark from the system
+# appearance when dex starts. Detection needs a terminal that reports it;
+# otherwise dex uses theme_dark.
 theme = "rose-pine"
+# theme_light = "solarized-light"
+# theme_dark = "rose-pine"
 unread_badges = true
 mention_badges = true
 unread_on_user_events = true

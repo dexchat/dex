@@ -12,6 +12,7 @@ import (
 	"github.com/dexchat/dex/internal/ui/styles"
 
 	tea "charm.land/bubbletea/v2"
+	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/dexchat/dex/internal/ui/components/channels"
 	"github.com/dexchat/dex/internal/ui/components/chat"
 	"github.com/dexchat/dex/internal/ui/components/help"
@@ -54,6 +55,9 @@ type Model struct {
 	height         int
 	theme          styles.Theme
 	usernameColors styles.UsernameColors
+	// themeDetecting is true while theme = "auto" waits for the terminal to
+	// report the system appearance.
+	themeDetecting bool
 
 	buffers             map[BufferKey]*Buffer
 	activeBuffer        BufferKey
@@ -88,18 +92,11 @@ func New(cfg *config.Config) *Model {
 	if err != nil {
 		directMessages = &history.DirectMessages{}
 	}
-	theme := styles.RosePineTheme()
-	switch cfg.UI.Theme {
-	case config.ThemeAyuDark:
-		theme = styles.AyuDarkTheme()
-	case config.ThemeDracula:
-		theme = styles.DraculaTheme()
-	case config.ThemeGruvboxDark:
-		theme = styles.GruvboxDarkTheme()
-	case config.ThemeSolarizedLight:
-		theme = styles.SolarizedLightTheme()
-	case config.ThemeNone:
-		theme = styles.NoneTheme()
+	theme := themeByName(cfg.UI.Theme)
+	themeDetecting := cfg.UI.Theme == config.ThemeAuto
+	if themeDetecting {
+		// Start dark; detectTheme switches once the terminal answers.
+		theme = themeByName(cfg.UI.ThemeDark)
 	}
 	m := Model{
 		config:          cfg,
@@ -108,6 +105,7 @@ func New(cfg *config.Config) *Model {
 		readState:       &history.ReadState{},
 		directMessages:  directMessages,
 		theme:           theme,
+		themeDetecting:  themeDetecting,
 		terminalFocused: true,
 		now:             time.Now,
 
@@ -173,6 +171,7 @@ func (m *Model) Init() tea.Cmd {
 		buf.Chat.Init(),
 		m.scheduleHistoryFlush(),
 		m.loadConfiguredHistory(),
+		m.detectTheme(),
 	)
 }
 
@@ -231,6 +230,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.BlurMsg:
 		m.terminalFocused = false
+
+	case uv.DarkColorSchemeEvent:
+		m.applyDetectedTheme(true)
+
+	case uv.LightColorSchemeEvent:
+		m.applyDetectedTheme(false)
+
+	case tea.BackgroundColorMsg:
+		m.applyDetectedTheme(msgTyped.IsDark())
+
+	case themeDetectTimeoutMsg:
+		m.themeDetecting = false
 
 	case tea.WindowSizeMsg:
 		m.width = msgTyped.Width
@@ -397,8 +408,10 @@ func (m *Model) View() tea.View {
 	view.ReportFocus = true
 	view.MouseMode = tea.MouseModeCellMotion
 	// Setting a background color changes the terminal's own background, so
-	// leave it unset when the theme should follow the terminal.
-	if m.theme.HasBackground() {
+	// leave it unset when the theme should follow the terminal. While the
+	// automatic theme is being detected it stays unset too, or the
+	// terminal could report our color instead of its own.
+	if m.theme.HasBackground() && !m.themeDetecting {
 		view.BackgroundColor = m.theme.Colors.Base.Background
 	}
 	return view

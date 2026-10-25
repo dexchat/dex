@@ -164,6 +164,86 @@ channels = ["#go"]
 	}
 }
 
+func TestLoadParsesAutoTheme(t *testing.T) {
+	cfg, err := loadFromBytes([]byte(`
+[ui]
+theme = "auto"
+theme_light = "none"
+theme_dark = "dracula"
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+	if err != nil {
+		t.Fatalf("loadFromBytes() error = %v", err)
+	}
+	if got := cfg.UI.Theme; got != ThemeAuto {
+		t.Fatalf("UI theme = %q, want %q", got, ThemeAuto)
+	}
+	if got := cfg.UI.ThemeLight; got != ThemeNone {
+		t.Fatalf("UI theme_light = %q, want %q", got, ThemeNone)
+	}
+	if got := cfg.UI.ThemeDark; got != ThemeDracula {
+		t.Fatalf("UI theme_dark = %q, want %q", got, ThemeDracula)
+	}
+}
+
+func TestLoadDefaultsAutoThemeVariants(t *testing.T) {
+	cfg, err := loadFromBytes([]byte(`
+[ui]
+theme = "auto"
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+	if err != nil {
+		t.Fatalf("loadFromBytes() error = %v", err)
+	}
+	if got := cfg.UI.ThemeLight; got != ThemeSolarizedLight {
+		t.Fatalf("UI theme_light default = %q, want %q", got, ThemeSolarizedLight)
+	}
+	if got := cfg.UI.ThemeDark; got != ThemeRosePine {
+		t.Fatalf("UI theme_dark default = %q, want %q", got, ThemeRosePine)
+	}
+}
+
+func TestLoadRejectsInvalidAutoThemeVariants(t *testing.T) {
+	tests := []struct {
+		name string
+		ui   string
+		want string
+	}{
+		{name: "unknown light", ui: `theme_light = "rose-pink"`, want: `unknown UI theme_light "rose-pink"`},
+		{name: "unknown dark", ui: `theme_dark = "rose-pink"`, want: `unknown UI theme_dark "rose-pink"`},
+		{name: "auto light", ui: `theme_light = "auto"`, want: `unknown UI theme_light "auto"`},
+		{name: "auto dark", ui: `theme_dark = "auto"`, want: `unknown UI theme_dark "auto"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := loadFromBytes([]byte(`
+[ui]
+theme = "auto"
+` + tt.ui + `
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("expected %q error, got %v", tt.want, err)
+			}
+		})
+	}
+}
+
 func TestLoadAcceptsGruvboxTheme(t *testing.T) {
 	cfg, err := loadFromBytes([]byte(`
 [ui]
