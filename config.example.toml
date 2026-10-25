@@ -45,13 +45,12 @@ cooldown = "2s"
 # "gruvbox-dark", "solarized-light", "none". The "none" theme uses the
 # terminal's own background and color palette.
 #
-# Set theme = "auto" to pick theme_light or theme_dark from the system
-# appearance and switch when it changes. Switching while dex runs needs a
-# terminal with light/dark reports (mode 2031); elsewhere the theme picked
-# at startup stays, and dex uses theme_dark if it cannot detect one.
+# Set a light and a dark theme to follow the system appearance:
+#   theme = { light = "solarized-light", dark = "rose-pine" }
+# Switching while dex runs needs a terminal with light/dark reports (mode
+# 2031); elsewhere the theme picked at startup stays, and dex uses the dark
+# theme if it cannot detect one.
 theme = "rose-pine"
-# theme_light = "solarized-light"
-# theme_dark = "rose-pine"
 unread_badges = true
 mention_badges = true
 unread_on_user_events = true
