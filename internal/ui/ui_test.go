@@ -1353,6 +1353,7 @@ func TestNewUsesConfiguredTheme(t *testing.T) {
 		configured string
 		want       styles.Theme
 	}{
+		{name: "Rose Pine Dawn", configured: config.ThemeRosePineDawn, want: styles.RosePineDawnTheme()},
 		{name: "Ayu Dark", configured: config.ThemeAyuDark, want: styles.AyuDarkTheme()},
 		{name: "Dracula", configured: config.ThemeDracula, want: styles.DraculaTheme()},
 		{name: "Gruvbox Dark", configured: config.ThemeGruvboxDark, want: styles.GruvboxDarkTheme()},

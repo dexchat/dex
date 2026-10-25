@@ -342,6 +342,90 @@ func RosePineTheme() Theme {
 	return theme
 }
 
+func RosePineDawnTheme() Theme {
+	theme := Theme{}
+
+	theme.Colors.Base.Background = lipgloss.Color("#FAF4ED")
+	theme.Colors.Base.Foreground = lipgloss.Color("#575279")
+	theme.Colors.Base.Surface = lipgloss.Color("#F2E9E1")
+	theme.Colors.Base.Border = lipgloss.Color("#DFDAD9")
+	theme.Colors.Base.Accent = lipgloss.Color("#765E92")
+	theme.Colors.Base.Error = lipgloss.Color("#A14D65")
+	theme.Colors.Base.Dimmed = lipgloss.Color("#696581")
+	theme.Colors.Base.Subtle = lipgloss.Color("#696581")
+	theme.Colors.Base.OnAccent = lipgloss.Color("#FAF4ED")
+	theme.Colors.Base.Divider = lipgloss.Color("#F2E9E1")
+
+	theme.Colors.Sidebar.Server = lipgloss.Color("#765E92")
+	theme.Colors.Sidebar.Unread = lipgloss.Color("#945C0F")
+	theme.Colors.Sidebar.Notification = lipgloss.Color("#945C0F")
+	theme.Colors.Sidebar.Mention = lipgloss.Color("#A14D65")
+	theme.Colors.Sidebar.Selection = lipgloss.Color("#F2E9E1")
+
+	theme.Colors.Chat.Nickname = lipgloss.Color("#935956")
+	theme.Colors.Chat.InactiveNickname = lipgloss.Color("#686868")
+	theme.Colors.Chat.Mention = lipgloss.Color("#A14D65")
+	theme.Colors.Chat.Separator = lipgloss.Color("#DFDAD9")
+	theme.Colors.Chat.Self = lipgloss.Color("#935956")
+	theme.Colors.Chat.Connected = lipgloss.Color("#416F77")
+	theme.Colors.Chat.Disconnected = lipgloss.Color("#A14D65")
+	theme.Colors.Chat.UserEvents = lipgloss.Color("#696581")
+	theme.Colors.Chat.ServerMessage = lipgloss.Color("#945C0F")
+
+	theme.Colors.Palette.Border = lipgloss.Color("#765E92")
+	theme.Colors.Palette.Highlight = lipgloss.Color("#765E92")
+
+	theme.Colors.Nicknames = []Color{
+		lipgloss.Color("#935956"),
+		lipgloss.Color("#945C0F"),
+		lipgloss.Color("#416F77"),
+		lipgloss.Color("#765E92"),
+		lipgloss.Color("#A14D65"),
+		lipgloss.Color("#575279"),
+	}
+
+	theme.Styles.App = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground)
+
+	theme.Styles.Sidebar = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground).
+		BorderStyle(lipgloss.HiddenBorder()).
+		BorderBackground(theme.Colors.Base.Background)
+
+	theme.Styles.UnreadItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Unread)
+
+	theme.Styles.NotifiedItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Notification).
+		Bold(true)
+
+	theme.Styles.MentionedItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Mention).
+		Bold(true)
+
+	theme.Styles.ServerItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Server).
+		Bold(true)
+
+	theme.Styles.ChatArea = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground).
+		BorderBackground(theme.Colors.Base.Background).
+		Border(lipgloss.HiddenBorder())
+
+	theme.Styles.InputField = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Surface).
+		Foreground(theme.Colors.Base.Foreground)
+
+	return theme
+}
+
 func SolarizedLightTheme() Theme {
 	theme := Theme{}
 

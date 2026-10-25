@@ -29,6 +29,8 @@ type themeDetectTimeoutMsg struct{}
 
 func themeByName(name string) styles.Theme {
 	switch name {
+	case config.ThemeRosePineDawn:
+		return styles.RosePineDawnTheme()
 	case config.ThemeAyuDark:
 		return styles.AyuDarkTheme()
 	case config.ThemeDracula:

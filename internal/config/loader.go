@@ -165,7 +165,7 @@ func defaultValues() *Config {
 // isTheme reports whether name is a known theme.
 func isTheme(name string) bool {
 	switch name {
-	case ThemeRosePine, ThemeAyuDark, ThemeDracula, ThemeGruvboxDark, ThemeSolarizedLight, ThemeNone:
+	case ThemeRosePine, ThemeRosePineDawn, ThemeAyuDark, ThemeDracula, ThemeGruvboxDark, ThemeSolarizedLight, ThemeNone:
 		return true
 	}
 	return false

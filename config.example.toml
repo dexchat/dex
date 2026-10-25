@@ -41,12 +41,12 @@ events = ["mention", "direct_message"]
 cooldown = "2s"
 
 [ui]
-# Available themes: "rose-pine", "ayu-dark", "dracula",
-# "gruvbox-dark", "solarized-light", "none". The "none" theme uses the
-# terminal's own background and color palette.
+# Available themes: "rose-pine", "rose-pine-dawn", "ayu-dark",
+# "dracula", "gruvbox-dark", "solarized-light", "none". The "none" theme
+# uses the terminal's own background and color palette.
 #
 # Set a light and a dark theme to follow the system appearance:
-#   theme = { light = "solarized-light", dark = "rose-pine" }
+#   theme = { light = "rose-pine-dawn", dark = "rose-pine" }
 # Switching while dex runs needs a terminal with light/dark reports (mode
 # 2031); elsewhere the theme picked at startup stays, and dex uses the dark
 # theme if it cannot detect one.

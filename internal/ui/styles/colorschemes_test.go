@@ -12,6 +12,7 @@ func TestThemeTextContrast(t *testing.T) {
 		"dracula":         DraculaTheme(),
 		"gruvbox-dark":    GruvboxDarkTheme(),
 		"rose-pine":       RosePineTheme(),
+		"rose-pine-dawn":  RosePineDawnTheme(),
 		"solarized-light": SolarizedLightTheme(),
 	}
 
@@ -52,6 +53,24 @@ func TestThemeTextContrast(t *testing.T) {
 
 func TestDraculaInteractiveContrast(t *testing.T) {
 	theme := DraculaTheme()
+	assertContrast(t, theme.Colors.Base.Foreground, theme.Colors.Base.Surface)
+	assertContrast(t, theme.Colors.Base.Accent, theme.Colors.Base.Surface)
+
+	selectedText := []Color{
+		theme.Colors.Base.Foreground,
+		theme.Colors.Base.Dimmed,
+		theme.Colors.Sidebar.Server,
+		theme.Colors.Sidebar.Unread,
+		theme.Colors.Sidebar.Notification,
+		theme.Colors.Sidebar.Mention,
+	}
+	for _, textColor := range selectedText {
+		assertContrast(t, textColor, theme.Colors.Sidebar.Selection)
+	}
+}
+
+func TestRosePineDawnInteractiveContrast(t *testing.T) {
+	theme := RosePineDawnTheme()
 	assertContrast(t, theme.Colors.Base.Foreground, theme.Colors.Base.Surface)
 	assertContrast(t, theme.Colors.Base.Accent, theme.Colors.Base.Surface)
 
