@@ -86,23 +86,20 @@ func loadFromBytes(data []byte) (*Config, error) {
 	}
 
 	cfg := defaultValues()
-	if raw.UI.Theme != "" {
-		if raw.UI.Theme != ThemeAuto && !isTheme(raw.UI.Theme) {
-			return nil, fmt.Errorf("config validation failed: unknown UI theme %q", raw.UI.Theme)
+	switch theme := raw.UI.Theme; {
+	case theme.Light != "":
+		if !isTheme(theme.Light) {
+			return nil, fmt.Errorf("config validation failed: unknown UI theme %q for light", theme.Light)
 		}
-		cfg.UI.Theme = raw.UI.Theme
-	}
-	if raw.UI.ThemeLight != "" {
-		if !isTheme(raw.UI.ThemeLight) {
-			return nil, fmt.Errorf("config validation failed: unknown UI theme_light %q", raw.UI.ThemeLight)
+		if !isTheme(theme.Dark) {
+			return nil, fmt.Errorf("config validation failed: unknown UI theme %q for dark", theme.Dark)
 		}
-		cfg.UI.ThemeLight = raw.UI.ThemeLight
-	}
-	if raw.UI.ThemeDark != "" {
-		if !isTheme(raw.UI.ThemeDark) {
-			return nil, fmt.Errorf("config validation failed: unknown UI theme_dark %q", raw.UI.ThemeDark)
+		cfg.UI.SystemTheme = &SystemTheme{Light: theme.Light, Dark: theme.Dark}
+	case theme.Name != "":
+		if !isTheme(theme.Name) {
+			return nil, fmt.Errorf("config validation failed: unknown UI theme %q", theme.Name)
 		}
-		cfg.UI.ThemeDark = raw.UI.ThemeDark
+		cfg.UI.Theme = theme.Name
 	}
 	if raw.UI.UnreadBadges != nil {
 		cfg.UI.UnreadBadges = *raw.UI.UnreadBadges
@@ -160,13 +157,12 @@ func loadFromBytes(data []byte) (*Config, error) {
 
 func defaultValues() *Config {
 	return &Config{
-		UI:            UI{Theme: ThemeRosePine, ThemeLight: ThemeSolarizedLight, ThemeDark: ThemeRosePine, UnreadBadges: true, MentionBadges: true, UnreadOnUserEvents: true},
+		UI:            UI{Theme: ThemeRosePine, UnreadBadges: true, MentionBadges: true, UnreadOnUserEvents: true},
 		Notifications: Notifications{Sound: true, Desktop: DesktopAuto, ShowBody: true, Events: map[string]bool{NotificationMention: true, NotificationDirectMessage: true}, Cooldown: 2 * time.Second},
 	}
 }
 
-// isTheme reports whether name is a concrete theme, which excludes
-// ThemeAuto.
+// isTheme reports whether name is a known theme.
 func isTheme(name string) bool {
 	switch name {
 	case ThemeRosePine, ThemeAyuDark, ThemeDracula, ThemeGruvboxDark, ThemeSolarizedLight, ThemeNone:

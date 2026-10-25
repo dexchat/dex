@@ -164,72 +164,75 @@ channels = ["#go"]
 	}
 }
 
-func TestLoadParsesAutoTheme(t *testing.T) {
-	cfg, err := loadFromBytes([]byte(`
-[ui]
-theme = "auto"
-theme_light = "none"
-theme_dark = "dracula"
-
-[servers.libera]
-address = "irc.libera.chat"
-port = 6697
-nickname = "dexuser"
-channels = ["#go"]
-`))
-	if err != nil {
-		t.Fatalf("loadFromBytes() error = %v", err)
-	}
-	if got := cfg.UI.Theme; got != ThemeAuto {
-		t.Fatalf("UI theme = %q, want %q", got, ThemeAuto)
-	}
-	if got := cfg.UI.ThemeLight; got != ThemeNone {
-		t.Fatalf("UI theme_light = %q, want %q", got, ThemeNone)
-	}
-	if got := cfg.UI.ThemeDark; got != ThemeDracula {
-		t.Fatalf("UI theme_dark = %q, want %q", got, ThemeDracula)
-	}
-}
-
-func TestLoadDefaultsAutoThemeVariants(t *testing.T) {
-	cfg, err := loadFromBytes([]byte(`
-[ui]
-theme = "auto"
-
-[servers.libera]
-address = "irc.libera.chat"
-port = 6697
-nickname = "dexuser"
-channels = ["#go"]
-`))
-	if err != nil {
-		t.Fatalf("loadFromBytes() error = %v", err)
-	}
-	if got := cfg.UI.ThemeLight; got != ThemeSolarizedLight {
-		t.Fatalf("UI theme_light default = %q, want %q", got, ThemeSolarizedLight)
-	}
-	if got := cfg.UI.ThemeDark; got != ThemeRosePine {
-		t.Fatalf("UI theme_dark default = %q, want %q", got, ThemeRosePine)
-	}
-}
-
-func TestLoadRejectsInvalidAutoThemeVariants(t *testing.T) {
+func TestLoadParsesSystemTheme(t *testing.T) {
 	tests := []struct {
 		name string
 		ui   string
-		want string
 	}{
-		{name: "unknown light", ui: `theme_light = "rose-pink"`, want: `unknown UI theme_light "rose-pink"`},
-		{name: "unknown dark", ui: `theme_dark = "rose-pink"`, want: `unknown UI theme_dark "rose-pink"`},
-		{name: "auto light", ui: `theme_light = "auto"`, want: `unknown UI theme_light "auto"`},
-		{name: "auto dark", ui: `theme_dark = "auto"`, want: `unknown UI theme_dark "auto"`},
+		{name: "inline table", ui: `theme = { light = "none", dark = "dracula" }`},
+		{name: "table section", ui: "[ui.theme]\nlight = \"none\"\ndark = \"dracula\""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := loadFromBytes([]byte(`
+[ui]
+` + tt.ui + `
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+			if err != nil {
+				t.Fatalf("loadFromBytes() error = %v", err)
+			}
+			want := SystemTheme{Light: ThemeNone, Dark: ThemeDracula}
+			if got := cfg.UI.SystemTheme; got == nil || *got != want {
+				t.Fatalf("UI system theme = %+v, want %+v", got, want)
+			}
+		})
+	}
+}
+
+func TestLoadThemeNameLeavesSystemThemeUnset(t *testing.T) {
+	cfg, err := loadFromBytes([]byte(`
+[ui]
+theme = "dracula"
+
+[servers.libera]
+address = "irc.libera.chat"
+port = 6697
+nickname = "dexuser"
+channels = ["#go"]
+`))
+	if err != nil {
+		t.Fatalf("loadFromBytes() error = %v", err)
+	}
+	if got := cfg.UI.SystemTheme; got != nil {
+		t.Fatalf("UI system theme = %+v, want nil", got)
+	}
+}
+
+func TestLoadRejectsInvalidSystemTheme(t *testing.T) {
+	tests := []struct {
+		name  string
+		theme string
+		want  string
+	}{
+		{name: "missing dark", theme: `{ light = "none" }`, want: "theme table needs both light and dark"},
+		{name: "missing light", theme: `{ dark = "dracula" }`, want: "theme table needs both light and dark"},
+		{name: "unknown field", theme: `{ ligth = "none", dark = "dracula" }`, want: `unknown theme field "ligth"`},
+		{name: "not a name", theme: `{ light = 1, dark = "dracula" }`, want: "theme.light must be a theme name"},
+		{name: "unknown light", theme: `{ light = "rose-pink", dark = "dracula" }`, want: `unknown UI theme "rose-pink" for light`},
+		{name: "unknown dark", theme: `{ light = "none", dark = "rose-pink" }`, want: `unknown UI theme "rose-pink" for dark`},
+		{name: "wrong type", theme: `["none", "dracula"]`, want: "theme must be a theme name or a table with light and dark"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := loadFromBytes([]byte(`
 [ui]
-theme = "auto"
-` + tt.ui + `
+theme = ` + tt.theme + `
 
 [servers.libera]
 address = "irc.libera.chat"

@@ -48,9 +48,9 @@ func main() {
 	}
 
 	_, err = p.Run()
-	// Turn off the light/dark reports that theme = "auto" enabled, or the
-	// shell would receive them after dex exits.
-	if cfg.UI.Theme == config.ThemeAuto {
+	// Turn off the light/dark reports that a light/dark theme enabled, or
+	// the shell would receive them after dex exits.
+	if cfg.UI.SystemTheme != nil {
 		_, _ = fmt.Fprint(os.Stdout, ansi.ResetModeLightDark)
 	}
 	if err != nil {

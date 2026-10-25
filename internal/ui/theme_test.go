@@ -59,29 +59,27 @@ func TestSetThemeBeforeWindowSizeAppliesOnFirstLayout(t *testing.T) {
 	}
 }
 
-func newAutoThemeTestModel() *Model {
+func newSystemThemeTestModel() *Model {
 	cfg := newActivityTestModel().config
-	cfg.UI.Theme = config.ThemeAuto
-	cfg.UI.ThemeLight = config.ThemeSolarizedLight
-	cfg.UI.ThemeDark = config.ThemeDracula
+	cfg.UI.SystemTheme = &config.SystemTheme{Light: config.ThemeSolarizedLight, Dark: config.ThemeDracula}
 	return New(cfg)
 }
 
-func TestAutoThemeStartsDarkWithoutTerminalBackground(t *testing.T) {
-	m := newAutoThemeTestModel()
+func TestSystemThemeStartsDarkWithoutTerminalBackground(t *testing.T) {
+	m := newSystemThemeTestModel()
 
-	if !m.themeDetecting {
-		t.Fatal("expected theme = \"auto\" to start detecting")
+	if m.systemTheme != systemThemeDetecting {
+		t.Fatal("expected a light/dark theme to start detecting")
 	}
 	if got, want := m.theme.Colors.Base.Background, styles.DraculaTheme().Colors.Base.Background; got != want {
-		t.Fatalf("initial background = %v, want theme_dark %v", got, want)
+		t.Fatalf("initial background = %v, want dark theme %v", got, want)
 	}
 	if got := m.View().BackgroundColor; got != nil {
 		t.Fatalf("view background while detecting = %v, want unset", got)
 	}
 }
 
-func TestAutoThemeAppliesFirstDetectedAppearance(t *testing.T) {
+func TestSystemThemeAppliesFirstDetectedAppearance(t *testing.T) {
 	light := styles.SolarizedLightTheme().Colors.Base.Background
 	dark := styles.DraculaTheme().Colors.Base.Background
 	tests := []struct {
@@ -108,14 +106,14 @@ func TestAutoThemeAppliesFirstDetectedAppearance(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := newAutoThemeTestModel()
+			m := newSystemThemeTestModel()
 			m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
 
 			for _, msg := range tt.msgs {
 				m.Update(msg)
 			}
 
-			if m.themeDetecting {
+			if m.systemTheme == systemThemeDetecting {
 				t.Fatal("expected detection to finish")
 			}
 			if got := m.theme.Colors.Base.Background; got != tt.want {
@@ -128,8 +126,8 @@ func TestAutoThemeAppliesFirstDetectedAppearance(t *testing.T) {
 	}
 }
 
-func TestAutoThemeFollowsSystemAppearanceChanges(t *testing.T) {
-	m := newAutoThemeTestModel()
+func TestSystemThemeFollowsSystemAppearanceChanges(t *testing.T) {
+	m := newSystemThemeTestModel()
 	m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
 	m.Update(uv.DarkColorSchemeEvent{})
 	light := styles.SolarizedLightTheme().Colors.Base.Background

@@ -9,9 +9,21 @@ import (
 	"github.com/dexchat/dex/internal/ui/styles"
 )
 
-// themeDetectTimeout bounds how long theme = "auto" waits for the terminal
-// to report its appearance before keeping the dark theme.
+// themeDetectTimeout bounds how long a light/dark theme waits for the
+// terminal to report its appearance before keeping the dark theme.
 const themeDetectTimeout = time.Second
+
+// systemTheme tracks how a light/dark theme follows the system appearance.
+type systemTheme int
+
+const (
+	// systemThemeOff means a single theme is configured.
+	systemThemeOff systemTheme = iota
+	// systemThemeDetecting waits for the first appearance report.
+	systemThemeDetecting
+	systemThemeLight
+	systemThemeDark
+)
 
 type themeDetectTimeoutMsg struct{}
 
@@ -38,7 +50,7 @@ func themeByName(name string) styles.Theme {
 // are ignored. It also enables light/dark reports, so the theme follows the
 // system appearance until dex exits.
 func (m *Model) detectTheme() tea.Cmd {
-	if !m.themeDetecting {
+	if m.systemTheme != systemThemeDetecting {
 		return nil
 	}
 	return tea.Batch(
@@ -53,22 +65,21 @@ func (m *Model) detectTheme() tea.Cmd {
 	)
 }
 
-// applySystemAppearance switches to theme_light or theme_dark when the
+// applySystemAppearance switches to the light or dark theme when the
 // terminal reports the system appearance, either answering detectTheme or
 // announcing a change.
 func (m *Model) applySystemAppearance(dark bool) {
-	if !m.followSystemTheme {
+	if m.systemTheme == systemThemeOff {
 		return
 	}
-	if !m.themeDetecting && dark == m.systemDark {
-		return
-	}
-	m.themeDetecting = false
-	m.systemDark = dark
-	name := m.config.UI.ThemeLight
+	next, name := systemThemeLight, m.config.UI.SystemTheme.Light
 	if dark {
-		name = m.config.UI.ThemeDark
+		next, name = systemThemeDark, m.config.UI.SystemTheme.Dark
 	}
+	if m.systemTheme == next {
+		return
+	}
+	m.systemTheme = next
 	m.setTheme(themeByName(name))
 }
 
@@ -76,7 +87,7 @@ func (m *Model) applySystemAppearance(dark bool) {
 // only while detecting. Afterwards the view may have set the background
 // itself, so the answer would describe our theme rather than the system.
 func (m *Model) applyTerminalBackground(dark bool) {
-	if !m.themeDetecting {
+	if m.systemTheme != systemThemeDetecting {
 		return
 	}
 	m.applySystemAppearance(dark)

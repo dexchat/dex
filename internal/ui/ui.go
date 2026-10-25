@@ -55,12 +55,7 @@ type Model struct {
 	height         int
 	theme          styles.Theme
 	usernameColors styles.UsernameColors
-	// followSystemTheme is set by theme = "auto". themeDetecting is true
-	// while it waits for the first appearance report, and systemDark holds
-	// the appearance the current theme was picked for.
-	followSystemTheme bool
-	themeDetecting    bool
-	systemDark        bool
+	systemTheme    systemTheme
 
 	buffers             map[BufferKey]*Buffer
 	activeBuffer        BufferKey
@@ -96,10 +91,11 @@ func New(cfg *config.Config) *Model {
 		directMessages = &history.DirectMessages{}
 	}
 	theme := themeByName(cfg.UI.Theme)
-	followSystemTheme := cfg.UI.Theme == config.ThemeAuto
-	if followSystemTheme {
+	systemTheme := systemThemeOff
+	if cfg.UI.SystemTheme != nil {
 		// Start dark; detectTheme switches once the terminal answers.
-		theme = themeByName(cfg.UI.ThemeDark)
+		theme = themeByName(cfg.UI.SystemTheme.Dark)
+		systemTheme = systemThemeDetecting
 	}
 	m := Model{
 		config:          cfg,
@@ -108,12 +104,9 @@ func New(cfg *config.Config) *Model {
 		readState:       &history.ReadState{},
 		directMessages:  directMessages,
 		theme:           theme,
+		systemTheme:     systemTheme,
 		terminalFocused: true,
 		now:             time.Now,
-
-		followSystemTheme: followSystemTheme,
-		themeDetecting:    followSystemTheme,
-		systemDark:        true,
 
 		lastDesktopNotifiedAt: make(map[BufferKey]time.Time),
 		persistence: persistenceState{
@@ -247,7 +240,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.applyTerminalBackground(msgTyped.IsDark())
 
 	case themeDetectTimeoutMsg:
-		m.themeDetecting = false
+		if m.systemTheme == systemThemeDetecting {
+			m.systemTheme = systemThemeDark
+		}
 
 	case tea.WindowSizeMsg:
 		m.width = msgTyped.Width
@@ -417,7 +412,7 @@ func (m *Model) View() tea.View {
 	// leave it unset when the theme should follow the terminal. While the
 	// automatic theme is being detected it stays unset too, or the
 	// terminal could report our color instead of its own.
-	if m.theme.HasBackground() && !m.themeDetecting {
+	if m.theme.HasBackground() && m.systemTheme != systemThemeDetecting {
 		view.BackgroundColor = m.theme.Colors.Base.Background
 	}
 	return view

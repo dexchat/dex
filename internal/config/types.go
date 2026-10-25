@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strings"
 	"time"
 )
@@ -14,8 +15,6 @@ const (
 	ThemeGruvboxDark          = "gruvbox-dark"
 	ThemeSolarizedLight       = "solarized-light"
 	ThemeNone                 = "none"
-	// ThemeAuto picks ThemeLight or ThemeDark from the system appearance.
-	ThemeAuto = "auto"
 )
 
 // DesktopMode controls desktop notifications.
@@ -67,21 +66,63 @@ type Notifications struct {
 }
 
 type rawUI struct {
-	Theme              string `toml:"theme"`
-	ThemeLight         string `toml:"theme_light"`
-	ThemeDark          string `toml:"theme_dark"`
-	UnreadBadges       *bool  `toml:"unread_badges"`
-	MentionBadges      *bool  `toml:"mention_badges"`
-	UnreadOnUserEvents *bool  `toml:"unread_on_user_events"`
+	Theme              rawTheme `toml:"theme"`
+	UnreadBadges       *bool    `toml:"unread_badges"`
+	MentionBadges      *bool    `toml:"mention_badges"`
+	UnreadOnUserEvents *bool    `toml:"unread_on_user_events"`
+}
+
+// rawTheme stores ui.theme, which is either a theme name or a table with
+// light and dark theme names.
+type rawTheme struct {
+	Name  string
+	Light string
+	Dark  string
 }
 
 type UI struct {
-	Theme              string
-	ThemeLight         string
-	ThemeDark          string
+	Theme string
+	// SystemTheme is set when ui.theme is a light/dark table. It replaces
+	// Theme with Light or Dark to follow the system appearance.
+	SystemTheme        *SystemTheme
 	UnreadBadges       bool
 	MentionBadges      bool
 	UnreadOnUserEvents bool
+}
+
+type SystemTheme struct {
+	Light string
+	Dark  string
+}
+
+// UnmarshalTOML decodes a theme name or a table with light and dark theme
+// names. Names are validated by the loader.
+func (t *rawTheme) UnmarshalTOML(value any) error {
+	switch value := value.(type) {
+	case string:
+		t.Name = value
+	case map[string]any:
+		for key, field := range value {
+			name, ok := field.(string)
+			if !ok {
+				return fmt.Errorf("theme.%s must be a theme name", key)
+			}
+			switch key {
+			case "light":
+				t.Light = name
+			case "dark":
+				t.Dark = name
+			default:
+				return fmt.Errorf("unknown theme field %q, want light or dark", key)
+			}
+		}
+		if t.Light == "" || t.Dark == "" {
+			return fmt.Errorf("theme table needs both light and dark")
+		}
+	default:
+		return fmt.Errorf("theme must be a theme name or a table with light and dark")
+	}
+	return nil
 }
 
 type BadgeSettings struct {
