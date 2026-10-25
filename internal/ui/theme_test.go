@@ -98,7 +98,13 @@ func TestAutoThemeAppliesFirstDetectedAppearance(t *testing.T) {
 			msgs: []tea.Msg{uv.LightColorSchemeEvent{}, tea.BackgroundColorMsg{Color: lipgloss.Color("#1e1e2e")}},
 			want: light,
 		},
-		{name: "timeout keeps dark", msgs: []tea.Msg{themeDetectTimeoutMsg{}, uv.LightColorSchemeEvent{}}, want: dark},
+		{name: "timeout keeps dark", msgs: []tea.Msg{themeDetectTimeoutMsg{}}, want: dark},
+		{
+			name: "background after timeout",
+			msgs: []tea.Msg{themeDetectTimeoutMsg{}, tea.BackgroundColorMsg{Color: lipgloss.Color("#fdf6e3")}},
+			want: dark,
+		},
+		{name: "report after timeout", msgs: []tea.Msg{themeDetectTimeoutMsg{}, uv.LightColorSchemeEvent{}}, want: light},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -119,6 +125,33 @@ func TestAutoThemeAppliesFirstDetectedAppearance(t *testing.T) {
 				t.Fatalf("view background = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestAutoThemeFollowsSystemAppearanceChanges(t *testing.T) {
+	m := newAutoThemeTestModel()
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
+	m.Update(uv.DarkColorSchemeEvent{})
+	light := styles.SolarizedLightTheme().Colors.Base.Background
+	dark := styles.DraculaTheme().Colors.Base.Background
+
+	steps := []struct {
+		msg  tea.Msg
+		want color.Color
+	}{
+		{msg: uv.LightColorSchemeEvent{}, want: light},
+		{msg: tea.BackgroundColorMsg{Color: lipgloss.Color("#1e1e2e")}, want: light},
+		{msg: uv.LightColorSchemeEvent{}, want: light},
+		{msg: uv.DarkColorSchemeEvent{}, want: dark},
+	}
+	for i, step := range steps {
+		m.Update(step.msg)
+		if got := m.theme.Colors.Base.Background; got != step.want {
+			t.Fatalf("step %d (%T): background = %v, want %v", i, step.msg, got, step.want)
+		}
+		if got := m.View().BackgroundColor; got != step.want {
+			t.Fatalf("step %d (%T): view background = %v, want %v", i, step.msg, got, step.want)
+		}
 	}
 }
 

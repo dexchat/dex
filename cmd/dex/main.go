@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/dexchat/dex/internal/config"
 	"github.com/dexchat/dex/internal/irc"
 	"github.com/dexchat/dex/internal/notify"
@@ -46,7 +47,13 @@ func main() {
 		tui.SetNotifier(notifier)
 	}
 
-	if _, err := p.Run(); err != nil {
+	_, err = p.Run()
+	// Turn off the light/dark reports that theme = "auto" enabled, or the
+	// shell would receive them after dex exits.
+	if cfg.UI.Theme == config.ThemeAuto {
+		_, _ = fmt.Fprint(os.Stdout, ansi.ResetModeLightDark)
+	}
+	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error running app: %v\n", err)
 		os.Exit(1)
 	}

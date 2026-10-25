@@ -46,8 +46,9 @@ cooldown = "2s"
 # terminal's own background and color palette.
 #
 # Set theme = "auto" to pick theme_light or theme_dark from the system
-# appearance when dex starts. Detection needs a terminal that reports it;
-# otherwise dex uses theme_dark.
+# appearance and switch when it changes. Switching while dex runs needs a
+# terminal with light/dark reports (mode 2031); elsewhere the theme picked
+# at startup stays, and dex uses theme_dark if it cannot detect one.
 theme = "rose-pine"
 # theme_light = "solarized-light"
 # theme_dark = "rose-pine"
