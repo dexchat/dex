@@ -8,11 +8,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/dexchat/dex/internal/ui/styles"
+	"github.com/dexchat/dex/internal/ui/styles/themes"
 )
 
 func TestGoToChannelActionOpensChannelPicker(t *testing.T) {
-	m := New(styles.RosePineTheme())
+	m := New(themes.RosePine())
 	m.Toggle()
 
 	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -26,7 +26,7 @@ func TestGoToChannelActionOpensChannelPicker(t *testing.T) {
 }
 
 func TestLastBufferActionRequestsLastBuffer(t *testing.T) {
-	m := New(styles.RosePineTheme())
+	m := New(themes.RosePine())
 	m.Toggle()
 	m.moveDown()
 
@@ -40,7 +40,7 @@ func TestLastBufferActionRequestsLastBuffer(t *testing.T) {
 }
 
 func TestEditInEditorActionRequestsEditor(t *testing.T) {
-	m := New(styles.RosePineTheme())
+	m := New(themes.RosePine())
 	m.Toggle()
 	m.moveDown()
 	m.moveDown()
@@ -55,7 +55,7 @@ func TestEditInEditorActionRequestsEditor(t *testing.T) {
 }
 
 func TestHelpActionReturnsOpenHelpMsg(t *testing.T) {
-	m := New(styles.RosePineTheme())
+	m := New(themes.RosePine())
 	m.Toggle()
 	// Help is the 4th item (index 3)
 	m.moveDown() // 1: LastBuffer
@@ -72,7 +72,7 @@ func TestHelpActionReturnsOpenHelpMsg(t *testing.T) {
 }
 
 func TestPaletteNavigationWithArrowKeys(t *testing.T) {
-	m := New(styles.RosePineTheme())
+	m := New(themes.RosePine())
 	m.Toggle()
 
 	if m.cursor != 0 {
@@ -100,7 +100,7 @@ func TestPaletteNavigationWithArrowKeys(t *testing.T) {
 }
 
 func TestPaletteWidthsDependOnMode(t *testing.T) {
-	m := New(styles.RosePineTheme())
+	m := New(themes.RosePine())
 	m.SetSize(90, 12)
 	m.Toggle()
 
@@ -115,7 +115,7 @@ func TestPaletteWidthsDependOnMode(t *testing.T) {
 }
 
 func TestChannelPickerSelectsSortedChannel(t *testing.T) {
-	m := New(styles.RosePineTheme())
+	m := New(themes.RosePine())
 	m.ShowChannels([]Channel{
 		{Server: "oftc", Name: "#zeta"},
 		{Server: "libera", Name: "#go"},
@@ -137,7 +137,7 @@ func TestChannelPickerSelectsSortedChannel(t *testing.T) {
 }
 
 func TestChannelPickerUsesChannelSpecificPresentation(t *testing.T) {
-	m := New(styles.RosePineTheme())
+	m := New(themes.RosePine())
 	m.SetSize(90, 12)
 	m.ShowChannels([]Channel{{Server: "libera", Name: "#go"}})
 
@@ -161,7 +161,7 @@ func TestChannelPickerUsesChannelSpecificPresentation(t *testing.T) {
 }
 
 func TestChannelPickerIsHeightBoundedAndFollowsCursor(t *testing.T) {
-	m := New(styles.RosePineTheme())
+	m := New(themes.RosePine())
 	m.SetSize(64, 12)
 	channels := make([]Channel, 20)
 	for i := range channels {

@@ -5,8 +5,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/dexchat/dex/internal/config"
 	"github.com/dexchat/dex/internal/ui/styles"
+	"github.com/dexchat/dex/internal/ui/styles/themes"
 )
 
 // themeDetectTimeout bounds how long a light/dark theme waits for the
@@ -28,22 +28,11 @@ const (
 type themeDetectTimeoutMsg struct{}
 
 func themeByName(name string) styles.Theme {
-	switch name {
-	case config.ThemeRosePineDawn:
-		return styles.RosePineDawnTheme()
-	case config.ThemeAyuDark:
-		return styles.AyuDarkTheme()
-	case config.ThemeDracula:
-		return styles.DraculaTheme()
-	case config.ThemeGruvboxDark:
-		return styles.GruvboxDarkTheme()
-	case config.ThemeSolarizedLight:
-		return styles.SolarizedLightTheme()
-	case config.ThemeNone:
-		return styles.NoneTheme()
-	default:
-		return styles.RosePineTheme()
+	if theme, ok := themes.ByName(name); ok {
+		return theme
 	}
+	theme, _ := themes.ByName(themes.Default)
+	return theme
 }
 
 // detectTheme asks the terminal for the system appearance, falling back to

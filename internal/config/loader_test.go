@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dexchat/dex/internal/ui/styles/themes"
 )
 
 func TestFilePathUsesXDGConfigHome(t *testing.T) {
@@ -88,8 +90,8 @@ notify_channels = ["#Alerts"]
 	if got := cfg.UI.UnreadBadges; got != false {
 		t.Fatalf("global unread_badges = %v, want false", got)
 	}
-	if got := cfg.UI.Theme; got != ThemeAyuDark {
-		t.Fatalf("UI theme = %q, want %q", got, ThemeAyuDark)
+	if got := cfg.UI.Theme; got != "ayu-dark" {
+		t.Fatalf("UI theme = %q, want %q", got, "ayu-dark")
 	}
 	if got := cfg.UI.MentionBadges; got != true {
 		t.Fatalf("global mention_badges = %v, want true", got)
@@ -137,8 +139,8 @@ channels = ["#go"]
 	if got := cfg.UI.UnreadBadges; got != true {
 		t.Fatalf("global unread_badges default = %v, want true", got)
 	}
-	if got := cfg.UI.Theme; got != ThemeRosePine {
-		t.Fatalf("UI theme default = %q, want %q", got, ThemeRosePine)
+	if got := cfg.UI.Theme; got != themes.Default {
+		t.Fatalf("UI theme default = %q, want %q", got, themes.Default)
 	}
 	if got := cfg.UI.MentionBadges; got != true {
 		t.Fatalf("global mention_badges default = %v, want true", got)
@@ -187,7 +189,7 @@ channels = ["#go"]
 			if err != nil {
 				t.Fatalf("loadFromBytes() error = %v", err)
 			}
-			want := SystemTheme{Light: ThemeNone, Dark: ThemeDracula}
+			want := SystemTheme{Light: "none", Dark: "dracula"}
 			if got := cfg.UI.SystemTheme; got == nil || *got != want {
 				t.Fatalf("UI system theme = %+v, want %+v", got, want)
 			}
@@ -247,10 +249,12 @@ channels = ["#go"]
 	}
 }
 
-func TestLoadAcceptsGruvboxTheme(t *testing.T) {
-	cfg, err := loadFromBytes([]byte(`
+func TestLoadAcceptsEveryTheme(t *testing.T) {
+	for _, name := range themes.Names() {
+		t.Run(name, func(t *testing.T) {
+			cfg, err := loadFromBytes([]byte(`
 [ui]
-theme = "gruvbox-dark"
+theme = "` + name + `"
 
 [servers.libera]
 address = "irc.libera.chat"
@@ -258,87 +262,13 @@ port = 6697
 nickname = "dexuser"
 channels = ["#go"]
 `))
-	if err != nil {
-		t.Fatalf("loadFromBytes() error = %v", err)
-	}
-	if got := cfg.UI.Theme; got != ThemeGruvboxDark {
-		t.Fatalf("UI theme = %q, want %q", got, ThemeGruvboxDark)
-	}
-}
-
-func TestLoadAcceptsRosePineDawnTheme(t *testing.T) {
-	cfg, err := loadFromBytes([]byte(`
-[ui]
-theme = "rose-pine-dawn"
-
-[servers.libera]
-address = "irc.libera.chat"
-port = 6697
-nickname = "dexuser"
-channels = ["#go"]
-`))
-	if err != nil {
-		t.Fatalf("loadFromBytes() error = %v", err)
-	}
-	if got := cfg.UI.Theme; got != ThemeRosePineDawn {
-		t.Fatalf("UI theme = %q, want %q", got, ThemeRosePineDawn)
-	}
-}
-
-func TestLoadAcceptsSolarizedLightTheme(t *testing.T) {
-	cfg, err := loadFromBytes([]byte(`
-[ui]
-theme = "solarized-light"
-
-[servers.libera]
-address = "irc.libera.chat"
-port = 6697
-nickname = "dexuser"
-channels = ["#go"]
-`))
-	if err != nil {
-		t.Fatalf("loadFromBytes() error = %v", err)
-	}
-	if got := cfg.UI.Theme; got != ThemeSolarizedLight {
-		t.Fatalf("UI theme = %q, want %q", got, ThemeSolarizedLight)
-	}
-}
-
-func TestLoadAcceptsDraculaTheme(t *testing.T) {
-	cfg, err := loadFromBytes([]byte(`
-[ui]
-theme = "dracula"
-
-[servers.libera]
-address = "irc.libera.chat"
-port = 6697
-nickname = "dexuser"
-channels = ["#go"]
-`))
-	if err != nil {
-		t.Fatalf("loadFromBytes() error = %v", err)
-	}
-	if got := cfg.UI.Theme; got != ThemeDracula {
-		t.Fatalf("UI theme = %q, want %q", got, ThemeDracula)
-	}
-}
-
-func TestLoadAcceptsNoneTheme(t *testing.T) {
-	cfg, err := loadFromBytes([]byte(`
-[ui]
-theme = "none"
-
-[servers.libera]
-address = "irc.libera.chat"
-port = 6697
-nickname = "dexuser"
-channels = ["#go"]
-`))
-	if err != nil {
-		t.Fatalf("loadFromBytes() error = %v", err)
-	}
-	if got := cfg.UI.Theme; got != ThemeNone {
-		t.Fatalf("UI theme = %q, want %q", got, ThemeNone)
+			if err != nil {
+				t.Fatalf("loadFromBytes() error = %v", err)
+			}
+			if got := cfg.UI.Theme; got != name {
+				t.Fatalf("UI theme = %q, want %q", got, name)
+			}
+		})
 	}
 }
 

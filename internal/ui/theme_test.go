@@ -12,7 +12,7 @@ import (
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/dexchat/dex/internal/config"
 	"github.com/dexchat/dex/internal/ui/components/chat"
-	"github.com/dexchat/dex/internal/ui/styles"
+	"github.com/dexchat/dex/internal/ui/styles/themes"
 )
 
 func TestSetThemeRestylesActiveAndInactiveBuffers(t *testing.T) {
@@ -27,7 +27,7 @@ func TestSetThemeRestylesActiveAndInactiveBuffers(t *testing.T) {
 	inactive.Chat.AddMessage(chat.Message{Timestamp: time.Now(), Username: "bob", Text: "hidden"})
 
 	oldBackground := backgroundSequence(m.theme.Colors.Base.Background)
-	light := styles.SolarizedLightTheme()
+	light := themes.SolarizedLight()
 	newBackground := backgroundSequence(light.Colors.Base.Background)
 
 	m.setTheme(light)
@@ -48,7 +48,7 @@ func TestSetThemeRestylesActiveAndInactiveBuffers(t *testing.T) {
 
 func TestSetThemeBeforeWindowSizeAppliesOnFirstLayout(t *testing.T) {
 	m := New(newActivityTestModel().config)
-	light := styles.SolarizedLightTheme()
+	light := themes.SolarizedLight()
 
 	m.setTheme(light)
 	m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
@@ -61,7 +61,7 @@ func TestSetThemeBeforeWindowSizeAppliesOnFirstLayout(t *testing.T) {
 
 func newSystemThemeTestModel() *Model {
 	cfg := newActivityTestModel().config
-	cfg.UI.SystemTheme = &config.SystemTheme{Light: config.ThemeSolarizedLight, Dark: config.ThemeDracula}
+	cfg.UI.SystemTheme = &config.SystemTheme{Light: "solarized-light", Dark: "dracula"}
 	return New(cfg)
 }
 
@@ -71,7 +71,7 @@ func TestSystemThemeStartsDarkWithoutTerminalBackground(t *testing.T) {
 	if m.systemTheme != systemThemeDetecting {
 		t.Fatal("expected a light/dark theme to start detecting")
 	}
-	if got, want := m.theme.Colors.Base.Background, styles.DraculaTheme().Colors.Base.Background; got != want {
+	if got, want := m.theme.Colors.Base.Background, themes.Dracula().Colors.Base.Background; got != want {
 		t.Fatalf("initial background = %v, want dark theme %v", got, want)
 	}
 	if got := m.View().BackgroundColor; got != nil {
@@ -80,8 +80,8 @@ func TestSystemThemeStartsDarkWithoutTerminalBackground(t *testing.T) {
 }
 
 func TestSystemThemeAppliesFirstDetectedAppearance(t *testing.T) {
-	light := styles.SolarizedLightTheme().Colors.Base.Background
-	dark := styles.DraculaTheme().Colors.Base.Background
+	light := themes.SolarizedLight().Colors.Base.Background
+	dark := themes.Dracula().Colors.Base.Background
 	tests := []struct {
 		name string
 		msgs []tea.Msg
@@ -130,8 +130,8 @@ func TestSystemThemeFollowsSystemAppearanceChanges(t *testing.T) {
 	m := newSystemThemeTestModel()
 	m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
 	m.Update(uv.DarkColorSchemeEvent{})
-	light := styles.SolarizedLightTheme().Colors.Base.Background
-	dark := styles.DraculaTheme().Colors.Base.Background
+	light := themes.SolarizedLight().Colors.Base.Background
+	dark := themes.Dracula().Colors.Base.Background
 
 	steps := []struct {
 		msg  tea.Msg

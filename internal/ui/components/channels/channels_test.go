@@ -9,7 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/dexchat/dex/internal/config"
-	"github.com/dexchat/dex/internal/ui/styles"
+	"github.com/dexchat/dex/internal/ui/styles/themes"
 )
 
 func TestMouseWheelScrollsListWithoutChangingSelection(t *testing.T) {
@@ -139,7 +139,7 @@ func TestRemoveBufferSelectsNeighborWithinServer(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := New(styles.AyuDarkTheme(), tt.servers)
+			m := New(themes.AyuDark(), tt.servers)
 			m, _ = m.Select(tt.server, tt.remove)
 
 			m, _ = m.Update(RemoveBufferMsg{
@@ -349,7 +349,7 @@ func TestActivityBadgeCapsLargeCounts(t *testing.T) {
 }
 
 func newScrollableChannelsModel() Model {
-	theme := styles.RosePineTheme()
+	theme := themes.RosePine()
 	var channelNames []string
 	for i := 0; i < 30; i++ {
 		channelNames = append(channelNames, fmt.Sprintf("#channel-%02d", i))
@@ -365,7 +365,7 @@ func newScrollableChannelsModel() Model {
 }
 
 func TestNoneThemeSelectionReversesTerminalColors(t *testing.T) {
-	m := New(styles.NoneTheme(), []*config.Server{{Name: "libera", Channels: []string{"#go"}}})
+	m := New(themes.None(), []*config.Server{{Name: "libera", Channels: []string{"#go"}}})
 	m = m.SetSize(30, 10)
 
 	reverse := regexp.MustCompile(`\x1b\[(?:\d+;)*7[;m]`)

@@ -93,7 +93,8 @@ components/
   keybindings/   Shared key definitions and quit handling
   palette/       Searchable commands and channel selection
   users/         Channel member viewport and IRC prefix display
-styles/          Themes, semantic style fields, and nickname color allocation
+styles/          Theme structure, semantic style fields, and nickname colors
+  themes/        Built-in theme colors, one file per family, and the registry
 ```
 
 Child models use the return conventions already established in their package:
@@ -175,8 +176,11 @@ Chat rendering is incremental.
 
 - Read colors from `styles.Theme`; prefer semantic fields over colors hardcoded
   inside components.
-- Keep complete theme palettes in `styles/colorschemes.go` and shared theme
-  structure in `styles/theme.go`.
+- Keep each theme family's colors in its own file under `styles/themes/`
+  (for example `styles/themes/rosepine.go` holds the dark and light Rosé
+  Pine themes), and register every theme in `styles/themes/themes.go`.
+  Shared theme structure lives in `styles/theme.go`, and `styles.NewTheme`
+  builds the styles from a theme's colors.
 - When adding a semantic UI role, add the required theme field and populate it
   in every theme.
 - Preserve terminal-cell-aware sizing when truncating, centering, or laying out

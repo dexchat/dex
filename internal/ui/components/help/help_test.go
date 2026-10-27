@@ -6,11 +6,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/dexchat/dex/internal/ui/styles"
+	"github.com/dexchat/dex/internal/ui/styles/themes"
 )
 
 func TestHelpVisibility(t *testing.T) {
-	m := New(styles.RosePineTheme())
+	m := New(themes.RosePine())
 	if m.IsVisible() {
 		t.Fatal("help modal should not be visible initially")
 	}
@@ -49,7 +49,7 @@ func TestHelpClosesOnKeypress(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := New(styles.RosePineTheme())
+			m := New(themes.RosePine())
 			m.Show()
 
 			m, _ = m.Update(tt.msg)
@@ -61,7 +61,7 @@ func TestHelpClosesOnKeypress(t *testing.T) {
 }
 
 func TestHelpViewContainsShortcuts(t *testing.T) {
-	m := New(styles.RosePineTheme())
+	m := New(themes.RosePine())
 	m.SetSize(80, 24)
 
 	// Invisible view returns empty string

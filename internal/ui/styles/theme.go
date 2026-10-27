@@ -88,3 +88,49 @@ func (t Theme) HasBackground() bool {
 	_, isNoColor := t.Colors.Base.Background.(lipgloss.NoColor)
 	return t.Colors.Base.Background != nil && !isNoColor
 }
+
+// NewTheme builds the styles shared by every theme from its colors.
+func NewTheme(colors Colors) Theme {
+	theme := Theme{Colors: colors}
+
+	theme.Styles.App = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground)
+
+	theme.Styles.Sidebar = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground).
+		BorderStyle(lipgloss.HiddenBorder()).
+		BorderBackground(theme.Colors.Base.Background)
+
+	theme.Styles.UnreadItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Unread)
+
+	theme.Styles.NotifiedItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Notification).
+		Bold(true)
+
+	theme.Styles.MentionedItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Mention).
+		Bold(true)
+
+	theme.Styles.ServerItem = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Sidebar.Server).
+		Bold(true)
+
+	theme.Styles.ChatArea = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Background).
+		Foreground(theme.Colors.Base.Foreground).
+		BorderBackground(theme.Colors.Base.Background).
+		Border(lipgloss.HiddenBorder())
+
+	theme.Styles.InputField = lipgloss.NewStyle().
+		Background(theme.Colors.Base.Surface).
+		Foreground(theme.Colors.Base.Foreground)
+
+	return theme
+}

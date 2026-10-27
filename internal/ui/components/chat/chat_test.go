@@ -10,10 +10,11 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/dexchat/dex/internal/ui/styles"
+	"github.com/dexchat/dex/internal/ui/styles/themes"
 )
 
 func TestSetInputValueMovesCursorToEndAndHonorsLimit(t *testing.T) {
-	theme := styles.RosePineTheme()
+	theme := themes.RosePine()
 	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
 	m.SetInputValue(strings.Repeat("a", 300))
 
@@ -26,7 +27,7 @@ func TestSetInputValueMovesCursorToEndAndHonorsLimit(t *testing.T) {
 }
 
 func TestSetNicknameRecalculatesInputWidth(t *testing.T) {
-	theme := styles.RosePineTheme()
+	theme := themes.RosePine()
 	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
 	m.SetSize(80, 12)
 
@@ -59,7 +60,7 @@ func (s *toggleChannelMembers) GetUserPrefix(nick string) string { return "" }
 func (s *toggleChannelMembers) Nicknames() []string              { return nil }
 
 func TestInvalidateContentRecolorsNicknameOnNextFlush(t *testing.T) {
-	theme := styles.RosePineTheme()
+	theme := themes.RosePine()
 	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
 	m.SetSize(80, 12)
 	members := &toggleChannelMembers{present: true}
@@ -95,7 +96,7 @@ func TestInvalidateContentRecolorsNicknameOnNextFlush(t *testing.T) {
 }
 
 func TestInactiveNicknameUsesSemanticThemeColor(t *testing.T) {
-	theme := styles.RosePineTheme()
+	theme := themes.RosePine()
 	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
 	m.SetChannelMembers(stubChannelMembers{})
 
@@ -114,7 +115,7 @@ func TestInactiveNicknameUsesSemanticThemeColor(t *testing.T) {
 }
 
 func TestTabCompletesAndCyclesMatchingNicknames(t *testing.T) {
-	m := New(styles.RosePineTheme(), styles.NewUsernameColors(nil))
+	m := New(themes.RosePine(), styles.NewUsernameColors(nil))
 	m.SetChannelMembers(stubChannelMembers{nicks: []string{"Alice", "alex", "bob"}})
 	m.input.SetValue("al")
 	m.input.CursorEnd()
@@ -131,7 +132,7 @@ func TestTabCompletesAndCyclesMatchingNicknames(t *testing.T) {
 }
 
 func TestTabCompletesNicknameAtCursorWithoutAddressSuffix(t *testing.T) {
-	m := New(styles.RosePineTheme(), styles.NewUsernameColors(nil))
+	m := New(themes.RosePine(), styles.NewUsernameColors(nil))
 	m.SetChannelMembers(stubChannelMembers{nicks: []string{"Alice"}})
 	m.input.SetValue("hello al there")
 	m.input.SetCursor(len([]rune("hello al")))
@@ -200,7 +201,7 @@ func TestUpdateContentFollowsBottomWhenAlreadyAtBottom(t *testing.T) {
 }
 
 func TestFlushQueueRendersOnlyNewMessages(t *testing.T) {
-	theme := styles.RosePineTheme()
+	theme := themes.RosePine()
 	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
 	m.SetSize(80, 12)
 	m.ReplaceMessages([]Message{{
@@ -230,7 +231,7 @@ func TestFlushQueueRendersOnlyNewMessages(t *testing.T) {
 }
 
 func TestReplacingMessagesInvalidatesRenderedContent(t *testing.T) {
-	theme := styles.RosePineTheme()
+	theme := themes.RosePine()
 	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
 	m.SetSize(80, 12)
 	m.AddMessage(Message{Timestamp: time.Now(), Username: "alice", Text: "first"})
@@ -250,7 +251,7 @@ func TestReplacingMessagesInvalidatesRenderedContent(t *testing.T) {
 }
 
 func TestSetNicknameInvalidatesRenderedContent(t *testing.T) {
-	theme := styles.RosePineTheme()
+	theme := themes.RosePine()
 	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
 	m.SetSize(80, 12)
 	m.AddMessage(Message{Timestamp: time.Now(), Username: "alice", Text: "hello"})
@@ -266,7 +267,7 @@ func TestSetNicknameInvalidatesRenderedContent(t *testing.T) {
 }
 
 func TestSetThemeInvalidatesRenderedContent(t *testing.T) {
-	theme := styles.RosePineTheme()
+	theme := themes.RosePine()
 	colors := styles.NewUsernameColors(theme.Colors.Nicknames)
 	m := New(theme, colors)
 	m.SetSize(80, 12)
@@ -274,7 +275,7 @@ func TestSetThemeInvalidatesRenderedContent(t *testing.T) {
 	m.AddMessage(msg)
 	before := strings.Join(m.renderedLines, "\n")
 
-	light := styles.SolarizedLightTheme()
+	light := themes.SolarizedLight()
 	m.SetTheme(light, colors.WithPalette(light.Colors.Nicknames))
 
 	if !m.needsRender {
@@ -296,7 +297,7 @@ func TestSetThemeInvalidatesRenderedContent(t *testing.T) {
 }
 
 func TestMentionedMessageHighlightsOnlyExactNickname(t *testing.T) {
-	theme := styles.RosePineTheme()
+	theme := themes.RosePine()
 	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
 	m.SetNickname("dexuser")
 	timestamp := time.Date(2026, time.August, 22, 14, 32, 0, 0, time.UTC)
@@ -329,7 +330,7 @@ func TestMentionedMessageHighlightsOnlyExactNickname(t *testing.T) {
 }
 
 func TestMentionHighlightPreservesIRCBackground(t *testing.T) {
-	theme := styles.RosePineTheme()
+	theme := themes.RosePine()
 	baseStyle := lipgloss.NewStyle().
 		Foreground(theme.Colors.Base.Foreground).
 		Background(theme.Colors.Base.Background)
@@ -350,7 +351,7 @@ func TestMentionHighlightPreservesIRCBackground(t *testing.T) {
 }
 
 func TestOwnMessageDoesNotHighlightNicknameAsMention(t *testing.T) {
-	theme := styles.RosePineTheme()
+	theme := themes.RosePine()
 	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
 	m.SetNickname("dexuser")
 
@@ -370,7 +371,7 @@ func TestOwnMessageDoesNotHighlightNicknameAsMention(t *testing.T) {
 }
 
 func newScrollableChatModel() Model {
-	theme := styles.RosePineTheme()
+	theme := themes.RosePine()
 	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
 	m.SetNickname("alice")
 	m.SetSize(80, 12)
@@ -388,7 +389,7 @@ func newScrollableChatModel() Model {
 }
 
 func TestEnterReturnsSynchronousSendAction(t *testing.T) {
-	m := New(styles.RosePineTheme(), styles.NewUsernameColors(styles.RosePineTheme().Colors.Nicknames))
+	m := New(themes.RosePine(), styles.NewUsernameColors(themes.RosePine().Colors.Nicknames))
 	m.SetInputValue("hello")
 	m, action, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if action == nil || action.Text != "hello" {

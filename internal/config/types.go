@@ -9,13 +9,6 @@ import (
 const (
 	NotificationMention       = "mention"
 	NotificationDirectMessage = "direct_message"
-	ThemeRosePine             = "rose-pine"
-	ThemeRosePineDawn         = "rose-pine-dawn"
-	ThemeAyuDark              = "ayu-dark"
-	ThemeDracula              = "dracula"
-	ThemeGruvboxDark          = "gruvbox-dark"
-	ThemeSolarizedLight       = "solarized-light"
-	ThemeNone                 = "none"
 )
 
 // DesktopMode controls desktop notifications.

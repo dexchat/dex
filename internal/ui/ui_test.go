@@ -20,6 +20,7 @@ import (
 	"github.com/dexchat/dex/internal/ui/components/palette"
 	"github.com/dexchat/dex/internal/ui/components/users"
 	"github.com/dexchat/dex/internal/ui/styles"
+	"github.com/dexchat/dex/internal/ui/styles/themes"
 )
 
 var errTestPersistence = errors.New("test persistence failure")
@@ -1353,12 +1354,12 @@ func TestNewUsesConfiguredTheme(t *testing.T) {
 		configured string
 		want       styles.Theme
 	}{
-		{name: "Rose Pine Dawn", configured: config.ThemeRosePineDawn, want: styles.RosePineDawnTheme()},
-		{name: "Ayu Dark", configured: config.ThemeAyuDark, want: styles.AyuDarkTheme()},
-		{name: "Dracula", configured: config.ThemeDracula, want: styles.DraculaTheme()},
-		{name: "Gruvbox Dark", configured: config.ThemeGruvboxDark, want: styles.GruvboxDarkTheme()},
-		{name: "Solarized Light", configured: config.ThemeSolarizedLight, want: styles.SolarizedLightTheme()},
-		{name: "None", configured: config.ThemeNone, want: styles.NoneTheme()},
+		{name: "Rose Pine Dawn", configured: "rose-pine-dawn", want: themes.RosePineDawn()},
+		{name: "Ayu Dark", configured: "ayu-dark", want: themes.AyuDark()},
+		{name: "Dracula", configured: "dracula", want: themes.Dracula()},
+		{name: "Gruvbox Dark", configured: "gruvbox-dark", want: themes.GruvboxDark()},
+		{name: "Solarized Light", configured: "solarized-light", want: themes.SolarizedLight()},
+		{name: "None", configured: "none", want: themes.None()},
 	}
 
 	for _, tt := range tests {
@@ -1382,7 +1383,7 @@ func TestViewBackgroundFollowsTheme(t *testing.T) {
 		t.Fatal("themed view background = nil, want theme background")
 	}
 
-	m.theme = styles.NoneTheme()
+	m.theme = themes.None()
 	if got := m.View().BackgroundColor; got != nil {
 		t.Fatalf("none theme view background = %#v, want nil", got)
 	}

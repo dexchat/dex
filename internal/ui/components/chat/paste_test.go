@@ -8,10 +8,11 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/dexchat/dex/internal/ui/styles"
+	"github.com/dexchat/dex/internal/ui/styles/themes"
 )
 
 func newPasteTestModel(width int) Model {
-	theme := styles.RosePineTheme()
+	theme := themes.RosePine()
 	m := New(theme, styles.NewUsernameColors(theme.Colors.Nicknames))
 	m.SetNickname("alice")
 	m.SetSize(width, 12)

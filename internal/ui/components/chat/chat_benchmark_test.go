@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/dexchat/dex/internal/ui/styles"
+	"github.com/dexchat/dex/internal/ui/styles/themes"
 )
 
 func BenchmarkFlushQueue(b *testing.B) {
 	for _, historySize := range []int{100, 1_000, 10_000} {
 		for _, batchSize := range []int{1, 50} {
 			b.Run(fmt.Sprintf("history=%d/batch=%d", historySize, batchSize), func(b *testing.B) {
-				theme := styles.RosePineTheme()
+				theme := themes.RosePine()
 				base := benchmarkMessages(historySize, time.Date(2026, time.January, 1, 12, 0, 0, 0, time.UTC))
 				batch := benchmarkMessages(batchSize, base[len(base)-1].Timestamp.Add(time.Minute))
 
@@ -35,7 +36,7 @@ func BenchmarkFlushQueue(b *testing.B) {
 func BenchmarkRefreshContent(b *testing.B) {
 	for _, historySize := range []int{100, 1_000, 10_000} {
 		b.Run(fmt.Sprintf("history=%d", historySize), func(b *testing.B) {
-			theme := styles.RosePineTheme()
+			theme := themes.RosePine()
 			messages := benchmarkMessages(historySize, time.Date(2026, time.January, 1, 12, 0, 0, 0, time.UTC))
 			m := newBenchmarkChat(theme, messages)
 
@@ -51,7 +52,7 @@ func BenchmarkRefreshContent(b *testing.B) {
 func BenchmarkSetSizeWidthChange(b *testing.B) {
 	for _, historySize := range []int{100, 1_000, 10_000} {
 		b.Run(fmt.Sprintf("history=%d", historySize), func(b *testing.B) {
-			theme := styles.RosePineTheme()
+			theme := themes.RosePine()
 			messages := benchmarkMessages(historySize, time.Date(2026, time.January, 1, 12, 0, 0, 0, time.UTC))
 
 			b.ReportAllocs()

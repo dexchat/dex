@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/dexchat/dex/internal/ui/styles/themes"
 )
 
 func Load() (*Config, error) {
@@ -157,18 +158,15 @@ func loadFromBytes(data []byte) (*Config, error) {
 
 func defaultValues() *Config {
 	return &Config{
-		UI:            UI{Theme: ThemeRosePine, UnreadBadges: true, MentionBadges: true, UnreadOnUserEvents: true},
+		UI:            UI{Theme: themes.Default, UnreadBadges: true, MentionBadges: true, UnreadOnUserEvents: true},
 		Notifications: Notifications{Sound: true, Desktop: DesktopAuto, ShowBody: true, Events: map[string]bool{NotificationMention: true, NotificationDirectMessage: true}, Cooldown: 2 * time.Second},
 	}
 }
 
 // isTheme reports whether name is a known theme.
 func isTheme(name string) bool {
-	switch name {
-	case ThemeRosePine, ThemeRosePineDawn, ThemeAyuDark, ThemeDracula, ThemeGruvboxDark, ThemeSolarizedLight, ThemeNone:
-		return true
-	}
-	return false
+	_, ok := themes.ByName(name)
+	return ok
 }
 
 func validate(servers map[string]*Server) error {
