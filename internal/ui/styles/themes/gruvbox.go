@@ -50,3 +50,49 @@ func GruvboxDark() styles.Theme {
 
 	return styles.NewTheme(colors)
 }
+
+func GruvboxLight() styles.Theme {
+	var colors styles.Colors
+
+	colors.Base.Background = lipgloss.Color("#F9F5D7")
+	colors.Base.Foreground = lipgloss.Color("#3C3836")
+	colors.Base.Surface = lipgloss.Color("#EBDBB2")
+	colors.Base.Border = lipgloss.Color("#D5C4A1")
+	colors.Base.Accent = lipgloss.Color("#38694B")
+	colors.Base.Error = lipgloss.Color("#9D0006")
+	colors.Base.Dimmed = lipgloss.Color("#685D54")
+	colors.Base.Subtle = lipgloss.Color("#685D54")
+	colors.Base.OnAccent = lipgloss.Color("#F9F5D7")
+	colors.Base.Divider = lipgloss.Color("#EBDBB2")
+
+	colors.Sidebar.Server = lipgloss.Color("#38694B")
+	colors.Sidebar.Unread = lipgloss.Color("#076678")
+	colors.Sidebar.Notification = lipgloss.Color("#84560F")
+	colors.Sidebar.Mention = lipgloss.Color("#AB3903")
+	colors.Sidebar.Selection = lipgloss.Color("#EBDBB2")
+
+	colors.Chat.Nickname = lipgloss.Color("#38694B")
+	colors.Chat.InactiveNickname = lipgloss.Color("#685D54")
+	colors.Chat.Mention = lipgloss.Color("#9D0006")
+	colors.Chat.Separator = lipgloss.Color("#D5C4A1")
+	colors.Chat.Self = lipgloss.Color("#76710E")
+	colors.Chat.Connected = lipgloss.Color("#38694B")
+	colors.Chat.Disconnected = lipgloss.Color("#9D0006")
+	colors.Chat.UserEvents = lipgloss.Color("#685D54")
+	colors.Chat.ServerMessage = lipgloss.Color("#84560F")
+
+	colors.Palette.Border = lipgloss.Color("#38694B")
+	colors.Palette.Highlight = lipgloss.Color("#38694B")
+
+	colors.Nicknames = []styles.Color{
+		lipgloss.Color("#9D0006"),
+		lipgloss.Color("#76710E"),
+		lipgloss.Color("#84560F"),
+		lipgloss.Color("#076678"),
+		lipgloss.Color("#8F3F71"),
+		lipgloss.Color("#38694B"),
+		lipgloss.Color("#AB3903"),
+	}
+
+	return styles.NewTheme(colors)
+}

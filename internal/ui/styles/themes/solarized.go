@@ -51,3 +51,50 @@ func SolarizedLight() styles.Theme {
 
 	return styles.NewTheme(colors)
 }
+
+func SolarizedDark() styles.Theme {
+	var colors styles.Colors
+
+	colors.Base.Background = lipgloss.Color("#002B36")
+	colors.Base.Foreground = lipgloss.Color("#8D9D9E")
+	colors.Base.Surface = lipgloss.Color("#073642")
+	colors.Base.Border = lipgloss.Color("#586E75")
+	colors.Base.Accent = lipgloss.Color("#4AA1DE")
+	colors.Base.Error = lipgloss.Color("#E56765")
+	colors.Base.Dimmed = lipgloss.Color("#879EA5")
+	colors.Base.Subtle = lipgloss.Color("#879EA5")
+	colors.Base.OnAccent = lipgloss.Color("#002B36")
+	colors.Base.Divider = lipgloss.Color("#073642")
+
+	colors.Sidebar.Server = lipgloss.Color("#2DABA1")
+	colors.Sidebar.Unread = lipgloss.Color("#4AA1DE")
+	colors.Sidebar.Notification = lipgloss.Color("#C29300")
+	colors.Sidebar.Mention = lipgloss.Color("#EC7A4B")
+	colors.Sidebar.Selection = lipgloss.Color("#073642")
+
+	colors.Chat.Nickname = lipgloss.Color("#4AA1DE")
+	colors.Chat.InactiveNickname = lipgloss.Color("#879EA5")
+	colors.Chat.Mention = lipgloss.Color("#DD659F")
+	colors.Chat.Separator = lipgloss.Color("#586E75")
+	colors.Chat.Self = lipgloss.Color("#859900")
+	colors.Chat.Connected = lipgloss.Color("#2DABA1")
+	colors.Chat.Disconnected = lipgloss.Color("#E56765")
+	colors.Chat.UserEvents = lipgloss.Color("#879EA5")
+	colors.Chat.ServerMessage = lipgloss.Color("#EC7A4B")
+
+	colors.Palette.Border = lipgloss.Color("#4AA1DE")
+	colors.Palette.Highlight = lipgloss.Color("#4AA1DE")
+
+	colors.Nicknames = []styles.Color{
+		lipgloss.Color("#C29300"),
+		lipgloss.Color("#EC7A4B"),
+		lipgloss.Color("#E56765"),
+		lipgloss.Color("#DD659F"),
+		lipgloss.Color("#8589CE"),
+		lipgloss.Color("#4AA1DE"),
+		lipgloss.Color("#2DABA1"),
+		lipgloss.Color("#859900"),
+	}
+
+	return styles.NewTheme(colors)
+}

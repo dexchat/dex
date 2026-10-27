@@ -1359,6 +1359,10 @@ func TestNewUsesConfiguredTheme(t *testing.T) {
 		{name: "Dracula", configured: "dracula", want: themes.Dracula()},
 		{name: "Gruvbox Dark", configured: "gruvbox-dark", want: themes.GruvboxDark()},
 		{name: "Solarized Light", configured: "solarized-light", want: themes.SolarizedLight()},
+		{name: "Gruvbox Light", configured: "gruvbox-light", want: themes.GruvboxLight()},
+		{name: "Solarized Dark", configured: "solarized-dark", want: themes.SolarizedDark()},
+		{name: "Catppuccin Latte", configured: "catppuccin-latte", want: themes.CatppuccinLatte()},
+		{name: "Catppuccin Mocha", configured: "catppuccin-mocha", want: themes.CatppuccinMocha()},
 		{name: "None", configured: "none", want: themes.None()},
 	}
 

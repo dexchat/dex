@@ -16,7 +16,11 @@ var themes = []struct {
 	{name: "ayu-dark", new: AyuDark},
 	{name: "dracula", new: Dracula},
 	{name: "gruvbox-dark", new: GruvboxDark},
+	{name: "gruvbox-light", new: GruvboxLight},
+	{name: "solarized-dark", new: SolarizedDark},
 	{name: "solarized-light", new: SolarizedLight},
+	{name: "catppuccin-latte", new: CatppuccinLatte},
+	{name: "catppuccin-mocha", new: CatppuccinMocha},
 	{name: "none", new: None},
 }
 
