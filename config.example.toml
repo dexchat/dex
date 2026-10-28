@@ -42,9 +42,10 @@ cooldown = "2s"
 
 [ui]
 # Available themes: "rose-pine", "rose-pine-dawn", "ayu-dark",
-# "dracula", "gruvbox-dark", "gruvbox-light", "solarized-dark",
-# "solarized-light", "catppuccin-latte", "catppuccin-mocha", "none". The
-# "none" theme uses the terminal's own background and color palette.
+# "ayu-light", "dracula", "gruvbox-dark", "gruvbox-light",
+# "solarized-dark", "solarized-light", "catppuccin-latte",
+# "catppuccin-mocha", "none". The "none" theme uses the terminal's own
+# background and color palette.
 #
 # Set a light and a dark theme to follow the system appearance:
 #   theme = { light = "rose-pine-dawn", dark = "rose-pine" }

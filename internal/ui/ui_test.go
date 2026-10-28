@@ -1356,6 +1356,7 @@ func TestNewUsesConfiguredTheme(t *testing.T) {
 	}{
 		{name: "Rose Pine Dawn", configured: "rose-pine-dawn", want: themes.RosePineDawn()},
 		{name: "Ayu Dark", configured: "ayu-dark", want: themes.AyuDark()},
+		{name: "Ayu Light", configured: "ayu-light", want: themes.AyuLight()},
 		{name: "Dracula", configured: "dracula", want: themes.Dracula()},
 		{name: "Gruvbox Dark", configured: "gruvbox-dark", want: themes.GruvboxDark()},
 		{name: "Solarized Light", configured: "solarized-light", want: themes.SolarizedLight()},

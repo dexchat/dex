@@ -14,6 +14,7 @@ var themes = []struct {
 	{name: "rose-pine", new: RosePine},
 	{name: "rose-pine-dawn", new: RosePineDawn},
 	{name: "ayu-dark", new: AyuDark},
+	{name: "ayu-light", new: AyuLight},
 	{name: "dracula", new: Dracula},
 	{name: "gruvbox-dark", new: GruvboxDark},
 	{name: "gruvbox-light", new: GruvboxLight},
