@@ -68,6 +68,8 @@ homebrew_casks:
     description: IRC/TUI client for dexchat
     binaries:
       - dex
+    conflicts:
+      - cask: dex@tip
     caveats: |
       If macOS blocks dexchat, enable it by running the following command:
       
@@ -101,7 +103,7 @@ chocolateys:
     skip_publish: true
 
 snapshot:
-  version_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next-{{ .ShortCommit }}"
 
 changelog:
   sort: asc

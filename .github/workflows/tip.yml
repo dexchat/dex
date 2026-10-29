@@ -1,0 +1,71 @@
+name: Tip
+
+# Builds the tip of main and publishes it to a rolling "tip" prerelease,
+# which the dex@tip Homebrew cask downloads from. The tip tag is moved by
+# this workflow on every run; it never matches the v* release trigger.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tip
+  cancel-in-progress: true
+
+jobs:
+  tip:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build snapshot
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --snapshot --clean --skip=chocolatey,nfpm
+
+      # Archive names carry the snapshot version, so they are renamed to
+      # stable names that the cask can point at.
+      - name: Prepare assets
+        shell: bash
+        run: |
+          mkdir tip
+          for archive in dist/dex_*.tar.gz dist/dex_*.zip; do
+            name=${archive#dist/dex_}
+            cp "$archive" "tip/dex_${name#*_}"
+          done
+          (cd tip && sha256sum * > checksums.txt)
+          ls -l tip
+
+      - name: Move tip tag
+        run: |
+          git tag --force tip "$GITHUB_SHA"
+          git push --force origin refs/tags/tip
+
+      - name: Publish tip release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="Automated build of ${GITHUB_SHA::7} from main. Not a stable release."
+          if gh release view tip > /dev/null 2>&1; then
+            gh release edit tip --prerelease --notes "$notes"
+            gh release upload tip tip/* --clobber
+          else
+            gh release create tip tip/* --prerelease --latest=false \
+              --title "tip" --notes "$notes"
+          fi
