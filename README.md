@@ -36,6 +36,9 @@ brew install --cask dexchat/tap/dex
 
 # Nix
 nix profile install github:dexchat/dex
+
+# Chocolatey
+choco install dexchat
 ```
 
 <details>
