@@ -51,6 +51,20 @@ sudo apt update && sudo apt install dexchat
 ```
 </details>
 
+<details>
+<summary><strong>Tip builds (Homebrew)</strong></summary>
+
+`dex@tip` is built from the latest commit on `main`. Use it only if you want
+to get the latest features before waiting the releases.
+
+```bash
+brew install --cask dexchat/tap/dex@tip
+
+# Update to the latest commit
+brew upgrade --cask --greedy dex@tip
+```
+</details>
+
 Until we add support for more package managers:
 - [Packages](https://github.com/dexchat/dex/releases/latest) are available in Debian and RPM formats
 - [Binaries](https://github.com/dexchat/dex/releases/latest) are available for Linux, macOS and Windows
